@@ -49,10 +49,10 @@ struct DaisyDosMigrationPlan: SchemaMigrationPlan {
 - [X] **Acceptance:** ModelContainer initializes successfully, SwiftData ready for model creation
 
 #### ✅ CloudKit Foundation Setup (Disabled)
-- [ ] Add CloudKit capability in Xcode project settings
-- [ ] Create CloudKit container in Developer Portal (name: `iCloud.com.yourteam.DaisyDos`)
-- [ ] Add CloudKit container to app's entitlements
-- [ ] Implement CloudKit initialization wrapper (disabled by default):
+- [X] Add CloudKit capability in Xcode project settings
+- [X] Create CloudKit container in Developer Portal (name: `iCloud.com.yourteam.DaisyDos`)
+- [X] Add CloudKit container to app's entitlements
+- [X] Implement CloudKit initialization wrapper (disabled by default):
 ```swift
 #if DEBUG
 private func initializeCloudKitSchemaIfNeeded() throws {
@@ -65,8 +65,8 @@ private func initializeCloudKitSchemaIfNeeded() throws {
 }
 #endif
 ```
-- [ ] Create `LocalOnlyModeManager` @Observable class to control sync features
-- [ ] **Acceptance:** CloudKit container exists, schema initialization ready but disabled, local-only mode functional
+- [X] Create `LocalOnlyModeManager` @Observable class to control sync features
+- [X] **Acceptance:** CloudKit container exists, schema initialization ready but disabled, local-only mode functional
 
 ### 1.2 Core Data Models (Effort: Medium)
 

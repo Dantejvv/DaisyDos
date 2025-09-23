@@ -16,9 +16,22 @@ import UserNotifications
 
 @main
 struct DaisyDosApp: App {
+    let localOnlyModeManager = LocalOnlyModeManager()
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema(versionedSchema: DaisyDosSchemaV1.self)
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        #if DEBUG
+        // Initialize CloudKit schema for development (disabled by default)
+        // This is only for schema preparation and does not enable sync
+        do {
+            try CloudKitManager.initializeCloudKitSchemaIfNeeded()
+            print("CloudKit schema initialization completed (DEBUG mode)")
+        } catch {
+            print("CloudKit schema initialization failed: \(error.localizedDescription)")
+        }
+        #endif
 
         do {
             return try ModelContainer(for: schema, migrationPlan: DaisyDosMigrationPlan.self, configurations: [modelConfiguration])
@@ -32,5 +45,6 @@ struct DaisyDosApp: App {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
+        .environment(localOnlyModeManager)
     }
 }

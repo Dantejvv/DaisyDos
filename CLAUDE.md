@@ -63,6 +63,20 @@ This is a standard Xcode project. Use Xcode to build and run:
 - `Item.swift`: Basic SwiftData model with timestamp (placeholder, will be replaced)
 - **Next Phase**: Task, Habit, Tag models per implementation roadmap (Phase 1.2)
 
+### CloudKit Foundation (✅ Phase 1.1 Complete)
+
+**Privacy-First CloudKit Integration:**
+- `CloudKitManager.swift`: CloudKit initialization wrapper (DEBUG only, disabled by default)
+- `LocalOnlyModeManager.swift`: @Observable privacy control manager with local-only mode default
+- `DaisyDos.entitlements`: CloudKit container `iCloud.com.yourteam.DaisyDos` configured
+- **Status**: CloudKit foundation ready but disabled, local-only mode functional
+
+**Key Features:**
+- Local-only mode is the default (privacy-first approach)
+- CloudKit schema initialization ready but only runs in DEBUG builds
+- Foundation prepared for Phase 10.0 CloudKit sync activation
+- No production CloudKit operations until explicitly enabled
+
 ### Privacy-First Design
 - Local-only mode is the default (CloudKit disabled)
 - iCloud container configured but not active
@@ -70,15 +84,16 @@ This is a standard Xcode project. Use Xcode to build and run:
 
 ## Development Context
 
-This project is in early development following a detailed implementation roadmap. **Phase 1.1 (SwiftData ModelContainer Foundation) is complete.**
+This project is in early development following a detailed implementation roadmap. **Phase 1.1 (Foundation & Architecture) is complete.**
 
 ### Current Implementation Status:
 
 1. **✅ Xcode project setup** with all required frameworks imported
 2. **✅ SwiftData ModelContainer Foundation** with versioned schema and migration plan
-3. **✅ CloudKit entitlements** configured but functionality disabled (local-only mode)
-4. **✅ Architecture foundation** ready for core model implementation
-5. **📋 Comprehensive planning documents** in `/Docs` folder containing detailed implementation strategy
+3. **✅ CloudKit Foundation Setup** with privacy-first local-only mode (disabled by default)
+4. **✅ Git configuration** with comprehensive .gitignore for iOS development
+5. **✅ Architecture foundation** ready for core model implementation
+6. **📋 Comprehensive planning documents** in `/Docs` folder containing detailed implementation strategy
 
 ### Ready for Phase 1.2:
 - Core Data Models creation (Task, Habit, Tag)
@@ -93,6 +108,18 @@ The architecture is designed to support:
 - Accessibility-first design approach
 - Performance optimization for large datasets (1000+ items)
 
+## Development Setup
+
+### Repository Configuration
+- **✅ Comprehensive .gitignore**: Configured for iOS/Xcode development with DaisyDos-specific exclusions
+- **✅ Git cleanup**: Removed user-specific files from tracking (xcuserdata, .DS_Store)
+- **✅ Privacy protection**: Local settings and certificates excluded from version control
+
+### File Organization
+- `CloudKitManager.swift` and `LocalOnlyModeManager.swift` in main app target
+- Schema management files: `DaisyDosSchemaV1.swift`, `DaisyDosMigrationPlan.swift`
+- Documentation: `Models_README.md` tracks planned model structure
+
 ## Key Implementation Principles
 
 1. **Component Reusability**: TaskRowView and HabitRowView must work identically across all contexts
@@ -102,3 +129,4 @@ The architecture is designed to support:
 5. **Performance Focus**: Designed to handle large datasets efficiently
 
 Refer to `/Docs/implementation_roadmap.md` for the detailed development plan and `/Docs/daisydos_prd.md` and `/Docs/daisydos_plan.md` for comprehensive product requirements.
+- Use Context7 to check up-to-date docs when needed for implementing new libraries or frameworks, or adding features using them.
