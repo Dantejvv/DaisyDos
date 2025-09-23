@@ -6,6 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		FE3537C72E8302B1007B0F25 /* daisydos_plan.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C32E8302B1007B0F25 /* daisydos_plan.md */; };
+		FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C42E8302B1007B0F25 /* daisydos_prd.md */; };
+		FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */; };
+		FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537EC2E830555007B0F25 /* CLAUDE.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		FE3537A62E830152007B0F25 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +34,10 @@
 		FE3537942E830151007B0F25 /* DaisyDos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DaisyDos.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3537A52E830152007B0F25 /* DaisyDosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaisyDosTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3537AF2E830152007B0F25 /* DaisyDosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaisyDosUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FE3537C32E8302B1007B0F25 /* daisydos_plan.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = daisydos_plan.md; sourceTree = "<group>"; };
+		FE3537C42E8302B1007B0F25 /* daisydos_prd.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = daisydos_prd.md; sourceTree = "<group>"; };
+		FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = implementation_roadmap.md; sourceTree = "<group>"; };
+		FE3537EC2E830555007B0F25 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -88,10 +99,12 @@
 		FE35378B2E830151007B0F25 = {
 			isa = PBXGroup;
 			children = (
+				FE3537EC2E830555007B0F25 /* CLAUDE.md */,
 				FE3537962E830151007B0F25 /* DaisyDos */,
 				FE3537A82E830152007B0F25 /* DaisyDosTests */,
 				FE3537B22E830152007B0F25 /* DaisyDosUITests */,
 				FE3537952E830151007B0F25 /* Products */,
+				FE3537C62E8302B1007B0F25 /* Docs */,
 			);
 			sourceTree = "<group>";
 		};
@@ -103,6 +116,16 @@
 				FE3537AF2E830152007B0F25 /* DaisyDosUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		FE3537C62E8302B1007B0F25 /* Docs */ = {
+			isa = PBXGroup;
+			children = (
+				FE3537C32E8302B1007B0F25 /* daisydos_plan.md */,
+				FE3537C42E8302B1007B0F25 /* daisydos_prd.md */,
+				FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */,
+			);
+			path = Docs;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -225,6 +248,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE3537C72E8302B1007B0F25 /* daisydos_plan.md in Resources */,
+				FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */,
+				FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */,
+				FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -299,6 +326,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -329,6 +357,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -395,7 +424,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -453,7 +482,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -471,7 +500,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = BKD7HH7ZDH;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dante.DaisyDosTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -490,7 +519,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = BKD7HH7ZDH;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dante.DaisyDosTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -7,6 +7,12 @@
 
 import SwiftUI
 import SwiftData
+import CloudKit
+import EventKit
+#if canImport(PhotoKit)
+import PhotoKit
+#endif
+import UserNotifications
 
 @main
 struct DaisyDosApp: App {
