@@ -28,7 +28,7 @@ This roadmap provides both strategic direction and granular implementation tasks
 - [X] **Acceptance:** Project builds successfully, all frameworks import without errors
 
 #### ✅ SwiftData ModelContainer Foundation
-- [ ] Create `DaisyDosSchemaV1` conforming to `VersionedSchema` protocol:
+- [X] Create `DaisyDosSchemaV1` conforming to `VersionedSchema` protocol:
 ```swift
 enum DaisyDosSchemaV1: VersionedSchema {
     static var versionIdentifier = Schema.Version(1, 0, 0)
@@ -37,16 +37,16 @@ enum DaisyDosSchemaV1: VersionedSchema {
     }
 }
 ```
-- [ ] Implement `DaisyDosMigrationPlan` conforming to `SchemaMigrationPlan`:
+- [X] Implement `DaisyDosMigrationPlan` conforming to `SchemaMigrationPlan`:
 ```swift
 struct DaisyDosMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] { [DaisyDosSchemaV1.self] }
     static var stages: [MigrationStage] { [] } // V1 baseline
 }
 ```
-- [ ] Configure ModelContainer in `DaisyDosApp.swift` with schema and migration plan
-- [ ] Test ModelContainer initialization succeeds without CloudKit (local-only mode)
-- [ ] **Acceptance:** ModelContainer initializes successfully, SwiftData ready for model creation
+- [X] Configure ModelContainer in `DaisyDosApp.swift` with schema and migration plan
+- [X] Test ModelContainer initialization succeeds without CloudKit (local-only mode)
+- [X] **Acceptance:** ModelContainer initializes successfully, SwiftData ready for model creation
 
 #### ✅ CloudKit Foundation Setup (Disabled)
 - [ ] Add CloudKit capability in Xcode project settings

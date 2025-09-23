@@ -69,6 +69,11 @@
 			path = DaisyDosUITests;
 			sourceTree = "<group>";
 		};
+		FE3537EE2E83498B007B0F25 /* .claude */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = .claude;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +104,7 @@
 		FE35378B2E830151007B0F25 = {
 			isa = PBXGroup;
 			children = (
+				FE3537EE2E83498B007B0F25 /* .claude */,
 				FE3537EC2E830555007B0F25 /* CLAUDE.md */,
 				FE3537962E830151007B0F25 /* DaisyDos */,
 				FE3537A82E830152007B0F25 /* DaisyDosTests */,
@@ -145,6 +151,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				FE3537962E830151007B0F25 /* DaisyDos */,
+				FE3537EE2E83498B007B0F25 /* .claude */,
 			);
 			name = DaisyDos;
 			packageProductDependencies = (
