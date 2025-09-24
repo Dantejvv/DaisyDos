@@ -71,7 +71,7 @@ private func initializeCloudKitSchemaIfNeeded() throws {
 ### 1.2 Core Data Models (Effort: Medium)
 
 #### ✅ Essential @Model Classes
-- [ ] Create base `Task` model with `@Model` macro:
+- [X] Create base `Task` model with `@Model` macro:
 ```swift
 @Model
 class Task {
@@ -88,19 +88,19 @@ class Task {
     }
 }
 ```
-- [ ] Create base `Habit` model with `@Model` macro and streak tracking properties
-- [ ] Create `Tag` model with `@Model` macro, SF Symbol icon, and color properties
-- [ ] Implement model relationships: Task-Tag (many-to-many), Habit-Tag (many-to-many)
-- [ ] Add validation logic for tag limits (max 3 per item, max 30 total)
-- [ ] **Acceptance:** All models compile, relationships work, validation prevents exceeding limits
+- [X] Create base `Habit` model with `@Model` macro and streak tracking properties
+- [X] Create `Tag` model with `@Model` macro, SF Symbol icon, and color properties
+- [X] Implement model relationships: Task-Tag (many-to-many), Habit-Tag (many-to-many)
+- [X] Add validation logic for tag limits (max 3 per item, max 30 total)
+- [X] **Acceptance:** All models compile, relationships work, validation prevents exceeding limits
 
 #### ✅ SwiftData Relationships & Constraints
-- [ ] Implement `@Relationship` macros for Task-Tag associations
-- [ ] Implement `@Relationship` macros for Habit-Tag associations  
-- [ ] Add `@Attribute(.unique)` constraints where appropriate
-- [ ] Test model creation, relationship assignment, and constraint validation
-- [ ] Verify SwiftData persistence across app launches
-- [ ] **Acceptance:** Models persist correctly, relationships maintain integrity, constraints enforced
+- [X] Implement `@Relationship` macros for Task-Tag associations
+- [X] Implement `@Relationship` macros for Habit-Tag associations  
+- [X] Add `@Attribute(.unique)` constraints where appropriate
+- [X] Test model creation, relationship assignment, and constraint validation
+- [X] Verify SwiftData persistence across app launches
+- [X] **Acceptance:** Models persist correctly, relationships maintain integrity, constraints enforced
 
 ### 1.3 @Observable Pattern Implementation (Effort: Small-Medium)
 

@@ -11,6 +11,6 @@ import SwiftData
 enum DaisyDosSchemaV1: VersionedSchema {
     static var versionIdentifier = Schema.Version(1, 0, 0)
     static var models: [any PersistentModel.Type] {
-        [Item.self]
+        [Task.self, Habit.self, Tag.self]
     }
 }

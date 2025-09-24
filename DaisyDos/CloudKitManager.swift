@@ -25,7 +25,7 @@ class CloudKitManager {
             desc.shouldAddStoreAsynchronously = false
 
             // Create managed object model for current schema
-            if let mom = NSManagedObjectModel.makeManagedObjectModel(for: [Item.self]) {
+            if let mom = NSManagedObjectModel.makeManagedObjectModel(for: [Task.self, Habit.self, Tag.self]) {
                 let container = NSPersistentCloudKitContainer(name: "DaisyDos", managedObjectModel: mom)
                 container.persistentStoreDescriptions = [desc]
 

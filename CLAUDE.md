@@ -51,17 +51,21 @@ This is a standard Xcode project. Use Xcode to build and run:
 - Value-based navigation prepared for deep linking
 - NavigationManager maintains separate NavigationPath per tab
 
-### SwiftData Foundation (✅ Phase 1.1 Complete)
+### SwiftData Foundation (✅ Phase 1.1 & 1.2 Complete)
 
 **ModelContainer Infrastructure:**
 - `DaisyDosSchemaV1.swift`: Versioned schema conforming to `VersionedSchema` protocol
 - `DaisyDosMigrationPlan.swift`: Migration plan conforming to `SchemaMigrationPlan` protocol
 - `DaisyDosApp.swift`: Updated to use versioned schema and migration plan
-- **Status**: ModelContainer initializes successfully, ready for model creation
+- **Status**: ModelContainer initializes successfully with production models
 
-**Current Models:**
-- `Item.swift`: Basic SwiftData model with timestamp (placeholder, will be replaced)
-- **Next Phase**: Task, Habit, Tag models per implementation roadmap (Phase 1.2)
+**Core Data Models (✅ Phase 1.2 Complete):**
+- `Task.swift`: Task model with @Model macro, tag relationships, validation logic
+- `Habit.swift`: Habit model with streak tracking, completion logic, tag relationships
+- `Tag.swift`: Tag model with SF Symbol icons, colors, unique constraints, system limits
+- **Relationships**: Bidirectional many-to-many Task-Tag and Habit-Tag associations
+- **Constraints**: Unique tag names/IDs, max 3 tags per item, max 30 total tags
+- **Testing**: Comprehensive validation via ModelTestView with constraint/relationship testing
 
 ### CloudKit Foundation (✅ Phase 1.1 Complete)
 
@@ -84,21 +88,22 @@ This is a standard Xcode project. Use Xcode to build and run:
 
 ## Development Context
 
-This project is in early development following a detailed implementation roadmap. **Phase 1.1 (Foundation & Architecture) is complete.**
+This project is in early development following a detailed implementation roadmap. **Phase 1.2 (Core Data Models) is complete.**
 
 ### Current Implementation Status:
 
 1. **✅ Xcode project setup** with all required frameworks imported
 2. **✅ SwiftData ModelContainer Foundation** with versioned schema and migration plan
 3. **✅ CloudKit Foundation Setup** with privacy-first local-only mode (disabled by default)
-4. **✅ Git configuration** with comprehensive .gitignore for iOS development
-5. **✅ Architecture foundation** ready for core model implementation
-6. **📋 Comprehensive planning documents** in `/Docs` folder containing detailed implementation strategy
+4. **✅ Core Data Models** with Task, Habit, and Tag @Model classes including relationships and constraints
+5. **✅ Comprehensive testing infrastructure** via ModelTestView with validation of all constraints and relationships
+6. **✅ Git configuration** with comprehensive .gitignore for iOS development
+7. **📋 Comprehensive planning documents** in `/Docs` folder containing detailed implementation strategy
 
-### Ready for Phase 1.2:
-- Core Data Models creation (Task, Habit, Tag)
-- @Model class implementation with relationships
-- SwiftData @Relationship macros and constraints
+### Ready for Phase 1.3:
+- @Observable Pattern Implementation (TaskManager, HabitManager, TagManager)
+- Environment Setup for dependency injection
+- Manager class creation with reactive computed properties
 
 The architecture is designed to support:
 - Unified task and habit management in single views
@@ -116,9 +121,11 @@ The architecture is designed to support:
 - **✅ Privacy protection**: Local settings and certificates excluded from version control
 
 ### File Organization
-- `CloudKitManager.swift` and `LocalOnlyModeManager.swift` in main app target
-- Schema management files: `DaisyDosSchemaV1.swift`, `DaisyDosMigrationPlan.swift`
-- Documentation: `Models_README.md` tracks planned model structure
+- **Core Models**: `Task.swift`, `Habit.swift`, `Tag.swift` with full @Model implementation
+- **Infrastructure**: `CloudKitManager.swift`, `LocalOnlyModeManager.swift` in main app target
+- **Schema management**: `DaisyDosSchemaV1.swift`, `DaisyDosMigrationPlan.swift`
+- **Testing**: `ModelTestView.swift` with comprehensive constraint and relationship validation
+- **Documentation**: `Models_README.md` tracks current model structure and future plans
 
 ## Key Implementation Principles
 
