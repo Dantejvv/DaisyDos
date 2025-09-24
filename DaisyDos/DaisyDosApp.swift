@@ -46,5 +46,8 @@ struct DaisyDosApp: App {
         }
         .modelContainer(sharedModelContainer)
         .environment(localOnlyModeManager)
+        .environment(TaskManager(modelContext: sharedModelContainer.mainContext))
+        .environment(HabitManager(modelContext: sharedModelContainer.mainContext))
+        .environment(TagManager(modelContext: sharedModelContainer.mainContext))
     }
 }

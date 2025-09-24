@@ -19,6 +19,11 @@ struct ContentView: View {
                     Label("Test Models", systemImage: "hammer.circle")
                 }
 
+            ManagerTestView()
+                .tabItem {
+                    Label("Test Managers", systemImage: "gearshape.circle")
+                }
+
             NavigationSplitView {
                 List {
                     ForEach(tasks) { task in

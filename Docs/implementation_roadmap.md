@@ -105,7 +105,7 @@ class Task {
 ### 1.3 @Observable Pattern Implementation (Effort: Small-Medium)
 
 #### ✅ Manager Classes with @Observable
-- [ ] Create `TaskManager` class with `@Observable` macro:
+- [X] Create `TaskManager` class with `@Observable` macro:
 ```swift
 @Observable
 class TaskManager {
@@ -121,22 +121,22 @@ class TaskManager {
     }
 }
 ```
-- [ ] Create `HabitManager` class with `@Observable` macro and similar pattern
-- [ ] Create `TagManager` class with `@Observable` macro for tag operations
-- [ ] Implement dependency injection via initializer (ModelContext injection)
-- [ ] Test @Observable reactivity with SwiftUI views
-- [ ] **Acceptance:** Managers update views automatically, dependency injection works, computed properties reactive
+- [X] Create `HabitManager` class with `@Observable` macro and similar pattern
+- [X] Create `TagManager` class with `@Observable` macro for tag operations
+- [X] Implement dependency injection via initializer (ModelContext injection)
+- [X] Test @Observable reactivity with SwiftUI views
+- [X] **Acceptance:** Managers update views automatically, dependency injection works, computed properties reactive
 
 #### ✅ Environment Setup
-- [ ] Configure managers in `DaisyDosApp.swift` using `.environment()` modifier:
+- [X] Configure managers in `DaisyDosApp.swift` using `.environment()` modifier:
 ```swift
 .environment(TaskManager(modelContext: container.mainContext))
 .environment(HabitManager(modelContext: container.mainContext))
 ```
-- [ ] Create test views to verify `@Environment` access to managers
-- [ ] Validate that views update when manager properties change
-- [ ] Test `@Bindable` wrapper with manager objects for two-way binding
-- [ ] **Acceptance:** Environment injection works, views reactive to manager changes, bindings functional
+- [X] Create test views to verify `@Environment` access to managers
+- [X] Validate that views update when manager properties change
+- [X] Test `@Bindable` wrapper with manager objects for two-way binding
+- [X] **Acceptance:** Environment injection works, views reactive to manager changes, bindings functional
 
 ### 1.4 Error Handling Architecture (Effort: Small-Medium)
 
