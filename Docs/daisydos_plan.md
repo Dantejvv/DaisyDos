@@ -18,12 +18,13 @@
 
 ## Architecture Decisions & Implementation
 
-### Core Pattern: Model-View with Services
-- **Models**: @Observable classes with business logic, computed properties
-- **Views**: SwiftUI presentation only, no business logic
-- **Services**: External I/O operations (CloudKit, EventKit, etc.)
-- **Managers**: @Observable coordinators bridging models and services
-- **No ViewModels**: Business logic lives directly in observable models
+### Core Pattern: Apple's Model-View (MV) Pattern with @Observable
+Following Apple's WWDC recommendations and the modern SwiftUI approach:
+- **Models**: @Observable classes containing business logic, validation, and computed properties
+- **Views**: Pure SwiftUI presentation layer - Views ARE their own ViewModels in SwiftUI
+- **Services**: Lightweight coordinators for external I/O (CloudKit, EventKit, notifications)
+- **No Traditional ViewModels**: Business logic lives directly in @Observable models, eliminating unnecessary abstraction layers
+- **Direct Model-View Communication**: Views directly consume and observe models, leveraging SwiftUI's built-in reactivity
 
 ### Navigation: Hybrid Tab+Stack Pattern
 ```swift
@@ -40,27 +41,49 @@ TabView(selection: $selectedTab) {
 - NavigationManager maintains separate NavigationPath per tab
 - Future: URL structure for deep linking (design now, implement post-MVP)
 
-### State Management: @Observable Framework
+### State Management: @Observable Models with Rich Business Logic
 ```swift
-@Observable class TaskManager {
-    private let modelContext: ModelContext
-    
-    // Computed properties for filtered data
-    var todaysTasks: [Task] {
-        // Dynamic filtering logic
+@Observable class Task {
+    var id: UUID = UUID()
+    var title: String
+    var isCompleted: Bool = false
+    var createdDate: Date = Date()
+    @Relationship var tags: [Tag] = []
+
+    // Business logic lives in the model
+    var isOverdue: Bool {
+        guard let dueDate = dueDate else { return false }
+        return dueDate < Date() && !isCompleted
     }
-    
-    func fetchTasks() -> [Task] {
+
+    func toggleCompletion() {
+        isCompleted.toggle()
+        completionDate = isCompleted ? Date() : nil
+    }
+
+    func addTag(_ tag: Tag) -> Bool {
+        guard tags.count < 3, !tags.contains(where: { $0.id == tag.id }) else { return false }
+        tags.append(tag)
+        return true
+    }
+}
+
+// Service layer for data operations
+@Observable class TaskService {
+    private let modelContext: ModelContext
+
+    var todaysTasks: [Task] {
         let descriptor = FetchDescriptor<Task>(
-            predicate: #Predicate<Task> { /* conditions */ }
+            predicate: #Predicate<Task> { $0.dueDate?.isToday == true }
         )
         return (try? modelContext.fetch(descriptor)) ?? []
     }
 }
 ```
-- Dependency injection via Environment (.environment(), NOT .environmentObject())
-- ModelContext injected to managers via initializer
-- Two-way bindings with @Bindable for mutable references
+- **@Observable Models**: Rich domain objects with business logic and validation
+- **Service Layer**: Lightweight coordinators for queries and persistence operations
+- **Environment Injection**: Services injected via .environment() (NOT .environmentObject())
+- **Direct View-Model Binding**: Views use @Bindable for mutable model references
 
 ### Data Architecture: SwiftData with Hybrid Settings
 - **Primary Data**: SwiftData @Model classes (Task, Habit, Tag) with CloudKit integration
@@ -124,40 +147,49 @@ struct RecurrenceRule: Codable {
 - Shared by Tasks and Habits via optional property
 - Rule changes immediately affect future dates
 
-## File Structure
+## File Structure - Apple's MV Pattern Implementation
 
 ```
 📱 DaisyDos/
 ├── 📂 App/
-│   ├── 📄 DaisyDosApp.swift          # Entry point, ModelContainer + CloudKit setup
+│   ├── 📄 DaisyDosApp.swift          # Entry point, ModelContainer + Service injection
 │   └── 📄 ContentView.swift          # Root TabView with NavigationStacks
 │
-├── 📂 Models/
-│   ├── 📂 Core/                      # @Model classes: Task, Habit, Tag, Subtask, HabitStreak
-│   ├── 📂 Recurring/                 # RecurrenceRule business logic
-│   ├── 📂 Settings/                  # UserPreferences, LocalSettings, PrivacySettings
-│   ├── 📂 Errors/                    # DaisyDosError app-specific types
-│   ├── 📂 Search/                    # SmartList, SearchFilter, SearchableProtocol
-│   └── 📂 Activity/                  # ActivityLog, ActivityDailyAggregate, ActivityMonthlyStats
+├── 📂 Features/                      # Feature-based organization
+│   ├── 📂 Tasks/
+│   │   ├── 📂 Models/               # Task.swift - @Observable with business logic
+│   │   ├── 📂 Views/                # TaskListView, TaskDetailView, TaskRowView
+│   │   └── 📂 Services/             # TaskService.swift - lightweight queries/persistence
+│   │
+│   ├── 📂 Habits/
+│   │   ├── 📂 Models/               # Habit.swift - @Observable with streak logic
+│   │   ├── 📂 Views/                # HabitListView, HabitDetailView, HabitRowView
+│   │   └── 📂 Services/             # HabitService.swift - lightweight queries/persistence
+│   │
+│   ├── 📂 Tags/
+│   │   ├── 📂 Models/               # Tag.swift - @Observable with validation
+│   │   ├── 📂 Views/                # TagView, TagPickerView
+│   │   └── 📂 Services/             # TagService.swift - lightweight queries/persistence
+│   │
+│   ├── 📂 Today/                    # TodayView - composes models directly
+│   ├── 📂 Calendar/                 # CalendarView - direct model consumption
+│   └── 📂 Search/                   # SearchView - direct model filtering
 │
-├── 📂 Views/
-│   ├── 📂 Tasks/                     # TaskListView, TaskDetailView, TaskRowView (SHARED)
-│   ├── 📂 Habits/                    # HabitListView, HabitDetailView, HabitRowView (SHARED)
-│   ├── 📂 Today/                     # TodayView (composes shared row components)
-│   ├── 📂 Calendar/                  # CalendarView, DayView, WeekView, MonthView
-│   ├── 📂 Search/                    # SearchView, SearchResultsView, filters
-│   ├── 📂 Settings/                  # SettingsView, various setting screens
-│   └── 📂 Components/                # Reusable UI: TagView, DateTimePicker, etc.
+├── 📂 Core/
+│   ├── 📂 Data/
+│   │   ├── 📂 SwiftData/            # Schema, Migration plans
+│   │   └── 📂 CloudKit/             # CloudKitManager (lightweight coordinator)
+│   │
+│   ├── 📂 UI/
+│   │   ├── 📂 DesignSystem/         # Typography, Colors, Spacing, Components
+│   │   └── 📂 Modifiers/            # Reusable SwiftUI modifiers
+│   │
+│   ├── 📂 ErrorHandling/            # Error types, recovery, presentation
+│   └── 📂 Services/                 # System-level services (notifications, etc.)
 │
-├── 📂 Services/                      # External I/O: CloudKit, Notifications, Calendar, Data
-│
-├── 📂 Managers/                      # @Observable coordinators: TaskManager, HabitManager, etc.
-│
-├── 📂 Extensions/                    # Helpers: View+, Date+, Color+, ModelContext+
-├── 📂 Modifiers/                     # SwiftUI modifiers: GlassEffect, ErrorPresentation
-├── 📂 Protocols/                     # Syncable, Exportable, Searchable, RecoverableError
-└── 📂 Resources/                     # Assets, localization, Info.plist
-└-- 📂 AppIntents/                    # Siri & Shortcuts
+├── 📂 Extensions/                    # Swift/SwiftUI extensions
+├── 📂 Resources/                     # Assets, localization, Info.plist
+└── 📂 AppIntents/                    # Siri & Shortcuts integration
 ```
 
 ## Features
@@ -195,34 +227,26 @@ struct RecurrenceRule: Codable {
 
 ## Critical Implementation Rules
 
-### Always Do:
-- Reuse UI components across contexts
-- Filter data at manager level via computed properties
-- Use value-based navigation with .navigationDestination
-- Maintain independent navigation state per tab
-- Convert platform errors to user-friendly messages
-- Aggregate data before cleanup
-- Validate tag limits at model level
-- Use .environment() for @Observable (never .environmentObject())
-- Inject ModelContext via initializer to managers
-- Always use FetchDescriptor for querying (not storing arrays)
-- Always check Local-Only mode flag before sync operations
-- Always validate constraints at model level when possible
+### Always Do - Apple MV Pattern Best Practices:
+- **Rich Domain Models**: Put business logic, validation, and computed properties in @Observable models
+- **Direct View-Model Communication**: Views directly observe and bind to models using @Bindable
+- **Lightweight Services**: Use services only for queries, persistence, and external I/O operations
+- **Environment Injection**: Use .environment() for @Observable services (never .environmentObject())
+- **FetchDescriptor Queries**: Always use FetchDescriptor for dynamic data fetching (avoid storing arrays)
+- **Model-Level Validation**: Implement constraints and business rules within model classes
+- **Value-Based Navigation**: Use .navigationDestination with type-safe navigation
+- **Component Reusability**: Share UI components across contexts with action injection
+- **Local-Only Mode**: Always check privacy flags before sync operations
 
-
-### Never Do:
-- Duplicate UI components for different contexts
-- Filter data in views
-- Pre-generate recurring instances (calculate dynamically)
-- Use singleton ErrorManager (inject via Environment)
-- Store arrays of @Model objects in managers (use FetchDescriptor)
-- Mix navigation logic between tabs
-- Expose technical errors to users
-- Implement cross-device drag & drop
-- Don't use inheritance with @Model classes
-- Don't use only UserDefaults for complex settings
-- Don't fetch ModelContext from Environment in managers
-- Don't store arrays of @Model objects in managers
+### Never Do - Anti-Patterns to Avoid:
+- **Traditional ViewModels**: Don't create separate ViewModel classes - Views ARE ViewModels in SwiftUI
+- **Anemic Models**: Don't create data-only models - enrich them with business logic
+- **View Business Logic**: Don't put business logic in Views - keep them presentational
+- **Manager Overuse**: Don't create heavy manager classes - prefer lightweight services
+- **Array Storage**: Don't store arrays of @Model objects - use FetchDescriptor for dynamic queries
+- **Cross-Tab Navigation**: Don't mix navigation logic between independent tab stacks
+- **Technical Error Exposure**: Don't show technical errors to users - transform to friendly messages
+- **Complex View Hierarchies**: Don't create overly deep view hierarchies - favor composition
 
 ## Future Features (Post-MVP)
 - CloudKit sync with conflict resolution

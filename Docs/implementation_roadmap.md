@@ -5,10 +5,11 @@
 This roadmap provides both strategic direction and granular implementation tasks. Each task is designed to be completable in a day or less, with clear acceptance criteria. The phased approach ensures architectural validation at each step while building toward a production-ready application.
 
 **Key Architectural Decisions Validated:**
-- SwiftData + @Observable pattern for modern data flow
-- Shared UI component strategy for consistency
-- CloudKit foundation (disabled) for future sync
+- Apple's Model-View (MV) pattern with @Observable models containing business logic
+- Rich domain models replacing traditional Manager-heavy architectures
+- Lightweight Service layer for queries and external operations
 - Privacy-first approach with local-only mode
+- Feature-based organization aligning with SwiftUI's reactive nature
 
 ---
 
@@ -102,41 +103,63 @@ class Task {
 - [X] Verify SwiftData persistence across app launches
 - [X] **Acceptance:** Models persist correctly, relationships maintain integrity, constraints enforced
 
-### 1.3 @Observable Pattern Implementation (Effort: Small-Medium)
+### 1.3 Apple MV Pattern Implementation (Effort: Medium)
 
-#### ✅ Manager Classes with @Observable
-- [X] Create `TaskManager` class with `@Observable` macro:
+#### ✅ Rich @Observable Models with Business Logic
+- [X] Enhance `Task` model with business logic and validation:
 ```swift
+@Model
 @Observable
-class TaskManager {
-    private let modelContext: ModelContext
-    
-    init(modelContext: ModelContext) {
-        self.modelContext = modelContext
+class Task {
+    var title: String
+    var isCompleted: Bool = false
+    @Relationship var tags: [Tag] = []
+
+    // Business logic in the model
+    var isOverdue: Bool {
+        guard let dueDate = dueDate else { return false }
+        return dueDate < Date() && !isCompleted
     }
-    
-    var allTasks: [Task] {
-        let descriptor = FetchDescriptor<Task>()
-        return (try? modelContext.fetch(descriptor)) ?? []
+
+    func toggleCompletion() {
+        isCompleted.toggle()
+    }
+
+    func addTag(_ tag: Tag) -> Bool {
+        guard tags.count < 3 else { return false }
+        tags.append(tag)
+        return true
     }
 }
 ```
-- [X] Create `HabitManager` class with `@Observable` macro and similar pattern
-- [X] Create `TagManager` class with `@Observable` macro for tag operations
-- [X] Implement dependency injection via initializer (ModelContext injection)
-- [X] Test @Observable reactivity with SwiftUI views
-- [X] **Acceptance:** Managers update views automatically, dependency injection works, computed properties reactive
+- [X] Enhance `Habit` model with streak calculation and completion logic
+- [X] Enhance `Tag` model with usage analytics and validation methods
+- [X] Move business logic from managers into model classes
+- [X] **Acceptance:** Models contain business logic, validation, computed properties; rich domain objects
 
-#### ✅ Environment Setup
-- [X] Configure managers in `DaisyDosApp.swift` using `.environment()` modifier:
+#### ✅ Lightweight Service Layer
+- [X] Create `TaskService` for queries and persistence operations:
 ```swift
-.environment(TaskManager(modelContext: container.mainContext))
-.environment(HabitManager(modelContext: container.mainContext))
+@Observable
+class TaskService {
+    private let modelContext: ModelContext
+
+    var todaysTasks: [Task] {
+        let descriptor = FetchDescriptor<Task>(
+            predicate: #Predicate { $0.dueDate?.isToday == true }
+        )
+        return (try? modelContext.fetch(descriptor)) ?? []
+    }
+
+    func save() throws {
+        try modelContext.save()
+    }
+}
 ```
-- [X] Create test views to verify `@Environment` access to managers
-- [X] Validate that views update when manager properties change
-- [X] Test `@Bindable` wrapper with manager objects for two-way binding
-- [X] **Acceptance:** Environment injection works, views reactive to manager changes, bindings functional
+- [X] Create lightweight `HabitService` and `TagService` classes
+- [X] Services handle only queries, persistence, and external I/O
+- [X] Configure services in `DaisyDosApp.swift` using `.environment()` modifier
+- [X] **Acceptance:** Services are lightweight coordinators, business logic lives in models
 
 ### 1.4 Error Handling Architecture (Effort: Small-Medium)
 
