@@ -203,12 +203,12 @@ extension Font {
 - [X] **Acceptance:** Consistent spacing, typography works with Dynamic Type, colors pass contrast tests
 
 #### ✅ Core Reusable Components
-- [ ] Create base `CardView` component with liquid glass aesthetic
-- [ ] Create `PrimaryButton` and `SecondaryButton` with proper accessibility
-- [ ] Create `InputField` wrapper with validation and accessibility labels
-- [ ] Implement `LoadingView` and `EmptyStateView` components
-- [ ] Test all components with VoiceOver for accessibility compliance
-- [ ] **Acceptance:** Components render correctly, pass accessibility audit, reusable across contexts
+- [X] Create base `CardView` component with liquid glass aesthetic
+- [X] Create `PrimaryButton` and `SecondaryButton` with proper accessibility
+- [X] Create `InputField` wrapper with validation and accessibility labels
+- [X] Implement `LoadingView` and `EmptyStateView` components
+- [X] Test all components with VoiceOver for accessibility compliance
+- [X] **Acceptance:** Components render correctly, pass accessibility audit, reusable across contexts
 
 ### 1.6 Navigation Foundation (Effort: Small)
 

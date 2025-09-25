@@ -34,6 +34,11 @@ struct ContentView: View {
                     Label("Design System", systemImage: "paintpalette.fill")
                 }
 
+            ComponentTestView()
+                .tabItem {
+                    Label("Components", systemImage: "square.stack.3d.up.fill")
+                }
+
             NavigationSplitView {
                 List {
                     ForEach(tasks) { task in
