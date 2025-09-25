@@ -29,6 +29,11 @@ struct ContentView: View {
                     Label("Test Errors", systemImage: "exclamationmark.triangle.fill")
                 }
 
+            DesignSystemTestView()
+                .tabItem {
+                    Label("Design System", systemImage: "paintpalette.fill")
+                }
+
             NavigationSplitView {
                 List {
                     ForEach(tasks) { task in

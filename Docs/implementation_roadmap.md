@@ -188,8 +188,8 @@ protocol RecoverableError: Error {
 ### 1.5 UI Foundation & Design System (Effort: Medium)
 
 #### ✅ Design System Implementation
-- [ ] Create `DesignSystem` structure with 8pt grid spacing constants
-- [ ] Implement typography scale (max 4 sizes, 2 weights):
+- [X] Create `DesignSystem` structure with 8pt grid spacing constants
+- [X] Implement typography scale (max 4 sizes, 2 weights):
 ```swift
 extension Font {
     static let daisyTitle = Font.title2.weight(.semibold)
@@ -197,10 +197,10 @@ extension Font {
     static let daisyCaption = Font.caption.weight(.regular)
 }
 ```
-- [ ] Define color scheme following 60-30-10 rule
-- [ ] Create liquid glass design modifiers and components
-- [ ] Implement accessibility baseline: 44pt touch targets, WCAG AA contrast
-- [ ] **Acceptance:** Consistent spacing, typography works with Dynamic Type, colors pass contrast tests
+- [X] Define color scheme following 60-30-10 rule
+- [X] Create liquid glass design modifiers and components
+- [X] Implement accessibility baseline: 44pt touch targets, WCAG AA contrast
+- [X] **Acceptance:** Consistent spacing, typography works with Dynamic Type, colors pass contrast tests
 
 #### ✅ Core Reusable Components
 - [ ] Create base `CardView` component with liquid glass aesthetic

@@ -11,6 +11,7 @@
 		FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C42E8302B1007B0F25 /* daisydos_prd.md */; };
 		FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */; };
 		FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537EC2E830555007B0F25 /* CLAUDE.md */; };
+		FE353BDC2E852A39007B0F25 /* phase_1_5_design_system_plan.md in Resources */ = {isa = PBXBuildFile; fileRef = FE353BDB2E852A39007B0F25 /* phase_1_5_design_system_plan.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,6 +39,7 @@
 		FE3537C42E8302B1007B0F25 /* daisydos_prd.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = daisydos_prd.md; sourceTree = "<group>"; };
 		FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = implementation_roadmap.md; sourceTree = "<group>"; };
 		FE3537EC2E830555007B0F25 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
+		FE353BDB2E852A39007B0F25 /* phase_1_5_design_system_plan.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = phase_1_5_design_system_plan.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -130,6 +132,7 @@
 				FE3537C32E8302B1007B0F25 /* daisydos_plan.md */,
 				FE3537C42E8302B1007B0F25 /* daisydos_prd.md */,
 				FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */,
+				FE353BDB2E852A39007B0F25 /* phase_1_5_design_system_plan.md */,
 			);
 			path = Docs;
 			sourceTree = "<group>";
@@ -255,6 +258,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE353BDC2E852A39007B0F25 /* phase_1_5_design_system_plan.md in Resources */,
 				FE3537C72E8302B1007B0F25 /* daisydos_plan.md in Resources */,
 				FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */,
 				FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */,
