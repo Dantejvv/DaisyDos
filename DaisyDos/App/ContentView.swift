@@ -9,91 +9,97 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var tasks: [Task]
+    @Environment(NavigationManager.self) private var navigationManager
 
     var body: some View {
-        TabView {
-            ModelTestView()
-                .tabItem {
-                    Label("Test Models", systemImage: "hammer.circle")
-                }
+        TabView(selection: Binding(
+            get: { navigationManager.selectedTab },
+            set: { navigationManager.selectedTab = $0 }
+        )) {
 
-            ManagerTestView()
-                .tabItem {
-                    Label("Test Managers", systemImage: "gearshape.circle")
-                }
+            // MARK: - Today Tab
 
-            ErrorHandlingTestView()
-                .tabItem {
-                    Label("Test Errors", systemImage: "exclamationmark.triangle.fill")
-                }
-
-            DesignSystemTestView()
-                .tabItem {
-                    Label("Design System", systemImage: "paintpalette.fill")
-                }
-
-            ComponentTestView()
-                .tabItem {
-                    Label("Components", systemImage: "square.stack.3d.up.fill")
-                }
-
-            NavigationSplitView {
-                List {
-                    ForEach(tasks) { task in
-                        NavigationLink {
-                            Text("Task: \(task.title)")
-                                .padding()
-                            Text("Created: \(task.createdDate, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                            Text("Completed: \(task.isCompleted ? "Yes" : "No")")
-                        } label: {
-                            HStack {
-                                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(task.isCompleted ? .green : .gray)
-                                Text(task.title)
-                                Spacer()
-                            }
-                        }
+            NavigationStack(path: navigationManager.pathBinding(for: .today)) {
+                TodayView()
+                    .navigationDestination(for: String.self) { _ in
+                        // TODO: Add navigation destinations in future phases
+                        Text("Navigation destination placeholder")
                     }
-                    .onDelete(perform: deleteTasks)
-                }
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        EditButton()
-                    }
-                    ToolbarItem {
-                        Button(action: addTask) {
-                            Label("Add Task", systemImage: "plus")
-                        }
-                    }
-                }
-            } detail: {
-                Text("Select a task")
             }
             .tabItem {
-                Label("Tasks", systemImage: "list.bullet")
+                TabType.today.tabLabel
             }
-        }
-    }
+            .tag(TabType.today)
 
-    private func addTask() {
-        withAnimation {
-            let newTask = Task(title: "New Task \(Date().formatted(.dateTime.hour().minute()))")
-            modelContext.insert(newTask)
-        }
-    }
+            // MARK: - Tasks Tab
 
-    private func deleteTasks(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(tasks[index])
+            NavigationStack(path: navigationManager.pathBinding(for: .tasks)) {
+                TasksView()
+                    .navigationDestination(for: String.self) { _ in
+                        // TODO: Add navigation destinations in future phases
+                        Text("Navigation destination placeholder")
+                    }
             }
+            .tabItem {
+                TabType.tasks.tabLabel
+            }
+            .tag(TabType.tasks)
+
+            // MARK: - Habits Tab
+
+            NavigationStack(path: navigationManager.pathBinding(for: .habits)) {
+                HabitsView()
+                    .navigationDestination(for: String.self) { _ in
+                        // TODO: Add navigation destinations in future phases
+                        Text("Navigation destination placeholder")
+                    }
+            }
+            .tabItem {
+                TabType.habits.tabLabel
+            }
+            .tag(TabType.habits)
+
+            // MARK: - Tags Tab
+
+            NavigationStack(path: navigationManager.pathBinding(for: .tags)) {
+                TagsView()
+                    .navigationDestination(for: String.self) { _ in
+                        // TODO: Add navigation destinations in future phases
+                        Text("Navigation destination placeholder")
+                    }
+            }
+            .tabItem {
+                TabType.tags.tabLabel
+            }
+            .tag(TabType.tags)
+
+            // MARK: - Settings Tab
+
+            NavigationStack(path: navigationManager.pathBinding(for: .settings)) {
+                SettingsView()
+                    .navigationDestination(for: String.self) { _ in
+                        // TODO: Add navigation destinations in future phases
+                        Text("Navigation destination placeholder")
+                    }
+            }
+            .tabItem {
+                TabType.settings.tabLabel
+            }
+            .tag(TabType.settings)
         }
+        .accessibilityLabel("Main navigation")
+        .accessibilityHint("Navigate between different sections of the app")
     }
 }
 
 #Preview {
-    ContentView()
-        .modelContainer(for: Task.self, inMemory: true)
+    let container = try! ModelContainer(for: Task.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+
+    return ContentView()
+        .modelContainer(container)
+        .environment(NavigationManager())
+        .environment(TaskManager(modelContext: container.mainContext))
+        .environment(HabitManager(modelContext: container.mainContext))
+        .environment(TagManager(modelContext: container.mainContext))
+        .environment(LocalOnlyModeManager())
 }

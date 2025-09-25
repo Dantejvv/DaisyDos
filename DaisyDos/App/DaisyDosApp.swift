@@ -17,14 +17,21 @@ import UserNotifications
 @main
 struct DaisyDosApp: App {
     let localOnlyModeManager = LocalOnlyModeManager()
+    let navigationManager = NavigationManager()
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema(versionedSchema: DaisyDosSchemaV1.self)
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        // Explicitly disable CloudKit for local-only mode
+        let modelConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .none  // This disables CloudKit integration
+        )
 
-        #if DEBUG
-        // Initialize CloudKit schema for development (disabled by default)
-        // This is only for schema preparation and does not enable sync
+        #if DEBUG && false
+        // CloudKit schema initialization disabled for Phase 1.6
+        // This will be enabled in Phase 10.0 when CloudKit sync is implemented
+        // The schema validation was causing issues with local-only mode
         do {
             try CloudKitManager.initializeCloudKitSchemaIfNeeded()
             print("CloudKit schema initialization completed (DEBUG mode)")
@@ -45,6 +52,7 @@ struct DaisyDosApp: App {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
+        .environment(navigationManager)
         .environment(localOnlyModeManager)
         .environment(TaskManager(modelContext: sharedModelContainer.mainContext))
         .environment(HabitManager(modelContext: sharedModelContainer.mainContext))
