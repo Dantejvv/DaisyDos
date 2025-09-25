@@ -164,7 +164,7 @@ class TaskService {
 ### 1.4 Error Handling Architecture (Effort: Small-Medium)
 
 #### ✅ Three-Tier Error System
-- [ ] Create `DaisyDosError` enum with app-specific error cases:
+- [X] Create `DaisyDosError` enum with app-specific error cases:
 ```swift
 enum DaisyDosError: Error {
     case modelContextUnavailable
@@ -173,17 +173,17 @@ enum DaisyDosError: Error {
     case invalidRecurrence
 }
 ```
-- [ ] Implement `RecoverableError` protocol for user-facing errors:
+- [X] Implement `RecoverableError` protocol for user-facing errors:
 ```swift
 protocol RecoverableError: Error {
     var userMessage: String { get }
     var recoveryOptions: [RecoveryAction] { get }
 }
 ```
-- [ ] Create error transformation utilities (platform → app → user)
-- [ ] Implement error presentation modifiers for SwiftUI
-- [ ] Test error handling with user-friendly messages
-- [ ] **Acceptance:** Errors display user-friendly messages, recovery options available, technical details hidden
+- [X] Create error transformation utilities (platform → app → user)
+- [X] Implement error presentation modifiers for SwiftUI
+- [X] Test error handling with user-friendly messages
+- [X] **Acceptance:** Errors display user-friendly messages, recovery options available, technical details hidden
 
 ### 1.5 UI Foundation & Design System (Effort: Medium)
 

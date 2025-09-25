@@ -12,6 +12,9 @@ import SwiftData
 class HabitManager {
     private let modelContext: ModelContext
 
+    // Error handling
+    var lastError: (any RecoverableError)?
+
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
     }
@@ -69,7 +72,7 @@ class HabitManager {
         do {
             try modelContext.save()
         } catch {
-            print("Failed to create habit: \(error)")
+            lastError = ErrorTransformer.transformHabitError(error, operation: "create habit")
         }
 
         return habit
@@ -86,7 +89,7 @@ class HabitManager {
         do {
             try modelContext.save()
         } catch {
-            print("Failed to update habit: \(error)")
+            lastError = ErrorTransformer.transformHabitError(error, operation: "update habit")
         }
     }
 
@@ -101,7 +104,7 @@ class HabitManager {
             try modelContext.save()
             return true
         } catch {
-            print("Failed to mark habit completed: \(error)")
+            lastError = ErrorTransformer.transformHabitError(error, operation: "mark habit completed")
             return false
         }
     }

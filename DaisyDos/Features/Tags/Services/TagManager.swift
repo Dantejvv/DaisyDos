@@ -13,6 +13,9 @@ import SwiftUI
 class TagManager {
     private let modelContext: ModelContext
 
+    // Error handling
+    var lastError: (any RecoverableError)?
+
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
     }
@@ -71,7 +74,7 @@ class TagManager {
             try modelContext.save()
             return tag
         } catch {
-            print("Failed to create tag: \(error)")
+            lastError = ErrorTransformer.transformTagError(error, operation: "create tag")
             return nil
         }
     }
@@ -101,7 +104,7 @@ class TagManager {
             try modelContext.save()
             return true
         } catch {
-            print("Failed to update tag: \(error)")
+            lastError = ErrorTransformer.transformTagError(error, operation: "update tag")
             return false
         }
     }
@@ -119,7 +122,7 @@ class TagManager {
             try modelContext.save()
             return true
         } catch {
-            print("Failed to delete tag: \(error)")
+            lastError = ErrorTransformer.transformTagError(error, operation: "delete tag")
             return false
         }
     }
@@ -131,7 +134,7 @@ class TagManager {
         do {
             try modelContext.save()
         } catch {
-            print("Failed to force delete tag: \(error)")
+            lastError = ErrorTransformer.transformTagError(error, operation: "force delete tag")
         }
     }
 
@@ -148,7 +151,7 @@ class TagManager {
         do {
             try modelContext.save()
         } catch {
-            print("Failed to delete tags: \(error)")
+            lastError = ErrorTransformer.transformTagError(error, operation: "delete tags")
         }
 
         return deletedTags

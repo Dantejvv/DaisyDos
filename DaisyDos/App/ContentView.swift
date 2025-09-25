@@ -24,6 +24,11 @@ struct ContentView: View {
                     Label("Test Managers", systemImage: "gearshape.circle")
                 }
 
+            ErrorHandlingTestView()
+                .tabItem {
+                    Label("Test Errors", systemImage: "exclamationmark.triangle.fill")
+                }
+
             NavigationSplitView {
                 List {
                     ForEach(tasks) { task in

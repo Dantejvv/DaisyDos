@@ -359,8 +359,8 @@ struct ManagerTestView: View {
         let healthTag = tagManager.createTag(name: "Health", sfSymbolName: "heart", colorName: "red")
 
         // Create tasks
-        let task1 = taskManager.createTask(title: "Test @Observable reactivity")
-        let task2 = taskManager.createTask(title: "Validate environment injection")
+        let task1 = taskManager.createTaskSafely(title: "Test @Observable reactivity")!
+        let task2 = taskManager.createTaskSafely(title: "Validate environment injection")!
 
         // Add tags to tasks
         if let workTag = workTag {
@@ -383,7 +383,7 @@ struct ManagerTestView: View {
         }
 
         // Mark some completed
-        taskManager.toggleTaskCompletion(task1)
+        taskManager.toggleTaskCompletionSafely(task1)
         _ = habitManager.markHabitCompleted(habit1)
     }
 
