@@ -11,14 +11,15 @@ import SwiftData
 struct TasksView: View {
     @Environment(TaskManager.self) private var taskManager
     @Environment(TagManager.self) private var tagManager
+    @Query(sort: \Task.createdDate, order: .reverse) private var allTasks: [Task]
     @State private var searchText = ""
     @State private var showingAddTask = false
 
     var body: some View {
         NavigationStack {
             VStack {
-                if filteredTasks.isEmpty && searchText.isEmpty {
-                    // Empty state
+                if allTasks.isEmpty {
+                    // Empty state when no tasks exist at all
                     Spacer()
                     VStack(spacing: 20) {
                         Image(systemName: "list.bullet.circle")
@@ -36,6 +37,7 @@ struct TasksView: View {
                     Spacer()
 
                 } else {
+                    // Show search bar and tasks when we have tasks
                     // Search bar
                     HStack {
                         Image(systemName: "magnifyingglass")
@@ -46,13 +48,31 @@ struct TasksView: View {
                     .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
                     .padding(.horizontal)
 
-                    // Task list
-                    List {
-                        ForEach(filteredTasks) { task in
-                            TaskRowView(task: task)
+                    // Task list or search results
+                    if filteredTasks.isEmpty && !searchText.isEmpty {
+                        // Show "no search results" state
+                        VStack(spacing: 16) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 48))
+                                .foregroundColor(.secondary)
+
+                            Text("No results for '\(searchText)'")
+                                .font(.title2.bold())
+
+                            Text("Try adjusting your search terms")
+                                .foregroundColor(.secondary)
                         }
+                        .padding()
+                        Spacer()
+                    } else {
+                        // Show task list
+                        List {
+                            ForEach(filteredTasks) { task in
+                                TaskRowView(task: task)
+                            }
+                        }
+                        .listStyle(PlainListStyle())
                     }
-                    .listStyle(PlainListStyle())
                 }
             }
             .navigationTitle("Tasks")
@@ -73,7 +93,7 @@ struct TasksView: View {
 
     private var filteredTasks: [Task] {
         if searchText.isEmpty {
-            return taskManager.allTasks
+            return allTasks
         } else {
             return taskManager.searchTasksSafely(query: searchText)
         }
@@ -89,7 +109,7 @@ private struct TaskRowView: View {
     var body: some View {
         HStack {
             Button(action: {
-                taskManager.toggleTaskCompletionSafely(task)
+                let _ = taskManager.toggleTaskCompletionSafely(task)
             }) {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                     .foregroundColor(task.isCompleted ? .green : .secondary)
@@ -118,7 +138,7 @@ private struct TaskRowView: View {
             Spacer()
 
             Button(action: {
-                taskManager.deleteTaskSafely(task)
+                let _ = taskManager.deleteTaskSafely(task)
             }) {
                 Image(systemName: "trash")
                     .foregroundColor(.red)
@@ -161,7 +181,7 @@ private struct AddTaskView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         if !taskTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            taskManager.createTaskSafely(title: taskTitle)
+                            let _ = taskManager.createTaskSafely(title: taskTitle)
                             dismiss()
                         }
                     }

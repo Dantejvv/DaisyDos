@@ -10,12 +10,14 @@ import SwiftData
 
 struct HabitsView: View {
     @Environment(HabitManager.self) private var habitManager
+    @Query(sort: \Habit.createdDate, order: .reverse) private var allHabits: [Habit]
     @State private var searchText = ""
+    @State private var showingAddHabit = false
 
     var body: some View {
         NavigationStack {
             VStack {
-                if habitManager.allHabits.isEmpty {
+                if allHabits.isEmpty {
                     // Empty state
                     Spacer()
                     VStack(spacing: 20) {
@@ -31,9 +33,9 @@ struct HabitsView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
 
-                        Text("Habit creation will be available in future updates.")
+                        Text("Tap the + button to create your first habit!")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.blue)
                             .padding(.horizontal)
                     }
                     Spacer()
@@ -41,7 +43,7 @@ struct HabitsView: View {
                 } else {
                     // Habit list
                     List {
-                        ForEach(habitManager.allHabits) { habit in
+                        ForEach(allHabits) { habit in
                             HabitRowView(habit: habit)
                         }
                     }
@@ -52,12 +54,14 @@ struct HabitsView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        // TODO: Add habit creation
+                        showingAddHabit = true
                     }) {
                         Image(systemName: "plus")
                     }
-                    .disabled(true) // Disabled until implementation
                 }
+            }
+            .sheet(isPresented: $showingAddHabit) {
+                AddHabitView()
             }
         }
     }
@@ -67,18 +71,18 @@ struct HabitsView: View {
 
 private struct HabitRowView: View {
     let habit: Habit
+    @Environment(HabitManager.self) private var habitManager
 
     var body: some View {
         HStack {
             Button(action: {
-                // TODO: Implement habit completion
+                let _ = habitManager.markHabitCompleted(habit)
             }) {
                 Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
                     .foregroundColor(habit.isCompletedToday ? .green : .secondary)
                     .font(.title3)
             }
             .buttonStyle(PlainButtonStyle())
-            .disabled(true) // Disabled until implementation
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(habit.title)
@@ -103,8 +107,65 @@ private struct HabitRowView: View {
             }
 
             Spacer()
+
+            Button(action: {
+                habitManager.deleteHabit(habit)
+            }) {
+                Image(systemName: "trash")
+                    .foregroundColor(.red)
+            }
+            .buttonStyle(PlainButtonStyle())
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Add Habit View
+
+private struct AddHabitView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(HabitManager.self) private var habitManager
+    @State private var habitTitle = ""
+    @State private var habitDescription = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("New Habit") {
+                    TextField("Habit title", text: $habitTitle)
+                    TextField("Description (optional)", text: $habitDescription, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+
+                Section {
+                    Text("Habit tracking features like streaks and schedules will be enhanced in future updates.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .navigationTitle("Add Habit")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        if !habitTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            let _ = habitManager.createHabit(
+                                title: habitTitle,
+                                habitDescription: habitDescription.isEmpty ? "" : habitDescription
+                            )
+                            dismiss()
+                        }
+                    }
+                    .disabled(habitTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
     }
 }
 

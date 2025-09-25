@@ -10,6 +10,7 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(NavigationManager.self) private var navigationManager
+    @Environment(PerformanceMonitor.self) private var performanceMonitor
 
     var body: some View {
         TabView(selection: Binding(
@@ -89,6 +90,9 @@ struct ContentView: View {
         }
         .accessibilityLabel("Main navigation")
         .accessibilityHint("Navigate between different sections of the app")
+        .onAppear {
+            performanceMonitor.markFirstViewRenderComplete()
+        }
     }
 }
 

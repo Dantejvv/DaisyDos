@@ -213,7 +213,7 @@ extension Font {
 ### 1.6 Navigation Foundation (Effort: Small)
 
 #### ✅ Tab-Based Navigation Shell
-- [ ] Create `ContentView` with `TabView` and independent `NavigationStack` per tab:
+- [X] Create `ContentView` with `TabView` and independent `NavigationStack` per tab:
 ```swift
 TabView(selection: $selectedTab) {
     NavigationStack(path: $navigationManager.todayPath) {
@@ -221,21 +221,21 @@ TabView(selection: $selectedTab) {
     }.tabItem { Label("Today", systemImage: "calendar") }
 }
 ```
-- [ ] Create `NavigationManager` @Observable class with separate `NavigationPath` per tab
-- [ ] Implement tab switching logic with state preservation
-- [ ] Add accessibility labels for tab items
-- [ ] Test navigation between tabs maintains independent state
-- [ ] **Acceptance:** Tab navigation works, independent navigation stacks, state preserved
+- [X] Create `NavigationManager` @Observable class with separate `NavigationPath` per tab
+- [X] Implement tab switching logic with state preservation
+- [X] Add accessibility labels for tab items
+- [X] Test navigation between tabs maintains independent state
+- [X] **Acceptance:** Tab navigation works, independent navigation stacks, state preserved
 
 ### 1.7 Performance & Accessibility Baselines (Effort: Small)
 
 #### ✅ Performance Monitoring
-- [ ] Implement launch time measurement (target: <2 seconds)
-- [ ] Add memory usage monitoring and reporting
-- [ ] Create UI response time measurement utilities (target: <100ms)
-- [ ] Set up basic performance test suite
-- [ ] Document baseline performance metrics
-- [ ] **Acceptance:** Performance monitoring active, baselines documented, meets targets
+- [X] Implement launch time measurement (target: <2 seconds)
+- [X] Add memory usage monitoring and reporting
+- [X] Create UI response time measurement utilities (target: <100ms)
+- [X] Set up basic performance test suite
+- [X] Document baseline performance metrics
+- [X] **Acceptance:** Performance monitoring active, baselines documented, meets targets
 
 #### ✅ Accessibility Audit Framework
 - [ ] Configure VoiceOver testing for all implemented components
