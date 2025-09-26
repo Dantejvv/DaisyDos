@@ -118,10 +118,10 @@ struct UIResponseTimeTracker {
 
         var color: Color {
             switch self {
-            case .excellent: return .green
+            case .excellent: return Color(.systemGreen)
             case .good: return .mint
             case .acceptable: return .yellow
-            case .slow: return .orange
+            case .slow: return Color(.systemOrange)
             case .unacceptable: return .red
             }
         }

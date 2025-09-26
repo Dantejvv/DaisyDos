@@ -10,6 +10,12 @@ import SwiftData
 
 struct TagsView: View {
     @Environment(TagManager.self) private var tagManager
+    @Query(sort: [SortDescriptor(\Tag.name)]) private var allTags: [Tag]
+
+    @State private var showingCreateTag = false
+    @State private var selectedTag: Tag?
+    @State private var showingEditTag = false
+    @State private var searchText = ""
 
     var body: some View {
         NavigationStack {
@@ -19,7 +25,7 @@ struct TagsView: View {
                     VStack(alignment: .leading) {
                         Text("Total Tags")
                             .font(.headline)
-                        Text("\(tagManager.tagCount) of 30")
+                        Text("\(allTags.count) of 30")
                             .font(.title2.bold())
                     }
 
@@ -37,7 +43,7 @@ struct TagsView: View {
                 .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
                 .padding(.horizontal)
 
-                if tagManager.allTags.isEmpty {
+                if allTags.isEmpty {
                     // Empty state
                     Spacer()
                     VStack(spacing: 20) {
@@ -61,14 +67,27 @@ struct TagsView: View {
                     Spacer()
 
                 } else {
+                    // Search bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                        TextField("Search tags...", text: $searchText)
+                    }
+                    .padding()
+                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal)
+
                     // Tag grid
                     ScrollView {
                         LazyVGrid(columns: [
                             GridItem(.flexible()),
                             GridItem(.flexible())
                         ], spacing: 16) {
-                            ForEach(tagManager.allTags) { tag in
-                                TagCardView(tag: tag)
+                            ForEach(filteredTags) { tag in
+                                TagCardView(tag: tag) {
+                                    selectedTag = tag
+                                    showingEditTag = true
+                                }
                             }
                         }
                         .padding(.horizontal)
@@ -76,15 +95,31 @@ struct TagsView: View {
                 }
             }
             .navigationTitle("Tags")
+            .sheet(isPresented: $showingCreateTag) {
+                TagCreationView()
+            }
+            .sheet(item: $selectedTag) { tag in
+                TagEditView(tag: tag)
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        // TODO: Add tag creation
+                        showingCreateTag = true
                     }) {
                         Image(systemName: "plus")
                     }
-                    .disabled(true) // Disabled until implementation
+                    .disabled(allTags.count >= 30)
                 }
+            }
+        }
+    }
+
+    private var filteredTags: [Tag] {
+        if searchText.isEmpty {
+            return allTags
+        } else {
+            return allTags.filter { tag in
+                tag.name.localizedCaseInsensitiveContains(searchText)
             }
         }
     }
@@ -94,6 +129,7 @@ struct TagsView: View {
 
 private struct TagCardView: View {
     let tag: Tag
+    let onTap: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -102,7 +138,7 @@ private struct TagCardView: View {
                 HStack(spacing: 8) {
                     Image(systemName: tag.sfSymbolName)
                         .font(.title2)
-                        .foregroundColor(Color(tag.colorName))
+                        .foregroundColor(tag.color)
 
                     Text(tag.name)
                         .font(.headline)
@@ -118,7 +154,7 @@ private struct TagCardView: View {
                     Image(systemName: "list.bullet")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("Tasks: Coming soon")
+                    Text("Tasks: \(tag.tasks.count)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -127,7 +163,7 @@ private struct TagCardView: View {
                     Image(systemName: "repeat.circle")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("Habits: Coming soon")
+                    Text("Habits: \(tag.habits.count)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -135,13 +171,17 @@ private struct TagCardView: View {
         }
         .padding()
         .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
     }
 }
 
 #Preview {
     let container = try! ModelContainer(for: Tag.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
 
-    return TagsView()
+    TagsView()
         .modelContainer(container)
         .environment(TagManager(modelContext: container.mainContext))
 }

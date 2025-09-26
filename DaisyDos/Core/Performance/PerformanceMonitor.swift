@@ -81,7 +81,7 @@ class PerformanceMonitor {
             var color: Color {
                 switch self {
                 case .info: return .blue
-                case .warning: return .orange
+                case .warning: return Color(.systemOrange)
                 case .critical: return .red
                 }
             }

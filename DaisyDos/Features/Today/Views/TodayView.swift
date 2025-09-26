@@ -42,7 +42,7 @@ struct TodayView: View {
                                 Text("Completed")
                                     .font(.headline)
                                 Text("\(taskManager.todaysTasks.filter { $0.isCompleted }.count)")
-                                    .foregroundColor(.green)
+                                    .foregroundColor(Color(.systemGreen))
                             }
                         }
 
@@ -86,7 +86,7 @@ struct TodayView: View {
                                             taskManager.toggleTaskCompletionSafely(task)
                                         }) {
                                             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(task.isCompleted ? .green : .secondary)
+                                                .foregroundColor(task.isCompleted ? Color(.systemGreen) : .secondary)
                                         }
                                         .buttonStyle(PlainButtonStyle())
 

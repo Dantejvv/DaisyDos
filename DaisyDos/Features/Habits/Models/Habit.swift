@@ -19,7 +19,13 @@ class Habit {
     var lastCompletedDate: Date?
 
     @Relationship(deleteRule: .nullify, inverse: \Tag.habits)
-    var tags: [Tag] = []
+    var tags: [Tag] = [] {
+        didSet {
+            if tags.count > 3 {
+                tags = Array(tags.prefix(3))
+            }
+        }
+    }
 
     init(title: String, habitDescription: String = "") {
         self.id = UUID()

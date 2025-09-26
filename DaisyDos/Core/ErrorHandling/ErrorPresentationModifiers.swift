@@ -251,7 +251,7 @@ struct ErrorBannerView: View {
     private func colorForPriority(_ priority: ErrorPriority) -> Color {
         switch priority {
         case .low: return .blue
-        case .medium: return .orange
+        case .medium: return Color(.systemOrange)
         case .high: return .red
         case .critical: return .red
         }
@@ -285,7 +285,7 @@ struct ErrorOverlayView: View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.largeTitle)
-                .foregroundColor(.orange)
+                .foregroundColor(Color(.systemOrange))
 
             VStack(spacing: 8) {
                 Text(error.userMessage)

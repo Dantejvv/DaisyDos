@@ -79,7 +79,7 @@ private struct HabitRowView: View {
                 let _ = habitManager.markHabitCompleted(habit)
             }) {
                 Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(habit.isCompletedToday ? .green : .secondary)
+                    .foregroundColor(habit.isCompletedToday ? Color(.systemGreen) : .secondary)
                     .font(.title3)
             }
             .buttonStyle(PlainButtonStyle())
@@ -92,7 +92,7 @@ private struct HabitRowView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "flame.fill")
                             .font(.caption)
-                            .foregroundColor(habit.currentStreak > 0 ? .orange : .secondary)
+                            .foregroundColor(habit.currentStreak > 0 ? Color(.systemOrange) : .secondary)
                         Text("\(habit.currentStreak) day streak")
                             .font(.caption)
                             .foregroundColor(.secondary)

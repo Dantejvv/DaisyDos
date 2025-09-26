@@ -124,8 +124,8 @@ struct TabConfiguration {
 
         /// Badge color for different types of notifications
         static let defaultBadgeColor = Color.red
-        static let habitStreakBadgeColor = Color.green
-        static let overdueTasksBadgeColor = Color.orange
+        static let habitStreakBadgeColor = Color(.systemGreen)
+        static let overdueTasksBadgeColor = Color(.systemOrange)
     }
 }
 

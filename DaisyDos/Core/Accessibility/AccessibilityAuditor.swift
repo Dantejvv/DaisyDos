@@ -494,7 +494,7 @@ enum AccessibilityGrade: String, CaseIterable {
     var color: Color {
         switch self {
         case .aPlus, .a: return Colors.Accent.success
-        case .bPlus, .b: return Color.green
+        case .bPlus, .b: return Color(.systemGreen)
         case .cPlus, .c: return Colors.Accent.warning
         case .d, .f: return Colors.Accent.error
         }
@@ -573,7 +573,7 @@ enum AccessibilityValidationStatus {
     var color: Color {
         switch self {
         case .excellent: return Colors.Accent.success
-        case .good: return Color.green
+        case .good: return Color(.systemGreen)
         case .needsImprovement: return Colors.Accent.warning
         case .critical: return Colors.Accent.error
         }
@@ -654,7 +654,7 @@ enum WCAGComplianceLevel: String, CaseIterable {
         switch self {
         case .nonCompliant: return Colors.Accent.error
         case .a: return Colors.Accent.warning
-        case .aa: return Color.green
+        case .aa: return Color(.systemGreen)
         case .aaa: return Colors.Accent.success
         }
     }

@@ -266,7 +266,7 @@ TabView(selection: $selectedTab) {
 ### 2.1 Complete Task Data Models (Effort: Medium)
 
 #### ✅ Enhanced Task Model
-- [ ] Extend `Task` model with priority levels (Low, Medium, High):
+- [X] Extend `Task` model with priority levels (Low, Medium, High):
 ```swift
 enum Priority: String, CaseIterable, Codable {
     case low = "Low"
@@ -274,18 +274,18 @@ enum Priority: String, CaseIterable, Codable {
     case high = "High"
 }
 ```
-- [ ] Add due date and start date properties with proper Date handling
-- [ ] Implement subtask relationships with unlimited nesting:
+- [X] Add due date and start date properties with proper Date handling
+- [X] Implement subtask relationships with unlimited nesting:
 ```swift
 @Relationship(deleteRule: .cascade) var subtasks: [Task] = []
 @Relationship(inverse: \Task.subtasks) var parentTask: Task?
 ```
-- [ ] Add attachment properties for PhotoKit integration
-- [ ] Create `RecurrenceRule` struct with dynamic calculation
-- [ ] **Acceptance:** Enhanced models persist correctly, relationships maintain integrity
+- [X] Add attachment properties for PhotoKit integration
+- [X] Create `RecurrenceRule` struct with dynamic calculation
+- [X] **Acceptance:** Enhanced models persist correctly, relationships maintain integrity
 
 #### ✅ Tag System Implementation
-- [ ] Implement tag assignment validation (max 3 per task):
+- [X] Implement tag assignment validation (max 3 per task):
 ```swift
 var tags: [Tag] = [] {
     didSet { 
@@ -293,11 +293,11 @@ var tags: [Tag] = [] {
     }
 }
 ```
-- [ ] Create tag pool management (max 30 total tags system-wide)
-- [ ] Implement SF Symbol icon selection and system color assignment
-- [ ] Add drag & drop support for tag assignment
-- [ ] Test tag validation across multiple task instances
-- [ ] **Acceptance:** Tag limits enforced, visual feedback works, drag & drop functional
+- [X] Create tag pool management (max 30 total tags system-wide)
+- [X] Implement SF Symbol icon selection and system color assignment
+- [X] Add drag & drop support for tag assignment
+- [X] Test tag validation across multiple task instances
+- [X] **Acceptance:** Tag limits enforced, visual feedback works, drag & drop functional
 
 ### 2.2 TaskRowView - Reusable Component Strategy (Effort: Medium)
 

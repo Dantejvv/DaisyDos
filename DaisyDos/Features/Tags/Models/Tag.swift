@@ -10,7 +10,7 @@ import SwiftData
 import SwiftUI
 
 @Model
-class Tag {
+class Tag: Identifiable {
     @Attribute(.unique) var id: UUID
     @Attribute(.unique) var name: String
     var sfSymbolName: String
@@ -33,16 +33,16 @@ class Tag {
 
     var color: Color {
         switch colorName.lowercased() {
-        case "red": return .red
-        case "orange": return .orange
-        case "yellow": return .yellow
-        case "green": return .green
-        case "blue": return .blue
-        case "purple": return .purple
-        case "pink": return .pink
-        case "brown": return .brown
-        case "gray": return .gray
-        default: return .blue
+        case "red": return Color(.systemRed)
+        case "orange": return Color(.systemOrange)
+        case "yellow": return Color(.systemYellow)
+        case "green": return Color(.systemGreen)
+        case "blue": return Color(.systemBlue)
+        case "purple": return Color(.systemPurple)
+        case "pink": return Color(.systemPink)
+        case "brown": return Color(.systemBrown)
+        case "gray": return Color(.systemGray)
+        default: return Color(.systemBlue)
         }
     }
 

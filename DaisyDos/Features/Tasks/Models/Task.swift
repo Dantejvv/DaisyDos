@@ -27,7 +27,13 @@ class Task {
 
     // MARK: - Relationships
     @Relationship(deleteRule: .nullify, inverse: \Tag.tasks)
-    var tags: [Tag] = []
+    var tags: [Tag] = [] {
+        didSet {
+            if tags.count > 3 {
+                tags = Array(tags.prefix(3))
+            }
+        }
+    }
 
     @Relationship(deleteRule: .cascade)
     var subtasks: [Task] = []

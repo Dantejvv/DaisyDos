@@ -644,22 +644,22 @@ private struct PerformanceStatusRow: View {
             HStack(spacing: 8) {
                 // Launch time indicator
                 Circle()
-                    .fill(summary.launchTimeMeetsTarget ? .green : .red)
+                    .fill(summary.launchTimeMeetsTarget ? Color(.systemGreen) : Color(.systemRed))
                     .frame(width: 8, height: 8)
 
                 // Memory indicator
                 Circle()
-                    .fill(summary.memoryMeetsTarget ? .green : .red)
+                    .fill(summary.memoryMeetsTarget ? Color(.systemGreen) : Color(.systemRed))
                     .frame(width: 8, height: 8)
 
                 // UI response indicator
                 Circle()
-                    .fill(summary.uiResponseMeetsTarget ? .green : .red)
+                    .fill(summary.uiResponseMeetsTarget ? Color(.systemGreen) : Color(.systemRed))
                     .frame(width: 8, height: 8)
 
                 Text(summary.overallHealthy ? "Good" : "Issues")
                     .font(.caption)
-                    .foregroundColor(summary.overallHealthy ? .green : .orange)
+                    .foregroundColor(summary.overallHealthy ? Color(.systemGreen) : Color(.systemOrange))
             }
         }
     }
@@ -706,7 +706,7 @@ private struct PerformanceDashboardView: View {
                         .font(.daisySubtitle)
                     Text("\(String(format: "%.2f", summary.launchTime))s")
                         .font(.daisyBody.weight(.semibold))
-                        .foregroundColor(summary.launchTimeMeetsTarget ? .green : .red)
+                        .foregroundColor(summary.launchTimeMeetsTarget ? Color(.systemGreen) : .red)
                     Text("Target: <2.0s")
                         .font(.daisyCaption)
                         .foregroundColor(.secondary)
@@ -719,7 +719,7 @@ private struct PerformanceDashboardView: View {
                         .font(.daisySubtitle)
                     Text("\(String(format: "%.1f", summary.currentMemoryUsage))MB")
                         .font(.daisyBody.weight(.semibold))
-                        .foregroundColor(summary.memoryMeetsTarget ? .green : .red)
+                        .foregroundColor(summary.memoryMeetsTarget ? Color(.systemGreen) : .red)
                     Text("Peak: \(String(format: "%.1f", summary.peakMemoryUsage))MB")
                         .font(.daisyCaption)
                         .foregroundColor(.secondary)
@@ -732,7 +732,7 @@ private struct PerformanceDashboardView: View {
                         .font(.daisySubtitle)
                     Text("\(String(format: "%.0f", summary.averageUIResponseTime * 1000))ms")
                         .font(.daisyBody.weight(.semibold))
-                        .foregroundColor(summary.uiResponseMeetsTarget ? .green : .red)
+                        .foregroundColor(summary.uiResponseMeetsTarget ? Color(.systemGreen) : .red)
                     Text("Target: <100ms")
                         .font(.daisyCaption)
                         .foregroundColor(.secondary)
@@ -741,11 +741,11 @@ private struct PerformanceDashboardView: View {
 
             HStack {
                 Image(systemName: summary.overallHealthy ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                    .foregroundColor(summary.overallHealthy ? .green : .orange)
+                    .foregroundColor(summary.overallHealthy ? Color(.systemGreen) : Color(.systemOrange))
 
                 Text(summary.overallHealthy ? "All performance metrics are healthy" : "Some performance issues detected")
                     .font(.daisyBody)
-                    .foregroundColor(summary.overallHealthy ? .green : .orange)
+                    .foregroundColor(summary.overallHealthy ? Color(.systemGreen) : Color(.systemOrange))
             }
         }
         .asCard()
@@ -794,7 +794,7 @@ private struct PerformanceDashboardView: View {
             if performanceMonitor.performanceAlerts.isEmpty {
                 HStack {
                     Image(systemName: "checkmark.circle")
-                        .foregroundColor(.green)
+                        .foregroundColor(Color(.systemGreen))
                     Text("No performance alerts")
                         .font(.daisyBody)
                         .foregroundColor(.secondary)

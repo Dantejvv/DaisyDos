@@ -170,8 +170,8 @@ struct MemoryMonitor {
         var statusColor: Color {
             switch statusDescription {
             case "Critical": return .red
-            case "Warning": return .orange
-            default: return .green
+            case "Warning": return Color(.systemOrange)
+            default: return Color(.systemGreen)
             }
         }
     }
@@ -195,7 +195,7 @@ struct MemoryMonitor {
             var color: Color {
                 switch self {
                 case .low: return .yellow
-                case .medium: return .orange
+                case .medium: return Color(.systemOrange)
                 case .high: return .red
                 }
             }
@@ -223,7 +223,7 @@ struct MemoryMonitor {
             var color: Color {
                 switch self {
                 case .low: return .blue
-                case .medium: return .orange
+                case .medium: return Color(.systemOrange)
                 case .high: return .red
                 }
             }
@@ -318,9 +318,9 @@ extension MemoryMonitor {
 
         var color: Color {
             switch self {
-            case .normal: return .green
+            case .normal: return Color(.systemGreen)
             case .moderate: return .yellow
-            case .high: return .orange
+            case .high: return Color(.systemOrange)
             case .critical: return .red
             }
         }
