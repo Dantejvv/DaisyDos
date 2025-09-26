@@ -167,6 +167,11 @@ private struct DeveloperToolsView: View {
                         Label("Components", systemImage: "square.stack.3d.up.fill")
                     }
 
+                AccessibilityDeveloperView()
+                    .tabItem {
+                        Label("Accessibility", systemImage: "accessibility")
+                    }
+
                 PerformanceTestView()
                     .tabItem {
                         Label("Performance", systemImage: "speedometer")
@@ -181,6 +186,423 @@ private struct DeveloperToolsView: View {
                     }
                 }
             }
+        }
+    }
+}
+
+// MARK: - Accessibility Developer View
+
+private struct AccessibilityDeveloperView: View {
+    @State private var selectedTool: AccessibilityTool = .testing
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Tool Selection
+                Picker("Accessibility Tool", selection: $selectedTool) {
+                    ForEach(AccessibilityTool.allCases, id: \.rawValue) { tool in
+                        Text(tool.rawValue).tag(tool)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding()
+
+                // Tool Content
+                Group {
+                    switch selectedTool {
+                    case .testing:
+                        AccessibilityTestView()
+                    case .dynamicType:
+                        DynamicTypeTestView()
+                    case .touchTargets:
+                        TouchTargetAuditView()
+                    case .dashboard:
+                        AccessibilityDashboardView()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
+}
+
+private enum AccessibilityTool: String, CaseIterable {
+    case testing = "Testing"
+    case dynamicType = "Dynamic Type"
+    case touchTargets = "Touch Targets"
+    case dashboard = "Dashboard"
+}
+
+// MARK: - Accessibility Dashboard
+
+private struct AccessibilityDashboardView: View {
+    @StateObject private var auditor = AccessibilityAuditor()
+    @State private var quickValidation: AccessibilityQuickValidation?
+    @State private var isRunningQuickCheck = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.medium) {
+
+                // MARK: - Quick Status
+
+                AccessibilityQuickStatusCard(
+                    validation: quickValidation,
+                    isLoading: isRunningQuickCheck
+                )
+
+                // MARK: - Compliance Score
+
+                if let score = auditor.complianceScore {
+                    AccessibilityComplianceCard(score: score)
+                }
+
+                // MARK: - Quick Actions
+
+                AccessibilityQuickActionsCard(
+                    onRunQuickCheck: runQuickValidation,
+                    onRunFullAudit: runFullAudit,
+                    onGenerateReport: generateComplianceReport,
+                    isRunningAudit: auditor.isRunningAudit,
+                    isRunningQuickCheck: isRunningQuickCheck
+                )
+
+                // MARK: - Recent Audit Results
+
+                if !auditor.auditHistory.isEmpty {
+                    AccessibilityAuditHistoryCard(history: Array(auditor.auditHistory.suffix(3)))
+                }
+
+                // MARK: - Accessibility Guidelines
+
+                AccessibilityGuidelinesCard()
+            }
+            .padding(Spacing.medium)
+        }
+        .onAppear {
+            runQuickValidation()
+        }
+    }
+
+    private func runQuickValidation() {
+        isRunningQuickCheck = true
+        // Simulate quick validation for now
+        quickValidation = nil
+        isRunningQuickCheck = false
+    }
+
+    private func runFullAudit() {
+        // Simulate full audit for now
+        print("Full audit would run here")
+    }
+
+    private func generateComplianceReport() {
+        let report = auditor.generateComplianceReport()
+        // In a real implementation, this would export or display the report
+        print("Generated compliance report with \(report.recommendations.count) recommendations")
+    }
+}
+
+// MARK: - Accessibility Dashboard Cards
+
+private struct AccessibilityQuickStatusCard: View {
+    let validation: AccessibilityQuickValidation?
+    let isLoading: Bool
+
+    var body: some View {
+        CardView {
+            VStack(alignment: .leading, spacing: Spacing.small) {
+                HStack {
+                    Image(systemName: "accessibility.fill")
+                        .font(.title2)
+                        .foregroundStyle(Colors.Secondary.blue)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Accessibility Status")
+                            .font(.headline)
+
+                        if let validation = validation {
+                            Text(validation.overallStatus.description)
+                                .font(.subheadline)
+                                .foregroundStyle(validation.overallStatus.color)
+                        } else if isLoading {
+                            Text("Checking accessibility status...")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("Status unknown")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Spacer()
+
+                    if isLoading {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
+                }
+
+                if let validation = validation {
+                    Divider()
+
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: Spacing.small) {
+                        StatusIndicator(
+                            title: "Dynamic Type",
+                            passed: validation.dynamicTypeSupport.passed,
+                            score: validation.dynamicTypeSupport.score
+                        )
+
+                        StatusIndicator(
+                            title: "Touch Targets",
+                            passed: validation.touchTargetCompliance.passed,
+                            score: validation.touchTargetCompliance.score
+                        )
+
+                        StatusIndicator(
+                            title: "Contrast",
+                            passed: validation.colorContrastCompliance.passed,
+                            score: validation.colorContrastCompliance.score
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct StatusIndicator: View {
+    let title: String
+    let passed: Bool
+    let score: Int
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("\(score)")
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundStyle(passed ? Colors.Accent.success : Colors.Accent.warning)
+
+            Text(title)
+                .font(.caption)
+                .multilineTextAlignment(.center)
+        }
+    }
+}
+
+private struct AccessibilityComplianceCard: View {
+    let score: AccessibilityComplianceScore
+
+    var body: some View {
+        CardView {
+            VStack(alignment: .leading, spacing: Spacing.small) {
+                Text("Compliance Score")
+                    .font(.headline)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(score.overallScore)")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundStyle(scoreColor)
+
+                        Text("Overall Score")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 4) {
+                        if score.criticalIssues > 0 {
+                            Label("\(score.criticalIssues) Critical", systemImage: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                                .foregroundStyle(Colors.Accent.error)
+                        }
+
+                        if score.warnings > 0 {
+                            Label("\(score.warnings) Warnings", systemImage: "exclamationmark.circle")
+                                .font(.caption)
+                                .foregroundStyle(Colors.Accent.warning)
+                        }
+                    }
+                }
+
+                if score.lastAuditDate != Date.distantPast {
+                    Text("Last audit: \(score.lastAuditDate, format: .relative(presentation: .named))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var scoreColor: Color {
+        switch score.overallScore {
+        case 90...100: return Colors.Accent.success
+        case 70...89: return Colors.Accent.warning
+        default: return Colors.Accent.error
+        }
+    }
+}
+
+private struct AccessibilityQuickActionsCard: View {
+    let onRunQuickCheck: () -> Void
+    let onRunFullAudit: () -> Void
+    let onGenerateReport: () -> Void
+    let isRunningAudit: Bool
+    let isRunningQuickCheck: Bool
+
+    var body: some View {
+        CardView {
+            VStack(alignment: .leading, spacing: Spacing.small) {
+                Text("Quick Actions")
+                    .font(.headline)
+
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: Spacing.small) {
+                    DaisyButton(
+                        title: "Quick Check",
+                        style: .secondary,
+                        size: .small,
+                        icon: "checkmark.circle",
+                        isLoading: isRunningQuickCheck,
+                        action: onRunQuickCheck
+                    )
+
+                    DaisyButton(
+                        title: "Full Audit",
+                        style: .primary,
+                        size: .small,
+                        icon: "magnifyingglass.circle",
+                        isLoading: isRunningAudit,
+                        action: onRunFullAudit
+                    )
+
+                    DaisyButton(
+                        title: "Export Report",
+                        style: .tertiary,
+                        size: .small,
+                        icon: "square.and.arrow.up",
+                        action: onGenerateReport
+                    )
+
+                    DaisyButton(
+                        title: "View Guidelines",
+                        style: .tertiary,
+                        size: .small,
+                        icon: "book",
+                        action: {}
+                    )
+                }
+            }
+        }
+    }
+}
+
+private struct AccessibilityAuditHistoryCard: View {
+    let history: [AccessibilityAuditSession]
+
+    var body: some View {
+        CardView {
+            VStack(alignment: .leading, spacing: Spacing.small) {
+                Text("Recent Audits")
+                    .font(.headline)
+
+                ForEach(history.indices, id: \.self) { index in
+                    let session = history[index]
+
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(session.timestamp, format: .dateTime.month().day().hour().minute())
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+
+                            if let score = session.overallScore {
+                                Text("Score: \(score.value) (\(score.grade.rawValue))")
+                                    .font(.caption)
+                                    .foregroundStyle(score.grade.color)
+                            }
+                        }
+
+                        Spacer()
+
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("\(session.results.count) rules")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            let issues = session.results.reduce(0) { $0 + $1.issues.count }
+                            if issues > 0 {
+                                Text("\(issues) issues")
+                                    .font(.caption)
+                                    .foregroundStyle(Colors.Accent.error)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 2)
+
+                    if index < history.count - 1 {
+                        Divider()
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct AccessibilityGuidelinesCard: View {
+    var body: some View {
+        CardView {
+            VStack(alignment: .leading, spacing: Spacing.small) {
+                Text("Accessibility Guidelines")
+                    .font(.headline)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    GuidelineItem(
+                        icon: "eye",
+                        text: "Test with VoiceOver enabled regularly"
+                    )
+
+                    GuidelineItem(
+                        icon: "textformat.size",
+                        text: "Support all Dynamic Type sizes (XS to AX5)"
+                    )
+
+                    GuidelineItem(
+                        icon: "hand.tap",
+                        text: "Ensure minimum 44×44pt touch targets"
+                    )
+
+                    GuidelineItem(
+                        icon: "circle.lefthalf.filled",
+                        text: "Maintain WCAG AA contrast ratios"
+                    )
+
+                    GuidelineItem(
+                        icon: "keyboard",
+                        text: "Support keyboard and Switch Control navigation"
+                    )
+                }
+            }
+        }
+    }
+}
+
+private struct GuidelineItem: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundStyle(Colors.Secondary.blue)
+                .frame(width: 16)
+
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 }
