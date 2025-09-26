@@ -89,6 +89,12 @@ extension DaisyDosError: RecoverableError {
             return "Too many tags"
         case .invalidRecurrence:
             return "Invalid schedule settings"
+        case .invalidDateRange:
+            return "Invalid dates"
+        case .circularReference:
+            return "Invalid task relationship"
+        case .attachmentLimitExceeded:
+            return "Attachment too large"
         case .duplicateEntity(let type):
             return "\(type.capitalized) already exists"
         case .entityNotFound(let type):
@@ -118,6 +124,12 @@ extension DaisyDosError: RecoverableError {
             return "You can only have 3 tags per item and 30 total tags in your system."
         case .invalidRecurrence:
             return "The schedule you've set up has invalid settings."
+        case .invalidDateRange:
+            return "The start date must be before the due date."
+        case .circularReference:
+            return "This would create a circular relationship between tasks."
+        case .attachmentLimitExceeded:
+            return "This attachment would exceed the size limit for tasks."
         case .duplicateEntity:
             return "An item with this information already exists in your system."
         case .entityNotFound:
@@ -174,6 +186,26 @@ extension DaisyDosError: RecoverableError {
                 RecoveryAction(title: "Cancel", style: .secondary) { /* Cancel */ }
             ]
 
+        case .invalidDateRange:
+            return [
+                RecoveryAction(title: "Fix Dates", style: .primary) { /* Return to date editor */ },
+                RecoveryAction(title: "Remove Dates", style: .secondary) { /* Clear dates */ },
+                RecoveryAction(title: "Cancel", style: .secondary) { /* Cancel */ }
+            ]
+
+        case .circularReference:
+            return [
+                RecoveryAction(title: "Choose Different Parent", style: .primary) { /* Parent selection */ },
+                RecoveryAction(title: "Cancel", style: .secondary) { /* Cancel */ }
+            ]
+
+        case .attachmentLimitExceeded:
+            return [
+                RecoveryAction(title: "Remove Attachments", style: .primary) { /* Attachment management */ },
+                RecoveryAction(title: "Choose Smaller File", style: .secondary) { /* File picker */ },
+                RecoveryAction(title: "Cancel", style: .secondary) { /* Cancel */ }
+            ]
+
         case .duplicateEntity:
             return [
                 RecoveryAction(title: "Edit Existing", style: .primary) { /* Edit existing */ },
@@ -216,7 +248,7 @@ extension DaisyDosError: RecoverableError {
 
     var priority: ErrorPriority {
         switch self {
-        case .validationFailed, .tagLimitExceeded, .invalidRecurrence:
+        case .validationFailed, .tagLimitExceeded, .invalidRecurrence, .invalidDateRange, .circularReference, .attachmentLimitExceeded:
             return .low
         case .duplicateEntity, .entityNotFound, .persistenceFailed:
             return .medium

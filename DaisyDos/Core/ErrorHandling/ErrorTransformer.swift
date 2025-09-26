@@ -265,7 +265,7 @@ class ErrorTransformer {
         }
 
         if description.contains("recurrence") || description.contains("schedule") {
-            return .invalidRecurrence(error.localizedDescription)
+            return .invalidRecurrence
         }
 
         return .validationFailed(context.entityType ?? "data")

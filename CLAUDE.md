@@ -62,32 +62,46 @@ This is a standard Xcode project. Use Xcode to build and run:
 
 ## Development Context
 
-**Phase 1.0 Complete - Phase 2.0 In Progress**
+**Phase 1.0 Complete - Phase 2.1 Enhanced Task Model Complete**
 
 ### Current Status
-DaisyDos has a solid architectural foundation with all core systems implemented. The app currently features:
+DaisyDos has a robust architectural foundation with enhanced task management capabilities implemented. The app currently features:
+
+**Core Foundation (Phase 1.0 Complete):**
 - Complete tab-based navigation (Today, Tasks, Habits, Tags, Settings)
-- Full task management capabilities (CRUD operations, search)
+- Basic task management capabilities (CRUD operations, search)
 - Privacy-first local-only data storage
 - WCAG AA accessibility compliance
 - Professional UI with liquid glass design aesthetic
 - Performance monitoring and developer tools
 
-### Phase 2.0 Goals
-Enhanced task management features:
-- **Due dates and reminders**: EventKit integration for calendar sync
-- **Priority levels**: High/Medium/Low priority system with visual indicators
-- **Advanced filtering**: Filter by status, priority, due date, tags
-- **Quick actions**: Swipe gestures and context menus
-- **Task dependencies**: Basic task relationships
+**Enhanced Task Model (Phase 2.1 Complete):**
+- ✅ **Priority System**: Low/Medium/High with visual indicators (colors, SF symbols)
+- ✅ **Due Dates & Start Dates**: Full date management with timezone support
+- ✅ **Task Descriptions**: Rich text descriptions for detailed task information
+- ✅ **Subtask Relationships**: Unlimited nesting with circular reference protection
+- ✅ **File Attachments**: PhotoKit integration, 50MB per file, 200MB per task limit
+- ✅ **Recurrence Rules**: Daily/weekly/monthly/yearly patterns with dynamic calculations
+- ✅ **Advanced Filtering**: Priority, due date, overdue, and smart today's tasks
+- ✅ **Enhanced TaskManager**: 60+ new methods for comprehensive task operations
+- ✅ **SwiftData V2 Schema**: Migration-ready with robust error handling
+
+### Phase 2.0 Remaining Goals
+UI Components and Integration:
+- **TaskRowView Component**: Reusable shared component for all contexts
+- **Task Creation/Edit Forms**: UI for enhanced task properties
+- **EventKit Integration**: Calendar sync and reminders
+- **Quick Actions**: Swipe gestures and context menus
 
 ### File Organization
-- **Models**: `Task.swift`, `Habit.swift`, `Tag.swift` - SwiftData models with @Model macro
-- **Managers**: `TaskManager.swift`, `HabitManager.swift`, `TagManager.swift` - @Observable business logic
+- **Enhanced Models**: `Task.swift` (V2), `Priority.swift`, `RecurrenceRule.swift`, `TaskAttachment.swift` - Full featured models
+- **Core Models**: `Habit.swift`, `Tag.swift` - SwiftData models with @Model macro
+- **Managers**: `TaskManager.swift` (enhanced), `HabitManager.swift`, `TagManager.swift` - @Observable business logic
 - **Views**: Production views in main navigation structure
 - **Components**: `CardView`, `DaisyButton`, `InputField`, `StateViews` - reusable UI components
 - **Design System**: Complete system with spacing, typography, colors, accessibility helpers
-- **Infrastructure**: CloudKit foundation (disabled), error handling, schema management
+- **Schema Management**: `DaisyDosSchemaV2.swift`, migration plan - SwiftData V2 with clean slate approach
+- **Infrastructure**: CloudKit foundation (disabled), comprehensive error handling
 
 ## Key Implementation Principles
 

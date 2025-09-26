@@ -25,7 +25,7 @@ struct DaisyDosApp: App {
     }
 
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema(versionedSchema: DaisyDosSchemaV1.self)
+        let schema = Schema(versionedSchema: DaisyDosSchemaV2.self)
         // Explicitly disable CloudKit for local-only mode
         let modelConfiguration = ModelConfiguration(
             schema: schema,

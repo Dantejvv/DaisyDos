@@ -32,7 +32,16 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
     case tagLimitExceeded
 
     /// Invalid recurrence rule configuration
-    case invalidRecurrence(String)
+    case invalidRecurrence
+
+    /// Invalid date range (start date after due date)
+    case invalidDateRange
+
+    /// Circular reference in subtask hierarchy
+    case circularReference
+
+    /// Attachment size limit exceeded
+    case attachmentLimitExceeded
 
     /// Duplicate entity creation attempted
     case duplicateEntity(String)
@@ -68,8 +77,14 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
             return "Validation failed for \(field)"
         case .tagLimitExceeded:
             return "Maximum tag limit exceeded"
-        case .invalidRecurrence(let details):
-            return "Invalid recurrence configuration: \(details)"
+        case .invalidRecurrence:
+            return "Invalid recurrence configuration"
+        case .invalidDateRange:
+            return "Start date must be before due date"
+        case .circularReference:
+            return "Cannot create circular subtask reference"
+        case .attachmentLimitExceeded:
+            return "Attachment size limit exceeded"
         case .duplicateEntity(let type):
             return "Duplicate \(type) already exists"
         case .entityNotFound(let type):
@@ -99,6 +114,12 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
             return "You can only have 3 tags per item and 30 total tags"
         case .invalidRecurrence:
             return "The recurrence pattern is not valid"
+        case .invalidDateRange:
+            return "The start date cannot be after the due date"
+        case .circularReference:
+            return "This would create a circular reference in the subtask hierarchy"
+        case .attachmentLimitExceeded:
+            return "This would exceed the attachment size limit (200MB per task)"
         case .duplicateEntity:
             return "An item with this information already exists"
         case .entityNotFound:
@@ -128,6 +149,12 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
             return "Remove existing tags to add new ones, or delete unused tags."
         case .invalidRecurrence:
             return "Please check your recurrence settings and try again."
+        case .invalidDateRange:
+            return "Set the start date before the due date, or remove one of the dates."
+        case .circularReference:
+            return "Choose a different parent task that isn't a subtask of the current task."
+        case .attachmentLimitExceeded:
+            return "Remove existing attachments or choose smaller files."
         case .duplicateEntity:
             return "Try using a different name or modify the existing item."
         case .entityNotFound:
@@ -148,7 +175,7 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
     /// Indicates if this error represents a user mistake vs system issue
     var isUserError: Bool {
         switch self {
-        case .tagLimitExceeded, .invalidRecurrence, .validationFailed, .duplicateEntity:
+        case .tagLimitExceeded, .invalidRecurrence, .invalidDateRange, .circularReference, .attachmentLimitExceeded, .validationFailed, .duplicateEntity:
             return true
         default:
             return false
