@@ -47,16 +47,9 @@ class TaskManager {
     }
 
     var todaysTasks: [Task] {
-        let today = Calendar.current.startOfDay(for: Date())
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today) ?? Date()
-
-        let descriptor = FetchDescriptor<Task>(
-            predicate: #Predicate<Task> { task in
-                task.createdDate >= today && task.createdDate < tomorrow
-            },
-            sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
-        )
-        return (try? modelContext.fetch(descriptor)) ?? []
+        // Show all incomplete tasks as "today's tasks" for now
+        // In Phase 2, this will be enhanced with due dates
+        return pendingTasks
     }
 
     // MARK: - CRUD Operations

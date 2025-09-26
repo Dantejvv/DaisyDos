@@ -1061,7 +1061,7 @@ func scheduleTaskReminder(for task: Task, at date: Date) {
 ### Per-Phase Validation Requirements
 
 #### Accessibility Audits (All Phases)
-- [ ] **Phase 1.0**: VoiceOver navigation baseline, Dynamic Type foundation, 44pt touch targets
+- [X] **Phase 1.0**: VoiceOver navigation baseline, Dynamic Type foundation, 44pt touch targets
 - [ ] **Phase 2.0**: TaskRowView accessibility excellence, task-specific labels and navigation
 - [ ] **Phase 3.0**: HabitRowView accessibility consistency, habit-specific patterns
 - [ ] **Phase 4.0**: Mixed content accessibility in Today View, unified navigation
@@ -1070,7 +1070,7 @@ func scheduleTaskReminder(for task: Task, at date: Date) {
 - [ ] **Ongoing**: WCAG 2.1 AA compliance validation and continuous improvement
 
 #### Performance Validation (All Phases)
-- [ ] **Phase 1.0**: Baseline establishment (launch <2s, memory usage baseline)
+- [X] **Phase 1.0**: Baseline establishment (launch <2s, memory usage baseline)
 - [ ] **Phase 2.0**: TaskRowView performance with 100+ items, shared component optimization
 - [ ] **Phase 3.0**: HabitRowView performance consistency, streak calculation optimization
 - [ ] **Phase 4.0**: Today View performance with realistic mixed loads (50+ items)
@@ -1079,7 +1079,7 @@ func scheduleTaskReminder(for task: Task, at date: Date) {
 - [ ] **Ongoing**: 100ms UI response time validation and optimization
 
 #### Testing Requirements (All Phases)
-- [ ] **Phase 1.0**: Architecture unit tests, error handling integration tests, @Observable pattern tests
+- [X] **Phase 1.0**: Architecture unit tests, error handling integration tests, @Observable pattern tests
 - [ ] **Phase 2.0**: TaskRowView reusability across contexts, task management integration tests
 - [ ] **Phase 3.0**: HabitRowView consistency tests, streak calculation accuracy tests
 - [ ] **Phase 4.0**: End-to-end Today View workflow tests, architectural validation
@@ -1116,7 +1116,7 @@ func scheduleTaskReminder(for task: Task, at date: Date) {
    - Conflict resolution framework must be prepared
 
 #### Risk Mitigation Checkpoints
-- [ ] **After Phase 1.0**: Architectural patterns validated, performance baseline established
+- [X] **After Phase 1.0**: Architectural patterns validated, performance baseline established
 - [ ] **After Phase 2.0**: Shared component strategy proven, reusability confirmed
 - [ ] **After Phase 3.0**: Component consistency validated, architectural scalability confirmed
 - [ ] **After Phase 4.0**: Core value proposition delivered, shared components proven in production use
