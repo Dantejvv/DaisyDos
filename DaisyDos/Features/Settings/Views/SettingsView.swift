@@ -67,9 +67,11 @@ struct SettingsView: View {
                         Label("About DaisyDos", systemImage: "questionmark.circle")
                     }
 
+                    #if DEBUG
                     Button(action: { showingTestViews = true }) {
                         Label("Developer Tools", systemImage: "hammer.circle")
                     }
+                    #endif
 
                     HStack {
                         Label("Version", systemImage: "apps.iphone")
@@ -83,9 +85,11 @@ struct SettingsView: View {
             .sheet(isPresented: $showingAbout) {
                 AboutView()
             }
+            #if DEBUG
             .sheet(isPresented: $showingTestViews) {
                 DeveloperToolsView()
             }
+            #endif
             .sheet(isPresented: $showingPerformance) {
                 PerformanceDashboardView()
             }
@@ -134,6 +138,7 @@ private struct AboutView: View {
     }
 }
 
+#if DEBUG
 // MARK: - Developer Tools View
 
 private struct DeveloperToolsView: View {
@@ -141,41 +146,53 @@ private struct DeveloperToolsView: View {
 
     var body: some View {
         NavigationStack {
-            TabView {
-                ModelTestView()
-                    .tabItem {
-                        Label("Models", systemImage: "hammer.circle")
-                    }
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.large) {
+                    Text("Developer Tools")
+                        .font(.largeTitle.bold())
+                        .padding(.bottom, Spacing.small)
 
-                ManagerTestView()
-                    .tabItem {
-                        Label("Managers", systemImage: "gearshape.circle")
-                    }
+                    VStack(alignment: .leading, spacing: Spacing.medium) {
+                        Text("Interactive Test Views")
+                            .font(.title2.bold())
 
-                ErrorHandlingTestView()
-                    .tabItem {
-                        Label("Errors", systemImage: "exclamationmark.triangle.fill")
-                    }
+                        Text("Interactive test views have been moved to the test target for better code organization and reduced bundle size. They are available when running tests.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
 
-                DesignSystemTestView()
-                    .tabItem {
-                        Label("Design", systemImage: "paintpalette.fill")
-                    }
+                        CardView {
+                            VStack(alignment: .leading, spacing: Spacing.small) {
+                                Text("Available Test Views")
+                                    .font(.headline)
 
-                ComponentTestView()
-                    .tabItem {
-                        Label("Components", systemImage: "square.stack.3d.up.fill")
-                    }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    TestViewItem(name: "ModelTestView", description: "Test SwiftData models and relationships")
+                                    TestViewItem(name: "ManagerTestView", description: "Test @Observable manager patterns")
+                                    TestViewItem(name: "ErrorHandlingTestView", description: "Test error transformation system")
+                                    TestViewItem(name: "DesignSystemTestView", description: "Test design system components")
+                                    TestViewItem(name: "ComponentTestView", description: "Test reusable UI components")
+                                    TestViewItem(name: "AccessibilityTestView", description: "Test accessibility compliance")
+                                    TestViewItem(name: "PerformanceTestView", description: "Test performance monitoring")
+                                    TestViewItem(name: "DynamicTypeTestView", description: "Test Dynamic Type scaling")
+                                }
+                            }
+                        }
 
-                AccessibilityDeveloperView()
-                    .tabItem {
-                        Label("Accessibility", systemImage: "accessibility")
-                    }
+                        Text("Location")
+                            .font(.title2.bold())
 
-                PerformanceTestView()
-                    .tabItem {
-                        Label("Performance", systemImage: "speedometer")
+                        Text("Test views are now located in:")
+                            .font(.body)
+
+                        Text("DaisyDosTests/InteractiveTestViews/")
+                            .font(.system(.body, design: .monospaced))
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(8)
                     }
+                }
+                .padding()
             }
             .navigationTitle("Developer Tools")
             .navigationBarTitleDisplayMode(.inline)
@@ -190,47 +207,38 @@ private struct DeveloperToolsView: View {
     }
 }
 
-// MARK: - Accessibility Developer View
-
-private struct AccessibilityDeveloperView: View {
-    @State private var selectedTool: AccessibilityTool = .testing
+private struct TestViewItem: View {
+    let name: String
+    let description: String
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Tool Selection
-                Picker("Accessibility Tool", selection: $selectedTool) {
-                    ForEach(AccessibilityTool.allCases, id: \.rawValue) { tool in
-                        Text(tool.rawValue).tag(tool)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding()
+        HStack {
+            Image(systemName: "hammer.circle")
+                .font(.caption)
+                .foregroundStyle(.blue)
+                .frame(width: 16)
 
-                // Tool Content
-                Group {
-                    switch selectedTool {
-                    case .testing:
-                        AccessibilityTestView()
-                    case .dynamicType:
-                        DynamicTypeTestView()
-                    case .touchTargets:
-                        TouchTargetAuditView()
-                    case .dashboard:
-                        AccessibilityDashboardView()
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .font(.caption)
+                    .fontWeight(.medium)
+
+                Text(description)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
         }
     }
 }
 
-private enum AccessibilityTool: String, CaseIterable {
-    case testing = "Testing"
-    case dynamicType = "Dynamic Type"
-    case touchTargets = "Touch Targets"
-    case dashboard = "Dashboard"
+// MARK: - Accessibility Developer View - Simplified for moved test views
+
+private struct AccessibilityDeveloperView: View {
+    var body: some View {
+        NavigationStack {
+            AccessibilityDashboardView()
+        }
+    }
 }
 
 // MARK: - Accessibility Dashboard
@@ -606,6 +614,7 @@ private struct GuidelineItem: View {
         }
     }
 }
+#endif
 
 #Preview {
     let container = try! ModelContainer(for: Task.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
