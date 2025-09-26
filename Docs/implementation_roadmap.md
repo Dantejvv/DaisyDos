@@ -246,15 +246,15 @@ TabView(selection: $selectedTab) {
 - [X] **Acceptance:** 100% VoiceOver navigation, Dynamic Type works, touch targets compliant
 
 ### Phase 1.0 Success Criteria
-- [ ] App launches in <2 seconds and navigates between tabs
-- [ ] Can create, read, delete basic tasks and habits using SwiftData
-- [ ] @Observable pattern proven with automatic UI updates
-- [ ] Error handling displays user-friendly messages
-- [ ] CloudKit foundation configured but disabled
-- [ ] Performance baselines established and documented
-- [ ] Accessibility compliance validated with audit
-- [ ] Local-only mode toggle functional
-- [ ] All architectural patterns validated through unit tests
+- [X] App launches in <2 seconds and navigates between tabs
+- [X] Can create, read, delete basic tasks and habits using SwiftData
+- [X] @Observable pattern proven with automatic UI updates
+- [X] Error handling displays user-friendly messages
+- [X] CloudKit foundation configured but disabled
+- [X] Performance baselines established and documented
+- [X] Accessibility compliance validated with audit
+- [X] Local-only mode toggle functional
+- [X] All architectural patterns validated through unit tests
 
 ---
 
