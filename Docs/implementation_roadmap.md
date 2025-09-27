@@ -722,6 +722,9 @@ class SearchManager {
 ### 5.3 Organization Features (Effort: Small-Medium)
 
 #### ✅ Enhanced Tag Management
+- [X] **Tag deletion functionality**: Safe deletion with usage validation and force delete option
+- [X] **Tag deletion UI**: Swipe-to-delete, context menus, and confirmation dialogs in TagsView and TagEditView
+- [X] **Undo support**: 5-second undo window with toast notification for accidental deletions
 - [ ] Create comprehensive tag management interface
 - [ ] Implement tag usage analytics
 - [ ] Add tag merging and splitting functionality

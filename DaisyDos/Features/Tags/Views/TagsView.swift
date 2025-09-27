@@ -16,6 +16,11 @@ struct TagsView: View {
     @State private var selectedTag: Tag?
     @State private var showingEditTag = false
     @State private var searchText = ""
+    @State private var tagToDelete: Tag?
+    @State private var showingDeleteConfirmation = false
+    @State private var showingUndoToast = false
+    @State private var deletedTag: Tag?
+    @State private var undoTimer: Timer?
 
     var body: some View {
         NavigationStack {
@@ -84,10 +89,13 @@ struct TagsView: View {
                             GridItem(.flexible())
                         ], spacing: 16) {
                             ForEach(filteredTags) { tag in
-                                TagCardView(tag: tag) {
+                                TagCardView(tag: tag, onEdit: {
                                     selectedTag = tag
                                     showingEditTag = true
-                                }
+                                }, onDelete: {
+                                    tagToDelete = tag
+                                    showingDeleteConfirmation = true
+                                })
                             }
                         }
                         .padding(.horizontal)
@@ -101,6 +109,29 @@ struct TagsView: View {
             .sheet(item: $selectedTag) { tag in
                 TagEditView(tag: tag)
             }
+            .confirmationDialog(
+                "Delete Tag",
+                isPresented: $showingDeleteConfirmation,
+                presenting: tagToDelete
+            ) { tag in
+                if tag.isInUse {
+                    Button("Remove from \(tag.totalItemCount) items and delete", role: .destructive) {
+                        deleteTag(tag, force: true)
+                    }
+                    Button("Cancel", role: .cancel) { }
+                } else {
+                    Button("Delete", role: .destructive) {
+                        deleteTag(tag, force: false)
+                    }
+                    Button("Cancel", role: .cancel) { }
+                }
+            } message: { tag in
+                if tag.isInUse {
+                    Text("This tag is used by \(tag.tasks.count) tasks and \(tag.habits.count) habits. Deleting it will remove it from all items.")
+                } else {
+                    Text("This will permanently delete the '\(tag.name)' tag.")
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -109,6 +140,14 @@ struct TagsView: View {
                         Image(systemName: "plus")
                     }
                     .disabled(allTags.count >= 30)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if showingUndoToast, let deletedTag = deletedTag {
+                    UndoToastView(tagName: deletedTag.name) {
+                        undoDelete()
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
         }
@@ -123,13 +162,53 @@ struct TagsView: View {
             }
         }
     }
+
+    // MARK: - Tag Deletion Methods
+
+    private func deleteTag(_ tag: Tag, force: Bool) {
+        let success = force ? {
+            tagManager.forceDeleteTag(tag)
+            return true
+        }() : tagManager.deleteTag(tag)
+
+        if success {
+            // Store for undo
+            deletedTag = tag
+            showingUndoToast = true
+
+            // Start undo timer
+            undoTimer?.invalidate()
+            undoTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
+                withAnimation {
+                    showingUndoToast = false
+                    deletedTag = nil
+                }
+            }
+        }
+    }
+
+    private func undoDelete() {
+        guard let tag = deletedTag else { return }
+
+        undoTimer?.invalidate()
+        undoTimer = nil
+
+        // Recreate the tag
+        if let _ = tagManager.createTag(name: tag.name, sfSymbolName: tag.sfSymbolName, colorName: tag.colorName) {
+            withAnimation {
+                showingUndoToast = false
+                deletedTag = nil
+            }
+        }
+    }
 }
 
 // MARK: - Tag Card View
 
 private struct TagCardView: View {
     let tag: Tag
-    let onTap: () -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -173,8 +252,56 @@ private struct TagCardView: View {
         .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
         .contentShape(Rectangle())
         .onTapGesture {
-            onTap()
+            onEdit()
         }
+        .contextMenu {
+            Button(action: onEdit) {
+                Label("Edit", systemImage: "pencil")
+            }
+
+            Button(action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+            .foregroundColor(.daisyError)
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button("Delete", role: .destructive, action: onDelete)
+        }
+    }
+}
+
+// MARK: - Undo Toast View
+
+private struct UndoToastView: View {
+    let tagName: String
+    let onUndo: () -> Void
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Tag deleted")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.white)
+                Text("'\(tagName)' was removed")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+
+            Spacer()
+
+            Button("Undo") {
+                onUndo()
+            }
+            .foregroundColor(.daisyCTA)
+            .fontWeight(.semibold)
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.black.opacity(0.8))
+        )
+        .padding(.horizontal)
+        .padding(.bottom, 20)
     }
 }
 

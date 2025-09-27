@@ -19,6 +19,7 @@ struct TagEditView: View {
     @State private var selectedSymbol: String = ""
     @State private var showingError = false
     @State private var errorMessage = ""
+    @State private var showingDeleteConfirmation = false
 
     var isFormValid: Bool {
         !tagName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -72,13 +73,25 @@ struct TagEditView: View {
                         Text("Items using this tag")
                         Spacer()
                         Text("\(tag.totalItemCount)")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
                     }
 
                     if tag.isInUse {
-                        Text("This tag is currently in use and cannot be deleted")
+                        Text("This tag is used by \(tag.tasks.count) tasks and \(tag.habits.count) habits")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
+                    }
+                }
+
+                Section {
+                    Button(action: {
+                        showingDeleteConfirmation = true
+                    }) {
+                        HStack {
+                            Image(systemName: "trash")
+                            Text("Delete Tag")
+                        }
+                        .foregroundColor(.daisyError)
                     }
                 }
             }
@@ -102,6 +115,28 @@ struct TagEditView: View {
                 Button("OK") { }
             } message: {
                 Text(errorMessage)
+            }
+            .confirmationDialog(
+                "Delete Tag",
+                isPresented: $showingDeleteConfirmation
+            ) {
+                if tag.isInUse {
+                    Button("Remove from \(tag.totalItemCount) items and delete", role: .destructive) {
+                        deleteTag(force: true)
+                    }
+                    Button("Cancel", role: .cancel) { }
+                } else {
+                    Button("Delete", role: .destructive) {
+                        deleteTag(force: false)
+                    }
+                    Button("Cancel", role: .cancel) { }
+                }
+            } message: {
+                if tag.isInUse {
+                    Text("This tag is used by \(tag.tasks.count) tasks and \(tag.habits.count) habits. Deleting it will remove it from all items.")
+                } else {
+                    Text("This will permanently delete the '\(tag.name)' tag.")
+                }
             }
             .onAppear {
                 tagName = tag.name
@@ -143,6 +178,19 @@ struct TagEditView: View {
         errorMessage = message
         showingError = true
     }
+
+    private func deleteTag(force: Bool) {
+        let success = force ? {
+            tagManager.forceDeleteTag(tag)
+            return true
+        }() : tagManager.deleteTag(tag)
+
+        if success {
+            dismiss()
+        } else {
+            showError("Failed to delete tag. The tag may be in use by other items.")
+        }
+    }
 }
 
 private struct TagPreview: View {
@@ -177,7 +225,7 @@ private struct TagPreview: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
