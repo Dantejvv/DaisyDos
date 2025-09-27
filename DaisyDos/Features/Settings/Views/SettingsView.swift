@@ -30,7 +30,7 @@ struct SettingsView: View {
                     }
                     Text("DaisyDos keeps your data private by default.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.daisyTextSecondary)
                 }
 
                 Section("Performance") {
@@ -46,19 +46,19 @@ struct SettingsView: View {
                         Label("Tasks", systemImage: "list.bullet")
                         Spacer()
                         Text("\(taskManager.taskCount)")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
                     }
                     HStack {
                         Label("Habits", systemImage: "repeat.circle")
                         Spacer()
                         Text("\(habitManager.habitCount)")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
                     }
                     HStack {
                         Label("Tags", systemImage: "tag")
                         Spacer()
                         Text("\(tagManager.tagCount)")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
                     }
                 }
 
@@ -77,7 +77,7 @@ struct SettingsView: View {
                         Label("Version", systemImage: "apps.iphone")
                         Spacer()
                         Text("1.0.0 Beta")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
                     }
                 }
             }
@@ -108,19 +108,19 @@ private struct AboutView: View {
                 VStack(spacing: 20) {
                     Image(systemName: "flower")
                         .font(.system(size: 64))
-                        .foregroundColor(.blue)
+                        .foregroundColor(.daisyCTA)
 
                     Text("DaisyDos")
                         .font(.largeTitle.bold())
 
                     Text("A unified productivity app for tasks and habits")
                         .font(.body)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.daisyTextSecondary)
                         .multilineTextAlignment(.center)
 
                     Text("DaisyDos combines task management and habit tracking in a single, privacy-first application. Built with SwiftUI and SwiftData, it focuses on simplicity, accessibility, and keeping your data private.")
                         .font(.body)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.daisyTextSecondary)
                         .padding()
                 }
                 .padding()
@@ -158,7 +158,7 @@ private struct DeveloperToolsView: View {
 
                         Text("Interactive test views have been moved to the test target for better code organization and reduced bundle size. They are available when running tests.")
                             .font(.body)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
 
                         CardView {
                             VStack(alignment: .leading, spacing: Spacing.small) {
@@ -188,7 +188,7 @@ private struct DeveloperToolsView: View {
                             .font(.system(.body, design: .monospaced))
                             .padding(.vertical, 8)
                             .padding(.horizontal, 12)
-                            .background(Color.gray.opacity(0.1))
+                            .background(Colors.Primary.backgroundTertiary)
                             .cornerRadius(8)
                     }
                 }
@@ -215,7 +215,7 @@ private struct TestViewItem: View {
         HStack {
             Image(systemName: "hammer.circle")
                 .font(.caption)
-                .foregroundStyle(.blue)
+                .foregroundStyle(Color.daisyCTA)
                 .frame(width: 16)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -225,7 +225,7 @@ private struct TestViewItem: View {
 
                 Text(description)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.daisyTextSecondary)
             }
         }
     }
@@ -323,7 +323,7 @@ private struct AccessibilityQuickStatusCard: View {
                 HStack {
                     Image(systemName: "accessibility.fill")
                         .font(.title2)
-                        .foregroundStyle(Colors.Secondary.blue)
+                        .foregroundStyle(Color.daisyCTA)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Accessibility Status")
@@ -336,11 +336,11 @@ private struct AccessibilityQuickStatusCard: View {
                         } else if isLoading {
                             Text("Checking accessibility status...")
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.daisyTextSecondary)
                         } else {
                             Text("Status unknown")
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.daisyTextSecondary)
                         }
                     }
 
@@ -417,7 +417,7 @@ private struct AccessibilityComplianceCard: View {
 
                         Text("Overall Score")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.daisyTextSecondary)
                     }
 
                     Spacer()
@@ -440,7 +440,7 @@ private struct AccessibilityComplianceCard: View {
                 if score.lastAuditDate != Date.distantPast {
                     Text("Last audit: \(score.lastAuditDate, format: .relative(presentation: .named))")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.daisyTextSecondary)
                 }
             }
         }
@@ -517,8 +517,7 @@ private struct AccessibilityAuditHistoryCard: View {
                 Text("Recent Audits")
                     .font(.headline)
 
-                ForEach(history.indices, id: \.self) { index in
-                    let session = history[index]
+                ForEach(Array(history.enumerated()), id: \.offset) { index, session in
 
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
@@ -538,7 +537,7 @@ private struct AccessibilityAuditHistoryCard: View {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text("\(session.results.count) rules")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.daisyTextSecondary)
 
                             let issues = session.results.reduce(0) { $0 + $1.issues.count }
                             if issues > 0 {
@@ -605,12 +604,12 @@ private struct GuidelineItem: View {
         HStack {
             Image(systemName: icon)
                 .font(.caption)
-                .foregroundStyle(Colors.Secondary.blue)
+                .foregroundStyle(Color.daisyCTA)
                 .frame(width: 16)
 
             Text(text)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.daisyTextSecondary)
         }
     }
 }
@@ -644,22 +643,22 @@ private struct PerformanceStatusRow: View {
             HStack(spacing: 8) {
                 // Launch time indicator
                 Circle()
-                    .fill(summary.launchTimeMeetsTarget ? Color(.systemGreen) : Color(.systemRed))
+                    .fill(summary.launchTimeMeetsTarget ? Color.daisySuccess : Color.daisyError)
                     .frame(width: 8, height: 8)
 
                 // Memory indicator
                 Circle()
-                    .fill(summary.memoryMeetsTarget ? Color(.systemGreen) : Color(.systemRed))
+                    .fill(summary.memoryMeetsTarget ? Color.daisySuccess : Color.daisyError)
                     .frame(width: 8, height: 8)
 
                 // UI response indicator
                 Circle()
-                    .fill(summary.uiResponseMeetsTarget ? Color(.systemGreen) : Color(.systemRed))
+                    .fill(summary.uiResponseMeetsTarget ? Color.daisySuccess : Color.daisyError)
                     .frame(width: 8, height: 8)
 
                 Text(summary.overallHealthy ? "Good" : "Issues")
                     .font(.caption)
-                    .foregroundColor(summary.overallHealthy ? Color(.systemGreen) : Color(.systemOrange))
+                    .foregroundColor(summary.overallHealthy ? .daisySuccess : .daisyWarning)
             }
         }
     }
@@ -706,10 +705,10 @@ private struct PerformanceDashboardView: View {
                         .font(.daisySubtitle)
                     Text("\(String(format: "%.2f", summary.launchTime))s")
                         .font(.daisyBody.weight(.semibold))
-                        .foregroundColor(summary.launchTimeMeetsTarget ? Color(.systemGreen) : .red)
+                        .foregroundColor(summary.launchTimeMeetsTarget ? .daisySuccess : .red)
                     Text("Target: <2.0s")
                         .font(.daisyCaption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.daisyTextSecondary)
                 }
 
                 Spacer()
@@ -719,10 +718,10 @@ private struct PerformanceDashboardView: View {
                         .font(.daisySubtitle)
                     Text("\(String(format: "%.1f", summary.currentMemoryUsage))MB")
                         .font(.daisyBody.weight(.semibold))
-                        .foregroundColor(summary.memoryMeetsTarget ? Color(.systemGreen) : .red)
+                        .foregroundColor(summary.memoryMeetsTarget ? .daisySuccess : .red)
                     Text("Peak: \(String(format: "%.1f", summary.peakMemoryUsage))MB")
                         .font(.daisyCaption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.daisyTextSecondary)
                 }
 
                 Spacer()
@@ -732,20 +731,20 @@ private struct PerformanceDashboardView: View {
                         .font(.daisySubtitle)
                     Text("\(String(format: "%.0f", summary.averageUIResponseTime * 1000))ms")
                         .font(.daisyBody.weight(.semibold))
-                        .foregroundColor(summary.uiResponseMeetsTarget ? Color(.systemGreen) : .red)
+                        .foregroundColor(summary.uiResponseMeetsTarget ? .daisySuccess : .red)
                     Text("Target: <100ms")
                         .font(.daisyCaption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.daisyTextSecondary)
                 }
             }
 
             HStack {
                 Image(systemName: summary.overallHealthy ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                    .foregroundColor(summary.overallHealthy ? Color(.systemGreen) : Color(.systemOrange))
+                    .foregroundColor(summary.overallHealthy ? .daisySuccess : .daisyWarning)
 
                 Text(summary.overallHealthy ? "All performance metrics are healthy" : "Some performance issues detected")
                     .font(.daisyBody)
-                    .foregroundColor(summary.overallHealthy ? Color(.systemGreen) : Color(.systemOrange))
+                    .foregroundColor(summary.overallHealthy ? .daisySuccess : .daisyWarning)
             }
         }
         .asCard()
@@ -794,10 +793,10 @@ private struct PerformanceDashboardView: View {
             if performanceMonitor.performanceAlerts.isEmpty {
                 HStack {
                     Image(systemName: "checkmark.circle")
-                        .foregroundColor(Color(.systemGreen))
+                        .foregroundColor(.daisySuccess)
                     Text("No performance alerts")
                         .font(.daisyBody)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.daisyTextSecondary)
                     Spacer()
                 }
             } else {
@@ -813,7 +812,7 @@ private struct PerformanceDashboardView: View {
                                 .lineLimit(2)
                             Text(alert.timestamp, format: .dateTime.hour().minute().second())
                                 .font(.daisyCaption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.daisyTextSecondary)
                         }
                         Spacer()
                     }
@@ -856,7 +855,7 @@ private struct MetricRow: View {
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(.blue)
+                .foregroundColor(.daisyCTA)
                 .frame(width: 24)
 
             Text(title)

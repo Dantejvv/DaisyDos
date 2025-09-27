@@ -44,9 +44,9 @@ private struct SymbolOption: View {
                 .frame(width: 44, height: 44)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(isSelected ? Color.accentColor : Color(.systemGray5))
+                        .fill(isSelected ? Color.daisyTag : Color.daisySurface)
                 )
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(isSelected ? .white : .daisyText)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.accentColor, lineWidth: isSelected ? 2 : 0)

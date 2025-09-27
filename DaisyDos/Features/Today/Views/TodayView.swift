@@ -27,7 +27,7 @@ struct TodayView: View {
                             Spacer()
                             Image(systemName: "calendar")
                                 .font(.title2)
-                                .foregroundColor(.blue)
+                                .foregroundColor(.daisyTask)
                         }
 
                         HStack {
@@ -35,14 +35,14 @@ struct TodayView: View {
                                 Text("Tasks Today")
                                     .font(.headline)
                                 Text("\(taskManager.todaysTasks.filter { !$0.isCompleted }.count) pending")
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.daisyTextSecondary)
                             }
                             Spacer()
                             VStack(alignment: .trailing) {
                                 Text("Completed")
                                     .font(.headline)
                                 Text("\(taskManager.todaysTasks.filter { $0.isCompleted }.count)")
-                                    .foregroundColor(Color(.systemGreen))
+                                    .foregroundColor(.daisySuccess)
                             }
                         }
 
@@ -51,19 +51,19 @@ struct TodayView: View {
                                 Text("Habits Today")
                                     .font(.headline)
                                 Text("Ready to track")
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.daisyTextSecondary)
                             }
                             Spacer()
                             VStack(alignment: .trailing) {
                                 Text("Streak")
                                     .font(.headline)
                                 Text("Coming soon")
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.daisyTextSecondary)
                             }
                         }
                     }
                     .padding()
-                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+                    .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
 
                     // MARK: - Today's Tasks
 
@@ -76,7 +76,7 @@ struct TodayView: View {
                                 Button("View All") {
                                     // TODO: Navigate to tasks tab
                                 }
-                                .foregroundColor(.blue)
+                                .foregroundColor(.daisyTask)
                             }
 
                             VStack(spacing: 8) {
@@ -86,12 +86,12 @@ struct TodayView: View {
                                             taskManager.toggleTaskCompletionSafely(task)
                                         }) {
                                             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(task.isCompleted ? Color(.systemGreen) : .secondary)
+                                                .foregroundColor(task.isCompleted ? .daisySuccess : .daisyTextSecondary)
                                         }
                                         .buttonStyle(PlainButtonStyle())
 
                                         Text(task.title)
-                                            .foregroundColor(task.isCompleted ? .secondary : .primary)
+                                            .foregroundColor(task.isCompleted ? .daisyTextSecondary : .daisyText)
                                             .strikethrough(task.isCompleted)
 
                                         Spacer()
@@ -100,7 +100,7 @@ struct TodayView: View {
                             }
                         }
                         .padding()
-                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+                        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
 
                     } else {
                         // Empty state
@@ -117,7 +117,7 @@ struct TodayView: View {
                                 .multilineTextAlignment(.center)
                         }
                         .padding()
-                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+                        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
                     }
 
                     // MARK: - Quick Actions
@@ -133,13 +133,13 @@ struct TodayView: View {
                                 VStack {
                                     Image(systemName: "plus.circle.fill")
                                         .font(.title)
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(.daisyTask)
                                     Text("Add Task")
                                         .font(.subheadline)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
+                                .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 10))
                             }
                             .buttonStyle(PlainButtonStyle())
 
@@ -149,19 +149,19 @@ struct TodayView: View {
                                 VStack {
                                     Image(systemName: "repeat.circle.fill")
                                         .font(.title)
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(.daisyTask)
                                     Text("Add Habit")
                                         .font(.subheadline)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
+                                .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 10))
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
                     }
                     .padding()
-                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+                    .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
                 }
                 .padding()
             }

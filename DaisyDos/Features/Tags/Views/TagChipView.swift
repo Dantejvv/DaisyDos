@@ -39,14 +39,14 @@ struct TagChipView: View {
             Text(tag.name)
                 .font(.caption.weight(.medium))
                 .lineLimit(1)
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(isSelected ? .white : .daisyText)
 
             // Remove button for removable chips
             if isRemovable, let onRemove = onRemove {
                 Button(action: onRemove) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.caption)
-                        .foregroundColor(isSelected ? .white.opacity(0.7) : .secondary)
+                        .foregroundColor(isSelected ? .white.opacity(0.7) : .daisyTextSecondary)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Remove \(tag.name) tag")
@@ -76,7 +76,7 @@ struct TagChipView: View {
         if isSelected {
             return tag.color
         } else {
-            return Color(.systemGray6)
+            return .daisySurface
         }
     }
 
@@ -84,7 +84,7 @@ struct TagChipView: View {
         if isSelected {
             return tag.color.opacity(0.3)
         } else {
-            return Color(.systemGray4)
+            return Colors.Semantic.separator
         }
     }
 }

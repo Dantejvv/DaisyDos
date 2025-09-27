@@ -36,11 +36,11 @@ struct TagsView: View {
                             .font(.headline)
                         Text("Track usage")
                             .font(.title2.bold())
-                            .foregroundColor(.blue)
+                            .foregroundColor(.daisyTag)
                     }
                 }
                 .padding()
-                .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+                .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
                 .padding(.horizontal)
 
                 if allTags.isEmpty {
@@ -49,19 +49,19 @@ struct TagsView: View {
                     VStack(spacing: 20) {
                         Image(systemName: "tag.circle")
                             .font(.system(size: 64))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
 
                         Text("No Tags Yet")
                             .font(.title2.bold())
 
                         Text("Create tags to organize your tasks and habits. Use colors and icons to make them visually distinctive!")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
 
                         Text("Tag creation will be available in future updates.")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
                             .padding(.horizontal)
                     }
                     Spacer()
@@ -70,11 +70,11 @@ struct TagsView: View {
                     // Search bar
                     HStack {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
                         TextField("Search tags...", text: $searchText)
                     }
                     .padding()
-                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
+                    .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 10))
                     .padding(.horizontal)
 
                     // Tag grid
@@ -153,24 +153,24 @@ private struct TagCardView: View {
                 HStack {
                     Image(systemName: "list.bullet")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.daisyTextSecondary)
                     Text("Tasks: \(tag.tasks.count)")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.daisyTextSecondary)
                 }
 
                 HStack {
                     Image(systemName: "repeat.circle")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.daisyTextSecondary)
                     Text("Habits: \(tag.habits.count)")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.daisyTextSecondary)
                 }
             }
         }
         .padding()
-        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
         .contentShape(Rectangle())
         .onTapGesture {
             onTap()

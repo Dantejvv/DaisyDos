@@ -79,13 +79,13 @@ struct TaskRowView: View {
                 Text(task.title)
                     .font(.body)
                     .strikethrough(task.isCompleted)
-                    .foregroundColor(task.isCompleted ? .secondary : .primary)
+                    .foregroundColor(task.isCompleted ? .daisyTextSecondary : .daisyText)
                     .lineLimit(1)
 
                 if let dueDate = task.dueDate {
                     Text(dueDate.formatted(date: .abbreviated, time: .omitted))
                         .font(.caption2)
-                        .foregroundColor(task.hasOverdueStatus ? .red : .secondary)
+                        .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyTextSecondary)
                 }
             }
 
@@ -99,7 +99,7 @@ struct TaskRowView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 8))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
@@ -117,12 +117,12 @@ struct TaskRowView: View {
                     Text(task.title)
                         .font(.headline)
                         .strikethrough(task.isCompleted)
-                        .foregroundColor(task.isCompleted ? .secondary : .primary)
+                        .foregroundColor(task.isCompleted ? .daisyTextSecondary : .daisyText)
 
                     if !task.taskDescription.isEmpty {
                         Text(task.taskDescription)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
                             .lineLimit(2)
                     }
                 }
@@ -145,7 +145,7 @@ struct TaskRowView: View {
             metadataFooter
         }
         .padding()
-        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
@@ -163,7 +163,7 @@ struct TaskRowView: View {
                     Text(task.title)
                         .font(.body.weight(.medium))
                         .strikethrough(task.isCompleted)
-                        .foregroundColor(task.isCompleted ? .secondary : .primary)
+                        .foregroundColor(task.isCompleted ? .daisyTextSecondary : .daisyText)
                         .lineLimit(1)
 
                     Spacer()
@@ -177,10 +177,10 @@ struct TaskRowView: View {
                     if task.hasOverdueStatus {
                         Text("Overdue")
                             .font(.caption2.weight(.medium))
-                            .foregroundColor(.red)
+                            .foregroundColor(.daisyError)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(.red.opacity(0.1), in: Capsule())
+                            .background(Colors.Accent.errorBackground, in: Capsule())
                     }
                 }
 
@@ -194,7 +194,7 @@ struct TaskRowView: View {
                         if task.tags.count > 2 {
                             Text("+\(task.tags.count - 2)")
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.daisyTextSecondary)
                         }
                     }
                 }
@@ -202,7 +202,7 @@ struct TaskRowView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 10))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
@@ -215,7 +215,7 @@ struct TaskRowView: View {
         Button(action: onToggleCompletion) {
             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                 .font(.title2)
-                .foregroundColor(task.isCompleted ? Color(.systemGreen) : .gray)
+                .foregroundColor(task.isCompleted ? .daisySuccess : Colors.Primary.textTertiary)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(task.isCompleted ? "Mark as incomplete" : "Mark as complete")
@@ -247,7 +247,7 @@ struct TaskRowView: View {
                     systemImage: "calendar"
                 )
                 .font(.caption)
-                .foregroundColor(task.hasOverdueStatus ? .red : .secondary)
+                .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyTextSecondary)
                 .accessibilityLabel("Due " + dueDate.formatted(date: .complete, time: .omitted))
             }
 
@@ -255,7 +255,7 @@ struct TaskRowView: View {
             if showsSubtasks && task.hasSubtasks {
                 Label("\(task.completedSubtaskCount)/\(task.subtaskCount)", systemImage: "checklist")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.daisyTextSecondary)
                     .accessibilityLabel("\(task.completedSubtaskCount) of \(task.subtaskCount) subtasks completed")
             }
 
@@ -267,7 +267,7 @@ struct TaskRowView: View {
                     Button(action: onTagAssignment) {
                         Image(systemName: "tag")
                             .font(.caption)
-                            .foregroundColor(.accentColor)
+                            .foregroundColor(.daisyTag)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Assign tags")
@@ -277,7 +277,7 @@ struct TaskRowView: View {
                 Button(action: onEdit) {
                     Image(systemName: "pencil")
                         .font(.caption)
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(.daisyTask)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Edit task")
@@ -286,7 +286,7 @@ struct TaskRowView: View {
                 Button(action: onDelete) {
                     Image(systemName: "trash")
                         .font(.caption)
-                        .foregroundColor(.red)
+                        .foregroundColor(.daisyError)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Delete task")
