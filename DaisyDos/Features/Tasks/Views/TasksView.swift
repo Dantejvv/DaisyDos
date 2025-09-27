@@ -11,7 +11,13 @@ import SwiftData
 struct TasksView: View {
     @Environment(TaskManager.self) private var taskManager
     @Environment(TagManager.self) private var tagManager
-    @Query(sort: \Task.createdDate, order: .reverse) private var allTasks: [Task]
+    @Query(
+        filter: #Predicate<Task> { task in
+            task.parentTask == nil
+        },
+        sort: \Task.createdDate,
+        order: .reverse
+    ) private var rootTasks: [Task]
     @State private var searchText = ""
     @State private var showingAddTask = false
     @State private var taskToEdit: Task?
@@ -24,7 +30,7 @@ struct TasksView: View {
     var body: some View {
         NavigationStack {
             VStack {
-                if allTasks.isEmpty {
+                if rootTasks.isEmpty {
                     // Empty state when no tasks exist at all
                     Spacer()
                     VStack(spacing: 20) {
@@ -158,7 +164,7 @@ struct TasksView: View {
             .navigationTitle("Tasks")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if !filteredTasks.isEmpty {
+                    if !rootTasks.isEmpty {
                         Button(isMultiSelectMode ? "Done" : "Select") {
                             withAnimation {
                                 isMultiSelectMode.toggle()
@@ -225,9 +231,10 @@ struct TasksView: View {
 
     private var filteredTasks: [Task] {
         if searchText.isEmpty {
-            return allTasks
+            return rootTasks
         } else {
-            return taskManager.searchTasksSafely(query: searchText)
+            // Filter search results to only include root tasks
+            return taskManager.searchTasksSafely(query: searchText).filter { $0.parentTask == nil }
         }
     }
 

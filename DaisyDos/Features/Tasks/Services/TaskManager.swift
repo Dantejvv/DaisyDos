@@ -10,7 +10,7 @@ import SwiftData
 
 @Observable
 class TaskManager {
-    private let modelContext: ModelContext
+    internal let modelContext: ModelContext
 
     // Error handling
     var lastError: (any RecoverableError)?
@@ -22,14 +22,19 @@ class TaskManager {
     // MARK: - Computed Properties for Filtered Data
 
     var allTasks: [Task] {
-        let descriptor = FetchDescriptor<Task>(sortBy: [SortDescriptor(\.createdDate, order: .reverse)])
+        let descriptor = FetchDescriptor<Task>(
+            predicate: #Predicate<Task> { task in
+                task.parentTask == nil
+            },
+            sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
+        )
         return (try? modelContext.fetch(descriptor)) ?? []
     }
 
     var completedTasks: [Task] {
         let descriptor = FetchDescriptor<Task>(
             predicate: #Predicate<Task> { task in
-                task.isCompleted == true
+                task.isCompleted == true && task.parentTask == nil
             },
             sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
         )
@@ -283,8 +288,10 @@ class TaskManager {
 
             let descriptor = FetchDescriptor<Task>(
                 predicate: #Predicate<Task> { task in
-                    task.title.localizedStandardContains(trimmedQuery) ||
-                    task.taskDescription.localizedStandardContains(trimmedQuery)
+                    task.parentTask == nil && (
+                        task.title.localizedStandardContains(trimmedQuery) ||
+                        task.taskDescription.localizedStandardContains(trimmedQuery)
+                    )
                 },
                 sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
             )

@@ -19,7 +19,12 @@ struct TodayView: View {
             task.isCompleted == false
         },
         sort: [SortDescriptor(\Task.createdDate, order: .reverse)]
-    ) private var todaysTasks: [Task]
+    ) private var allIncompleteTasks: [Task]
+
+    // Filter to only root tasks
+    private var todaysTasks: [Task] {
+        allIncompleteTasks.filter { $0.parentTask == nil }
+    }
 
     var body: some View {
         NavigationStack {

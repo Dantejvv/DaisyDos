@@ -18,6 +18,8 @@ struct TaskDetailView: View {
     @State private var showingTagAssignment = false
     @State private var showingDeleteConfirmation = false
     @State private var showingShareSheet = false
+    @State private var showingSubtaskManagement = false
+    @State private var showingSubtaskCreation = false
 
     var body: some View {
         NavigationStack {
@@ -41,9 +43,7 @@ struct TaskDetailView: View {
                     }
 
                     // MARK: - Subtasks Section
-                    if task.hasSubtasks {
-                        subtasksSection
-                    }
+                    enhancedSubtasksSection
 
                     // MARK: - Attachments Section
                     if !task.attachments.isEmpty {
@@ -276,53 +276,109 @@ struct TaskDetailView: View {
         .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
     }
 
-    // MARK: - Subtasks Section
+    // MARK: - Enhanced Subtasks Section
 
     @ViewBuilder
-    private var subtasksSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private var enhancedSubtasksSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header with actions
             HStack {
                 Text("Subtasks")
                     .font(.headline)
+
                 Spacer()
-                Text("\(task.completedSubtaskCount)/\(task.subtaskCount)")
-                    .font(.caption)
-                    .foregroundColor(.daisyTextSecondary)
-            }
 
-            // Progress bar
-            ProgressView(value: task.subtaskCompletionPercentage)
-                .tint(.daisySuccess)
-
-            VStack(spacing: 8) {
-                ForEach(task.subtasks.prefix(3), id: \.id) { subtask in
-                    HStack {
-                        Image(systemName: subtask.isCompleted ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(subtask.isCompleted ? .daisySuccess : .daisyTextSecondary)
-                        Text(subtask.title)
-                            .font(.subheadline)
-                            .strikethrough(subtask.isCompleted)
-                            .foregroundColor(subtask.isCompleted ? .daisyTextSecondary : .daisyText)
-                        Spacer()
-                    }
-                }
-
-                if task.subtaskCount > 3 {
-                    HStack {
-                        Text("+ \(task.subtaskCount - 3) more subtasks")
+                if task.hasSubtasks {
+                    Button(action: {
+                        withAnimation(.spring(response: 0.4)) {
+                            showingSubtaskManagement.toggle()
+                        }
+                    }) {
+                        Text(showingSubtaskManagement ? "Collapse" : "Manage")
                             .font(.caption)
-                            .foregroundColor(.daisyTextSecondary)
-                        Spacer()
+                            .foregroundColor(.daisyTask)
                     }
                 }
+
+                Button(action: {
+                    showingSubtaskCreation = true
+                }) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(.daisyTask)
+                }
+                .accessibilityLabel("Add subtask")
             }
 
-            Text("Subtask management will be available in the next update.")
-                .font(.caption)
-                .foregroundColor(.daisyTextSecondary)
+            // Progress overview
+            if task.hasSubtasks {
+                SubtaskProgressSummary(task: task, style: .detailed)
+            }
+
+            // Subtask management or preview
+            if showingSubtaskManagement || !task.hasSubtasks {
+                SubtaskListView(parentTask: task, nestingLevel: 0)
+            } else if task.hasSubtasks {
+                // Compact preview of subtasks
+                subtaskPreview
+            }
         }
         .padding()
         .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+        .sheet(isPresented: $showingSubtaskCreation) {
+            SubtaskCreationView(parentTask: task)
+        }
+    }
+
+    @ViewBuilder
+    private var subtaskPreview: some View {
+        VStack(spacing: 8) {
+            ForEach(task.subtasks.prefix(3), id: \.id) { subtask in
+                HStack {
+                    Button(action: {
+                        toggleSubtaskCompletion(subtask)
+                    }) {
+                        Image(systemName: subtask.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(subtask.isCompleted ? .daisySuccess : .daisyTextSecondary)
+                    }
+                    .buttonStyle(.plain)
+
+                    Text(subtask.title)
+                        .font(.subheadline)
+                        .strikethrough(subtask.isCompleted)
+                        .foregroundColor(subtask.isCompleted ? .daisyTextSecondary : .daisyText)
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    if subtask.hasSubtasks {
+                        Text("\(subtask.completedSubtaskCount)/\(subtask.subtaskCount)")
+                            .font(.caption)
+                            .foregroundColor(.daisyTextSecondary)
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    showingSubtaskManagement = true
+                }
+            }
+
+            if task.subtaskCount > 3 {
+                Button(action: {
+                    showingSubtaskManagement = true
+                }) {
+                    HStack {
+                        Text("+ \(task.subtaskCount - 3) more subtasks")
+                            .font(.caption)
+                            .foregroundColor(.daisyTask)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.daisyTask)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     // MARK: - Attachments Section
@@ -463,6 +519,10 @@ struct TaskDetailView: View {
         if success {
             dismiss()
         }
+    }
+
+    private func toggleSubtaskCompletion(_ subtask: Task) {
+        _ = taskManager.toggleSubtaskCompletionSafely(subtask)
     }
 }
 

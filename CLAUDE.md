@@ -62,10 +62,10 @@ This is a standard Xcode project. Use Xcode to build and run:
 
 ## Development Context
 
-**Phase 1.0 Complete - Phase 2.2 Complete: TaskRowView Reusability Pattern**
+**Phase 1.0 Complete - Phase 2.3.2 Complete: Advanced Task Management with Subtasks**
 
 ### Current Status
-DaisyDos has a robust architectural foundation with enhanced task management, complete tag system, and proven component reusability patterns implemented. The app currently features:
+DaisyDos has a comprehensive task management system with full CRUD operations, advanced subtask hierarchies, and proven architectural patterns. The app currently features:
 
 **Core Foundation (Phase 1.0 Complete):**
 - Complete tab-based navigation (Today, Tasks, Habits, Tags, Settings)
@@ -104,24 +104,47 @@ DaisyDos has a robust architectural foundation with enhanced task management, co
 - ✅ **Performance Optimized**: Efficient rendering with conditional UI based on display modes
 - ✅ **Comprehensive Previews**: Multiple preview configurations for testing all display modes and accessibility
 
+**Complete Task CRUD Operations (Phase 2.3.1 Complete):**
+- ✅ **TaskEditView**: Dedicated task editing interface with pre-populated forms and change detection
+- ✅ **TaskDetailView**: Comprehensive task display with inline editing and action menus
+- ✅ **Enhanced TasksView**: Multi-select, bulk operations, context menus, and detail navigation
+- ✅ **Task Duplication**: Smart duplication with date adjustment and tag preservation
+- ✅ **Enhanced Form Validation**: Real-time feedback, character limits, and date validation
+- ✅ **Bulk Operations**: Multi-select mode with completion toggle and batch deletion
+
+**Advanced Subtask Management (Phase 2.3.2 Complete):**
+- ✅ **SubtaskRowView**: Recursive subtask display with unlimited nesting and visual depth indicators
+- ✅ **Modern Drag & Drop**: Task+Transferable protocol with circular reference prevention
+- ✅ **SubtaskCreationView**: Comprehensive subtask creation with inheritance and nesting validation
+- ✅ **Rich Progress Visualization**: Progress rings, bars, summaries, and interactive components
+- ✅ **Intelligent Completion Propagation**: Three-strategy system (Automatic, Manual, Hybrid)
+- ✅ **TaskDetailView Integration**: Seamless subtask management within task detail interface
+- ✅ **Performance Optimization**: Efficient rendering for deep hierarchies (10+ levels)
+- ✅ **Root Task Filtering**: Subtasks properly contained within parent task detail views
+
 ### Phase 2.3 Next Goals
-Advanced Task Management Features:
-- **Task CRUD Operations**: Complete create/edit/delete functionality with validation
-- **Subtask Management**: Nesting interface with drag & drop reordering
+Remaining Advanced Task Management Features:
 - **EventKit Integration**: Calendar sync and reminders
 - **Quick Actions**: Swipe gestures and context menus
 - **Advanced Tag Features**: Drag & drop with Transferable protocol
+- **Attachment Management**: File upload, preview, and organization
 
 ### File Organization
 - **Enhanced Models**: `Task.swift` (V2), `Priority.swift`, `RecurrenceRule.swift`, `TaskAttachment.swift` - Full featured models
+- **Transferable Extensions**: `Task+Transferable.swift` - Modern drag & drop support with validation
 - **Core Models**: `Habit.swift`, `Tag.swift` - SwiftData models with @Model macro and Identifiable conformance
-- **Managers**: `TaskManager.swift` (enhanced), `HabitManager.swift`, `TagManager.swift` - @Observable business logic
-- **Views**: Production views in main navigation structure
-  - `TasksView.swift` - Main task list interface
-  - `TagsView.swift` - Complete tag management with @Query integration
-  - `TaskRowView.swift` - Maximally reusable task component with composition pattern API and cross-context compatibility
-  - `TaskRowCrossContextDemo.swift` - Cross-context validation demo showing TaskRowView in different display modes
-  - `AddTaskView.swift` - Enhanced task creation with tag assignment
+- **Managers**: `TaskManager.swift` (enhanced), `TaskManager+Subtasks.swift`, `HabitManager.swift`, `TagManager.swift` - @Observable business logic
+- **Task Views**: Complete task management interface
+  - `TasksView.swift` - Main task list with multi-select, bulk operations, and root task filtering
+  - `TaskDetailView.swift` - Comprehensive task display with integrated subtask management
+  - `TaskEditView.swift` - Dedicated task editing with validation and change detection
+  - `TaskRowView.swift` - Maximally reusable task component with composition pattern API
+  - `AddTaskView.swift` - Enhanced task creation with validation and tag assignment
+- **Subtask Management**: Complete subtask system (`/Views/Subtasks/`)
+  - `SubtaskRowView.swift` - Recursive subtask display with unlimited nesting
+  - `SubtaskListView.swift` - Drag & drop management with visual feedback
+  - `SubtaskCreationView.swift` - Comprehensive subtask creation interface
+  - `SubtaskProgressView.swift` - Rich progress visualization components
 - **Tag UI Components**: Complete tag system interface
   - `TagCreationView.swift`, `TagEditView.swift` - Tag CRUD operations
   - `TagColorPicker.swift`, `TagSymbolPicker.swift` - Visual selection interfaces
@@ -134,15 +157,16 @@ Advanced Task Management Features:
 
 ## Key Implementation Principles
 
-1. **Component Reusability**: TaskRowView proven to work identically across all contexts using composition pattern. HabitRowView will follow identical patterns
+1. **Component Reusability**: TaskRowView and SubtaskRowView proven to work identically across all contexts using composition pattern
 2. **@Observable First**: Use @Observable pattern throughout, no traditional ViewModels
 3. **Privacy by Default**: All features work locally before any cloud integration
 4. **Error Handling Excellence**: Three-tier system transforms all errors to user-friendly messages with recovery actions
 5. **Accessibility Excellence**: WCAG 2.1 AA compliance from the start with 48pt touch targets and full VoiceOver support
-6. **Performance Focus**: Designed to handle large datasets efficiently with optimized components
+6. **Performance Focus**: Designed to handle large datasets and deep hierarchies efficiently with optimized components
 7. **Design System Consistency**: All UI components use established spacing, typography, colors, and liquid glass aesthetic
 8. **Developer Experience**: Semantic APIs (`.asCard()`, `DaisyButton.primary()`) with comprehensive documentation and previews
 9. **SwiftData Integration**: Use @Query for automatic UI updates and computed properties for business logic in @Observable managers
+10. **Hierarchical Data Management**: Proper root/child task separation with intelligent filtering and completion propagation
 
 Refer to `/Docs/implementation_roadmap.md` for the detailed development plan and `/Docs/daisydos_prd.md` and `/Docs/daisydos_plan.md` for comprehensive product requirements.
 
