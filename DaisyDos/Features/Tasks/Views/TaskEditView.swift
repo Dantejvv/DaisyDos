@@ -1,5 +1,5 @@
 //
-//  AddTaskView.swift
+//  TaskEditView.swift
 //  DaisyDos
 //
 //  Created by Claude Code on 9/26/25.
@@ -8,30 +8,39 @@
 import SwiftUI
 import SwiftData
 
-struct AddTaskView: View {
+struct TaskEditView: View {
     @Environment(TaskManager.self) private var taskManager
     @Environment(\.dismiss) private var dismiss
 
-    @State private var title = ""
-    @State private var taskDescription = ""
-    @State private var priority: Priority = .medium
+    let task: Task
+
+    @State private var title: String
+    @State private var taskDescription: String
+    @State private var priority: Priority
     @State private var dueDate: Date?
-    @State private var hasDueDate = false
-    @State private var selectedTags: [Tag] = []
+    @State private var hasDueDate: Bool
+    @State private var startDate: Date?
+    @State private var hasStartDate: Bool
+    @State private var selectedTags: [Tag]
     @State private var showingTagSelection = false
     @State private var showingError = false
     @State private var errorMessage = ""
+    @State private var showingUnsavedChangesAlert = false
+
+    init(task: Task) {
+        self.task = task
+        self._title = State(initialValue: task.title)
+        self._taskDescription = State(initialValue: task.taskDescription)
+        self._priority = State(initialValue: task.priority)
+        self._dueDate = State(initialValue: task.dueDate)
+        self._hasDueDate = State(initialValue: task.dueDate != nil)
+        self._startDate = State(initialValue: task.startDate)
+        self._hasStartDate = State(initialValue: task.startDate != nil)
+        self._selectedTags = State(initialValue: task.tags)
+    }
 
     var isFormValid: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && hasValidDates
-    }
-
-    var hasValidDates: Bool {
-        guard hasDueDate, let dueDate = dueDate else {
-            return true
-        }
-        // Due date should not be in the past
-        return dueDate >= Calendar.current.startOfDay(for: Date())
     }
 
     var titleCharacterCount: Int {
@@ -55,6 +64,27 @@ struct AddTaskView: View {
 
     private var descriptionCountColor: Color {
         descriptionCharacterCount > Int(Double(maxDescriptionLength) * 0.8) ? .daisyError : .daisyTextSecondary
+    }
+
+    var hasChanges: Bool {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = taskDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return trimmedTitle != task.title ||
+               trimmedDescription != task.taskDescription ||
+               priority != task.priority ||
+               (hasDueDate ? dueDate : nil) != task.dueDate ||
+               (hasStartDate ? startDate : nil) != task.startDate ||
+               Set(selectedTags.map(\.id)) != Set(task.tags.map(\.id))
+    }
+
+    var hasValidDates: Bool {
+        guard hasStartDate && hasDueDate,
+              let start = startDate,
+              let due = dueDate else {
+            return true
+        }
+        return start <= due
     }
 
     var body: some View {
@@ -138,25 +168,35 @@ struct AddTaskView: View {
                     .padding(.horizontal, 4)
                 }
 
-                Section("Due Date") {
+                Section("Dates") {
+                    // Start Date
+                    Toggle("Set start date", isOn: $hasStartDate)
+
+                    if hasStartDate {
+                        DatePicker("Start date", selection: Binding(
+                            get: { startDate ?? Date() },
+                            set: { startDate = $0 }
+                        ), displayedComponents: [.date])
+                    }
+
+                    // Due Date
                     Toggle("Set due date", isOn: $hasDueDate)
 
                     if hasDueDate {
-                        VStack(alignment: .leading, spacing: 8) {
-                            DatePicker("Due date", selection: Binding(
-                                get: { dueDate ?? Date() },
-                                set: { dueDate = $0 }
-                            ), in: Date()..., displayedComponents: [.date])
+                        DatePicker("Due date", selection: Binding(
+                            get: { dueDate ?? Date() },
+                            set: { dueDate = $0 }
+                        ), displayedComponents: [.date])
+                    }
 
-                            if !hasValidDates {
-                                HStack {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundColor(.daisyError)
-                                    Text("Due date cannot be in the past")
-                                        .font(.caption)
-                                        .foregroundColor(.daisyError)
-                                }
-                            }
+                    // Date validation warning
+                    if !hasValidDates {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.daisyError)
+                            Text("Start date must be before due date")
+                                .font(.caption)
+                                .foregroundColor(.daisyError)
                         }
                     }
                 }
@@ -203,21 +243,41 @@ struct AddTaskView: View {
                         }
                     }
                 }
+
+                if task.hasRecurrence {
+                    Section("Recurrence") {
+                        HStack {
+                            Image(systemName: "repeat")
+                                .foregroundColor(.daisyTask)
+                            Text("This task has a recurrence rule")
+                                .font(.subheadline)
+                            Spacer()
+                        }
+
+                        Text("Recurrence rule editing will be available in future updates.")
+                            .font(.caption)
+                            .foregroundColor(.daisyTextSecondary)
+                    }
+                }
             }
-            .navigationTitle("New Task")
+            .navigationTitle("Edit Task")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        dismiss()
+                        if hasChanges {
+                            showingUnsavedChangesAlert = true
+                        } else {
+                            dismiss()
+                        }
                     }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") {
-                        createTask()
+                    Button("Save") {
+                        saveChanges()
                     }
-                    .disabled(!isFormValid)
+                    .disabled(!isFormValid || !hasValidDates || !hasChanges)
                 }
             }
             .sheet(isPresented: $showingTagSelection) {
@@ -234,7 +294,15 @@ struct AddTaskView: View {
                         }
                 }
             }
-            .alert("Error Creating Task", isPresented: $showingError) {
+            .alert("Unsaved Changes", isPresented: $showingUnsavedChangesAlert) {
+                Button("Discard Changes", role: .destructive) {
+                    dismiss()
+                }
+                Button("Continue Editing", role: .cancel) { }
+            } message: {
+                Text("You have unsaved changes. Are you sure you want to discard them?")
+            }
+            .alert("Error Saving Task", isPresented: $showingError) {
                 Button("OK") { }
             } message: {
                 Text(errorMessage)
@@ -242,30 +310,52 @@ struct AddTaskView: View {
         }
     }
 
-    private func createTask() {
+    private func saveChanges() {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = taskDescription.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedTitle.isEmpty else {
             showError("Task title cannot be empty")
             return
         }
 
-        let result = taskManager.createTask(
+        guard hasValidDates else {
+            showError("Start date must be before due date")
+            return
+        }
+
+        let result = taskManager.updateTask(
+            task,
             title: trimmedTitle,
-            taskDescription: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),
+            taskDescription: trimmedDescription,
             priority: priority,
-            dueDate: hasDueDate ? dueDate : nil
+            dueDate: hasDueDate ? dueDate : nil,
+            startDate: hasStartDate ? startDate : nil
         )
 
         switch result {
-        case .success(let createdTask):
-            // Add selected tags
-            for tag in selectedTags {
-                _ = taskManager.addTagSafely(tag, to: createdTask)
-            }
+        case .success:
+            // Update tags
+            updateTaskTags()
             dismiss()
         case .failure(let error):
             showError(error.wrapped.userMessage)
+        }
+    }
+
+    private func updateTaskTags() {
+        // Remove tags that are no longer selected
+        for tag in task.tags {
+            if !selectedTags.contains(tag) {
+                _ = taskManager.removeTagSafely(tag, from: task)
+            }
+        }
+
+        // Add newly selected tags
+        for tag in selectedTags {
+            if !task.tags.contains(tag) {
+                _ = taskManager.addTagSafely(tag, to: task)
+            }
         }
     }
 
@@ -274,7 +364,6 @@ struct AddTaskView: View {
         showingError = true
     }
 }
-
 
 #Preview {
     let container = try! ModelContainer(
@@ -285,11 +374,23 @@ struct AddTaskView: View {
     let taskManager = TaskManager(modelContext: container.mainContext)
     let tagManager = TagManager(modelContext: container.mainContext)
 
-    // Create some sample tags
-    let _ = tagManager.createTag(name: "Work", sfSymbolName: "briefcase", colorName: "blue")
-    let _ = tagManager.createTag(name: "Personal", sfSymbolName: "house", colorName: "green")
+    // Create sample tags
+    let workTag = tagManager.createTag(name: "Work", sfSymbolName: "briefcase", colorName: "blue")!
+    let personalTag = tagManager.createTag(name: "Personal", sfSymbolName: "house", colorName: "green")!
 
-    AddTaskView()
+    // Create sample task
+    let task = Task(
+        title: "Sample Task to Edit",
+        taskDescription: "This is a sample task with description for editing demo",
+        priority: .high,
+        dueDate: Calendar.current.date(byAdding: .day, value: 2, to: Date()),
+        startDate: Date()
+    )
+    _ = task.addTag(workTag)
+    container.mainContext.insert(task)
+    try! container.mainContext.save()
+
+    return TaskEditView(task: task)
         .modelContainer(container)
         .environment(taskManager)
         .environment(tagManager)

@@ -489,6 +489,61 @@ class TaskManager {
         }
     }
 
+    // MARK: - Task Duplication
+
+    func duplicateTask(_ task: Task) -> Result<Task, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "duplicate task",
+            entityType: "task"
+        ) {
+            let trimmedTitle = task.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedTitle.isEmpty else {
+                throw DaisyDosError.validationFailed("title")
+            }
+
+            // Create new task with "(Copy)" suffix
+            let duplicateTitle = "\(trimmedTitle) (Copy)"
+
+            // Adjust due date if it's in the past
+            let duplicateDueDate: Date?
+            if let dueDate = task.dueDate {
+                duplicateDueDate = dueDate > Date() ? dueDate : nil
+            } else {
+                duplicateDueDate = nil
+            }
+
+            let duplicateTask = Task(
+                title: duplicateTitle,
+                taskDescription: task.taskDescription,
+                priority: task.priority,
+                dueDate: duplicateDueDate,
+                startDate: task.startDate,
+                recurrenceRule: task.recurrenceRule
+            )
+
+            modelContext.insert(duplicateTask)
+
+            // Copy tags
+            for tag in task.tags {
+                _ = duplicateTask.addTag(tag)
+            }
+
+            try modelContext.save()
+            return duplicateTask
+        }
+    }
+
+    /// Duplicate a task and handle errors internally
+    func duplicateTaskSafely(_ task: Task) -> Task? {
+        switch duplicateTask(task) {
+        case .success(let duplicatedTask):
+            return duplicatedTask
+        case .failure(let error):
+            lastError = error.wrapped
+            return nil
+        }
+    }
+
     // MARK: - Statistics
 
     var taskCount: Int {
@@ -525,6 +580,35 @@ class TaskManager {
     /// Update a task and handle errors internally
     func updateTaskSafely(_ task: Task, title: String? = nil, isCompleted: Bool? = nil) -> Bool {
         switch updateTask(task, title: title, isCompleted: isCompleted) {
+        case .success:
+            return true
+        case .failure(let error):
+            lastError = error.wrapped
+            return false
+        }
+    }
+
+    /// Enhanced update task with all properties and handle errors internally
+    func updateTaskSafely(
+        _ task: Task,
+        title: String? = nil,
+        taskDescription: String? = nil,
+        priority: Priority? = nil,
+        dueDate: Date? = nil,
+        startDate: Date? = nil,
+        recurrenceRule: RecurrenceRule? = nil,
+        isCompleted: Bool? = nil
+    ) -> Bool {
+        switch updateTask(
+            task,
+            title: title,
+            taskDescription: taskDescription,
+            priority: priority,
+            dueDate: dueDate,
+            startDate: startDate,
+            recurrenceRule: recurrenceRule,
+            isCompleted: isCompleted
+        ) {
         case .success:
             return true
         case .failure(let error):

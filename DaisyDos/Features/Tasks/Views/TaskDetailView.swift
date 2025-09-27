@@ -1,0 +1,509 @@
+//
+//  TaskDetailView.swift
+//  DaisyDos
+//
+//  Created by Claude Code on 9/26/25.
+//
+
+import SwiftUI
+import SwiftData
+
+struct TaskDetailView: View {
+    @Environment(TaskManager.self) private var taskManager
+    @Environment(\.dismiss) private var dismiss
+
+    let task: Task
+
+    @State private var showingEditView = false
+    @State private var showingTagAssignment = false
+    @State private var showingDeleteConfirmation = false
+    @State private var showingShareSheet = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+
+                    // MARK: - Task Header
+                    taskHeaderSection
+
+                    // MARK: - Task Details
+                    taskDetailsSection
+
+                    // MARK: - Tags Section
+                    if !task.tags.isEmpty {
+                        tagsSection
+                    }
+
+                    // MARK: - Dates Section
+                    if task.dueDate != nil || task.startDate != nil {
+                        datesSection
+                    }
+
+                    // MARK: - Subtasks Section
+                    if task.hasSubtasks {
+                        subtasksSection
+                    }
+
+                    // MARK: - Attachments Section
+                    if !task.attachments.isEmpty {
+                        attachmentsSection
+                    }
+
+                    // MARK: - Metadata Section
+                    metadataSection
+
+                    Spacer(minLength: 100) // Space for floating action button
+                }
+                .padding()
+            }
+            .navigationTitle("Task Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button(action: {
+                            showingEditView = true
+                        }) {
+                            Label("Edit", systemImage: "pencil")
+                        }
+
+                        Button(action: {
+                            duplicateTask()
+                        }) {
+                            Label("Duplicate", systemImage: "plus.square.on.square")
+                        }
+
+                        Button(action: {
+                            showingTagAssignment = true
+                        }) {
+                            Label("Manage Tags", systemImage: "tag")
+                        }
+
+                        Divider()
+
+                        Button(action: {
+                            showingShareSheet = true
+                        }) {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
+
+                        Button(action: {
+                            showingDeleteConfirmation = true
+                        }) {
+                            Label("Delete", systemImage: "trash")
+                        }
+                        .foregroundColor(.daisyError)
+
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                // Floating completion toggle
+                Button(action: {
+                    _ = taskManager.toggleTaskCompletionSafely(task)
+                }) {
+                    Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 56))
+                        .foregroundColor(task.isCompleted ? .daisySuccess : .daisyTask)
+                        .background(
+                            Circle()
+                                .fill(.regularMaterial)
+                                .shadow(radius: 8)
+                        )
+                }
+                .padding()
+                .accessibilityLabel(task.isCompleted ? "Mark as incomplete" : "Mark as complete")
+            }
+            .sheet(isPresented: $showingEditView) {
+                TaskEditView(task: task)
+            }
+            .sheet(isPresented: $showingTagAssignment) {
+                TagAssignmentSheet.forTask(task: task) { newTags in
+                    updateTaskTags(newTags)
+                }
+            }
+            .alert(
+                "Delete Task",
+                isPresented: $showingDeleteConfirmation
+            ) {
+                Button("Delete", role: .destructive) {
+                    deleteTask()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Are you sure you want to delete '\(task.title)'? This action cannot be undone.")
+            }
+        }
+    }
+
+    // MARK: - Header Section
+
+    @ViewBuilder
+    private var taskHeaderSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(task.title)
+                        .font(.title.bold())
+                        .foregroundColor(task.isCompleted ? .daisyTextSecondary : .daisyText)
+                        .strikethrough(task.isCompleted)
+
+                    if task.priority != .medium {
+                        HStack(spacing: 6) {
+                            task.priority.indicatorView()
+                                .font(.caption)
+                            Text("\(task.priority.displayName) Priority")
+                                .font(.caption.weight(.medium))
+                                .foregroundColor(.daisyTextSecondary)
+                        }
+                    }
+                }
+
+                Spacer()
+
+                if task.isCompleted {
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.daisySuccess)
+                        Text("Complete")
+                            .font(.caption.weight(.medium))
+                            .foregroundColor(.daisySuccess)
+                    }
+                } else if task.hasOverdueStatus {
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.title2)
+                            .foregroundColor(.daisyError)
+                        Text("Overdue")
+                            .font(.caption.weight(.medium))
+                            .foregroundColor(.daisyError)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Task Details Section
+
+    @ViewBuilder
+    private var taskDetailsSection: some View {
+        if !task.taskDescription.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Description")
+                        .font(.headline)
+                    Spacer()
+                }
+
+                Text(task.taskDescription)
+                    .font(.body)
+                    .foregroundColor(.daisyText)
+            }
+            .padding()
+            .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    // MARK: - Tags Section
+
+    @ViewBuilder
+    private var tagsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Tags")
+                    .font(.headline)
+                Spacer()
+                Button("Manage") {
+                    showingTagAssignment = true
+                }
+                .font(.caption)
+                .foregroundColor(.daisyTask)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(task.tags, id: \.id) { tag in
+                        TagChipView(tag: tag)
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Dates Section
+
+    @ViewBuilder
+    private var datesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Dates")
+                .font(.headline)
+
+            VStack(spacing: 8) {
+                if let startDate = task.startDate {
+                    HStack {
+                        Label("Start Date", systemImage: "calendar.badge.plus")
+                            .font(.subheadline)
+                            .foregroundColor(.daisyTextSecondary)
+                        Spacer()
+                        Text(startDate.formatted(date: .complete, time: .omitted))
+                            .font(.subheadline)
+                    }
+                }
+
+                if let dueDate = task.dueDate {
+                    HStack {
+                        Label("Due Date", systemImage: "calendar.badge.clock")
+                            .font(.subheadline)
+                            .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyTextSecondary)
+                        Spacer()
+                        Text(dueDate.formatted(date: .complete, time: .omitted))
+                            .font(.subheadline)
+                            .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyText)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Subtasks Section
+
+    @ViewBuilder
+    private var subtasksSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Subtasks")
+                    .font(.headline)
+                Spacer()
+                Text("\(task.completedSubtaskCount)/\(task.subtaskCount)")
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+            }
+
+            // Progress bar
+            ProgressView(value: task.subtaskCompletionPercentage)
+                .tint(.daisySuccess)
+
+            VStack(spacing: 8) {
+                ForEach(task.subtasks.prefix(3), id: \.id) { subtask in
+                    HStack {
+                        Image(systemName: subtask.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(subtask.isCompleted ? .daisySuccess : .daisyTextSecondary)
+                        Text(subtask.title)
+                            .font(.subheadline)
+                            .strikethrough(subtask.isCompleted)
+                            .foregroundColor(subtask.isCompleted ? .daisyTextSecondary : .daisyText)
+                        Spacer()
+                    }
+                }
+
+                if task.subtaskCount > 3 {
+                    HStack {
+                        Text("+ \(task.subtaskCount - 3) more subtasks")
+                            .font(.caption)
+                            .foregroundColor(.daisyTextSecondary)
+                        Spacer()
+                    }
+                }
+            }
+
+            Text("Subtask management will be available in the next update.")
+                .font(.caption)
+                .foregroundColor(.daisyTextSecondary)
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Attachments Section
+
+    @ViewBuilder
+    private var attachmentsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Attachments")
+                    .font(.headline)
+                Spacer()
+                Text("\(task.attachmentCount)")
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+            }
+
+            LazyVGrid(columns: gridColumns, spacing: 8) {
+                ForEach(Array(task.attachments.prefix(4)), id: \.id) { attachment in
+                    attachmentCard(for: attachment)
+                }
+            }
+
+            if task.attachmentCount > 4 {
+                Text("+ \(task.attachmentCount - 4) more attachments")
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+            }
+
+            Text("Attachment management will be available in future updates.")
+                .font(.caption)
+                .foregroundColor(.daisyTextSecondary)
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Metadata Section
+
+    @ViewBuilder
+    private var metadataSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Details")
+                .font(.headline)
+
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Created")
+                        .font(.subheadline)
+                        .foregroundColor(.daisyTextSecondary)
+                    Spacer()
+                    Text(task.createdDate.formatted(date: .abbreviated, time: .shortened))
+                        .font(.subheadline)
+                }
+
+                HStack {
+                    Text("Modified")
+                        .font(.subheadline)
+                        .foregroundColor(.daisyTextSecondary)
+                    Spacer()
+                    Text(task.modifiedDate.formatted(date: .abbreviated, time: .shortened))
+                        .font(.subheadline)
+                }
+
+                if task.isCompleted, let completedDate = task.completedDate {
+                    HStack {
+                        Text("Completed")
+                            .font(.subheadline)
+                            .foregroundColor(.daisySuccess)
+                        Spacer()
+                        Text(completedDate.formatted(date: .abbreviated, time: .shortened))
+                            .font(.subheadline)
+                            .foregroundColor(.daisySuccess)
+                    }
+                }
+
+                if task.hasRecurrence {
+                    HStack {
+                        Text("Recurring")
+                            .font(.subheadline)
+                            .foregroundColor(.daisyTextSecondary)
+                        Spacer()
+                        Image(systemName: "repeat")
+                            .font(.subheadline)
+                            .foregroundColor(.daisyTask)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Helper Properties and Views
+
+    private var gridColumns: [GridItem] {
+        [GridItem(.flexible()), GridItem(.flexible())]
+    }
+
+    @ViewBuilder
+    private func attachmentCard(for attachment: TaskAttachment) -> some View {
+        VStack {
+            Image(systemName: "doc.fill")
+                .font(.largeTitle)
+                .foregroundColor(.daisyTextSecondary)
+            Text(attachment.fileName)
+                .font(.caption)
+                .lineLimit(1)
+        }
+        .frame(height: 80)
+        .frame(maxWidth: .infinity)
+        .background(Color.daisySurface.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: - Helper Methods
+
+    private func updateTaskTags(_ newTags: [Tag]) {
+        // Remove tags that are no longer selected
+        for tag in task.tags {
+            if !newTags.contains(tag) {
+                _ = taskManager.removeTagSafely(tag, from: task)
+            }
+        }
+
+        // Add newly selected tags
+        for tag in newTags {
+            if !task.tags.contains(tag) {
+                _ = taskManager.addTagSafely(tag, to: task)
+            }
+        }
+    }
+
+    private func duplicateTask() {
+        _ = taskManager.duplicateTaskSafely(task)
+    }
+
+    private func deleteTask() {
+        let success = taskManager.deleteTaskSafely(task)
+        if success {
+            dismiss()
+        }
+    }
+}
+
+#Preview {
+    let container = try! ModelContainer(
+        for: Task.self, Tag.self,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+
+    let taskManager = TaskManager(modelContext: container.mainContext)
+    let tagManager = TagManager(modelContext: container.mainContext)
+
+    // Create sample tags
+    let workTag = tagManager.createTag(name: "Work", sfSymbolName: "briefcase", colorName: "blue")!
+    let urgentTag = tagManager.createTag(name: "Urgent", sfSymbolName: "exclamationmark", colorName: "red")!
+
+    // Create sample task with full features
+    let task = Task(
+        title: "Complete Quarterly Report",
+        taskDescription: "Prepare the comprehensive quarterly report including all metrics, analysis, and recommendations for the executive team. This is a critical deliverable for the company.",
+        priority: .high,
+        dueDate: Calendar.current.date(byAdding: .day, value: 2, to: Date()),
+        startDate: Date()
+    )
+    _ = task.addTag(workTag)
+    _ = task.addTag(urgentTag)
+
+    // Add subtasks
+    let subtask1 = task.createSubtask(title: "Gather data from all departments")
+    let subtask2 = task.createSubtask(title: "Analyze quarterly metrics")
+    let subtask3 = task.createSubtask(title: "Create charts and visualizations")
+    subtask1.setCompleted(true)
+
+    container.mainContext.insert(task)
+    container.mainContext.insert(subtask1)
+    container.mainContext.insert(subtask2)
+    container.mainContext.insert(subtask3)
+    try! container.mainContext.save()
+
+    return TaskDetailView(task: task)
+        .modelContainer(container)
+        .environment(taskManager)
+        .environment(tagManager)
+}
