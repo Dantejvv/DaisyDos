@@ -39,16 +39,33 @@ struct AddTaskView: View {
                 }
 
                 Section("Priority") {
-                    Picker("Priority", selection: $priority) {
-                        ForEach(Priority.allCases, id: \.self) { priority in
-                            HStack {
-                                priority.indicatorView()
-                                Text(priority.rawValue)
+                    HStack(spacing: 0) {
+                        ForEach(Priority.allCases, id: \.self) { priorityOption in
+                            Button(action: {
+                                priority = priorityOption
+                            }) {
+                                VStack(spacing: 4) {
+                                    priorityOption.indicatorView()
+                                        .font(.caption)
+                                    Text(priorityOption.rawValue)
+                                        .font(.caption2)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(priority == priorityOption ? Color.daisyTask.opacity(0.2) : Color.clear)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.daisyTask, lineWidth: priority == priorityOption ? 2 : 0.5)
+                                )
                             }
-                            .tag(priority)
+                            .buttonStyle(.plain)
+                            .foregroundColor(priority == priorityOption ? .daisyTask : .daisyText)
                         }
                     }
-                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 4)
                 }
 
                 Section("Due Date") {
@@ -67,7 +84,7 @@ struct AddTaskView: View {
                         Button("Add Tags") {
                             showingTagSelection = true
                         }
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(.daisyTask)
                     } else {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
@@ -88,7 +105,7 @@ struct AddTaskView: View {
                                     }) {
                                         Image(systemName: "plus.circle")
                                             .font(.title2)
-                                            .foregroundColor(.accentColor)
+                                            .foregroundColor(.daisyTask)
                                     }
                                     .buttonStyle(.plain)
                                     .accessibilityLabel("Add more tags")
@@ -100,7 +117,7 @@ struct AddTaskView: View {
                         if selectedTags.count == 3 {
                             Text("Maximum tags reached (3/3)")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.daisyTextSecondary)
                         }
                     }
                 }

@@ -10,14 +10,13 @@ import SwiftData
 
 struct TagSelectionView: View {
     @Environment(TagManager.self) private var tagManager
+    @Query(sort: [SortDescriptor(\Tag.name)]) private var allTags: [Tag]
     @Binding var selectedTags: [Tag]
 
     @State private var searchText = ""
     @State private var showingCreateTag = false
 
     private var filteredTags: [Tag] {
-        let allTags = tagManager.allTags
-
         if searchText.isEmpty {
             return allTags
         } else {
@@ -45,7 +44,7 @@ struct TagSelectionView: View {
                         if selectedTags.count == 3 {
                             Text("Maximum reached")
                                 .font(.caption)
-                                .foregroundColor(Color(.systemOrange))
+                                .foregroundColor(.daisyWarning)
                         }
                     }
 
@@ -70,12 +69,12 @@ struct TagSelectionView: View {
             // Search bar
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.daisyTextSecondary)
 
                 TextField("Search tags...", text: $searchText)
             }
             .padding()
-            .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
+            .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 10))
 
             // Available tags section
             VStack(alignment: .leading, spacing: 8) {
@@ -94,7 +93,7 @@ struct TagSelectionView: View {
                             Text("New")
                                 .font(.caption.weight(.medium))
                         }
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(.daisyTag)
                     }
                     .disabled(tagManager.remainingTagSlots <= 0)
                 }
@@ -104,11 +103,11 @@ struct TagSelectionView: View {
                     VStack(spacing: 12) {
                         Image(systemName: searchText.isEmpty ? "tag.slash" : "magnifyingglass")
                             .font(.title2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
 
                         Text(searchText.isEmpty ? "No tags available" : "No tags found")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.daisyTextSecondary)
 
                         if searchText.isEmpty && tagManager.canCreateNewTag {
                             Button("Create your first tag") {

@@ -81,6 +81,30 @@ enum Priority: String, CaseIterable, Codable, Identifiable {
         }
     }
 
+    /// Short name for compact display
+    var shortName: String {
+        switch self {
+        case .low:
+            return "Low"
+        case .medium:
+            return "Med"
+        case .high:
+            return "High"
+        }
+    }
+
+    /// Symbol as text for segmented control
+    var symbolText: String {
+        switch self {
+        case .low:
+            return "🌙"  // Moon emoji
+        case .medium:
+            return "⚫"  // Medium black circle
+        case .high:
+            return "❗"  // Exclamation mark
+        }
+    }
+
     // MARK: - Sorting and Filtering
 
     /// Numeric value for sorting (higher number = higher priority)

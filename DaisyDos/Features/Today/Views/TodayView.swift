@@ -13,6 +13,14 @@ struct TodayView: View {
     @Environment(HabitManager.self) private var habitManager
     @Environment(TagManager.self) private var tagManager
 
+    // SwiftData query for automatic updates when tasks change
+    @Query(
+        filter: #Predicate<Task> { task in
+            task.isCompleted == false
+        },
+        sort: [SortDescriptor(\Task.createdDate, order: .reverse)]
+    ) private var todaysTasks: [Task]
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -34,14 +42,14 @@ struct TodayView: View {
                             VStack(alignment: .leading) {
                                 Text("Tasks Today")
                                     .font(.headline)
-                                Text("\(taskManager.todaysTasks.filter { !$0.isCompleted }.count) pending")
+                                Text("\(todaysTasks.filter { !$0.isCompleted }.count) pending")
                                     .foregroundColor(.daisyTextSecondary)
                             }
                             Spacer()
                             VStack(alignment: .trailing) {
                                 Text("Completed")
                                     .font(.headline)
-                                Text("\(taskManager.todaysTasks.filter { $0.isCompleted }.count)")
+                                Text("\(todaysTasks.filter { $0.isCompleted }.count)")
                                     .foregroundColor(.daisySuccess)
                             }
                         }
@@ -67,7 +75,7 @@ struct TodayView: View {
 
                     // MARK: - Today's Tasks
 
-                    if !taskManager.todaysTasks.isEmpty {
+                    if !todaysTasks.isEmpty {
                         VStack(alignment: .leading, spacing: 16) {
                             HStack {
                                 Text("Today's Tasks")
@@ -80,7 +88,7 @@ struct TodayView: View {
                             }
 
                             VStack(spacing: 8) {
-                                ForEach(taskManager.todaysTasks.prefix(5)) { task in
+                                ForEach(todaysTasks.prefix(5)) { task in
                                     HStack {
                                         Button(action: {
                                             taskManager.toggleTaskCompletionSafely(task)
@@ -107,13 +115,13 @@ struct TodayView: View {
                         VStack(spacing: 16) {
                             Image(systemName: "calendar.badge.plus")
                                 .font(.system(size: 48))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.daisyTextSecondary)
 
                             Text("No tasks for today")
                                 .font(.title2.bold())
 
                             Text("Start your day by adding some tasks!")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.daisyTextSecondary)
                                 .multilineTextAlignment(.center)
                         }
                         .padding()
