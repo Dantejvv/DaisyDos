@@ -83,7 +83,7 @@ struct SubtaskProgressBar: View {
     }
 
     private var segments: [SubtaskSegment] {
-        task.subtasks.enumerated().map { index, subtask in
+        task.orderedSubtasks.enumerated().map { index, subtask in
             SubtaskSegment(
                 id: subtask.id,
                 isCompleted: subtask.isCompleted,
@@ -332,7 +332,7 @@ struct InteractiveSubtaskProgressView: View {
             // Expandable subtask list
             if isExpanded {
                 VStack(spacing: 4) {
-                    ForEach(task.subtasks.prefix(5), id: \.id) { subtask in
+                    ForEach(task.orderedSubtasks.prefix(5), id: \.id) { subtask in
                         Button(action: {
                             onSubtaskTapped(subtask)
                         }) {

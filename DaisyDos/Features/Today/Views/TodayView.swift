@@ -96,7 +96,7 @@ struct TodayView: View {
                                 ForEach(todaysTasks.prefix(5)) { task in
                                     HStack {
                                         Button(action: {
-                                            taskManager.toggleTaskCompletionSafely(task)
+                                            toggleTaskCompletion(task)
                                         }) {
                                             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                                                 .foregroundColor(task.isCompleted ? .daisySuccess : .daisyTextSecondary)
@@ -180,6 +180,23 @@ struct TodayView: View {
             }
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func toggleTaskCompletion(_ task: Task) {
+        if task.hasSubtasks {
+            let result = taskManager.toggleSubtaskCompletion(
+                task,
+                strategy: .hybrid,
+                propagateToParent: true
+            )
+            if case .failure(let error) = result {
+                print("Failed to toggle task completion: \(error)")
+            }
+        } else {
+            _ = taskManager.toggleTaskCompletionSafely(task)
         }
     }
 }

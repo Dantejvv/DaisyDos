@@ -388,6 +388,38 @@ class TaskManager {
         }
     }
 
+    /// Moves a subtask up one position in its parent's subtask list
+    func moveSubtaskUp(_ subtask: Task) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "move subtask up",
+            entityType: "task"
+        ) {
+            guard let parent = subtask.parentTask else {
+                throw DaisyDosError.validationFailed("Subtask has no parent")
+            }
+
+            parent.moveSubtaskUp(subtask)
+            try modelContext.save()
+        }
+    }
+
+    /// Moves a subtask down one position in its parent's subtask list
+    func moveSubtaskDown(_ subtask: Task) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "move subtask down",
+            entityType: "task"
+        ) {
+            guard let parent = subtask.parentTask else {
+                throw DaisyDosError.validationFailed("Subtask has no parent")
+            }
+
+            parent.moveSubtaskDown(subtask)
+            try modelContext.save()
+        }
+    }
+
+    // MARK: - Helper Methods
+
     // MARK: - Attachment Management
 
     func addAttachment(

@@ -9,46 +9,58 @@ import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
-// MARK: - Custom UTType for Task
+// MARK: - Custom UTTypes
 
 extension UTType {
     static let daisyTask = UTType(exportedAs: "com.daisydos.task")
+    static let daisySubtaskMove = UTType(exportedAs: "com.daisydos.subtask-move")
+}
+
+// MARK: - Internal Drag Data for Move Operations
+
+struct SubtaskMoveData: Codable, Transferable {
+    let taskId: UUID
+    let parentTaskId: UUID  // Required - must match drop target parent
+    let currentIndex: Int   // Position in current parent's subtask array
+
+    init(taskId: UUID, parentTaskId: UUID, currentIndex: Int) {
+        self.taskId = taskId
+        self.parentTaskId = parentTaskId
+        self.currentIndex = currentIndex
+    }
+
+    static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(contentType: .daisySubtaskMove)
+    }
 }
 
 // MARK: - Task Transferable Implementation
 
 extension Task: Transferable {
     static var transferRepresentation: some TransferRepresentation {
-        // Text representation for external apps
+        // For internal operations, use a proxy to SubtaskMoveData
+        ProxyRepresentation { task in
+            guard let parent = task.parentTask else {
+                // Root tasks cannot be reordered via this mechanism
+                return SubtaskMoveData(taskId: task.id, parentTaskId: UUID(), currentIndex: -1)
+            }
+
+            let currentIndex = parent.subtasks.firstIndex(of: task) ?? -1
+            return SubtaskMoveData(
+                taskId: task.id,
+                parentTaskId: parent.id,
+                currentIndex: currentIndex
+            )
+        } importing: { moveData in
+            // This should not be used for importing - drop handler manages moves
+            Task(title: "Moving...")
+        }
+
+        // External apps - text representation
         ProxyRepresentation(exporting: \.title) { title in
             Task(title: title)
         }
     }
-}
-
-// MARK: - Drag Data for Subtask Operations
-
-struct SubtaskDragData: Codable, Transferable {
-    let taskId: UUID
-    let title: String
-    let currentParentId: UUID?
-    let nestingLevel: Int
-
-    static var transferRepresentation: some TransferRepresentation {
-        CodableRepresentation(contentType: .daisySubtaskData)
-    }
-}
-
-extension UTType {
-    static let daisySubtaskData = UTType(exportedAs: "com.daisydos.subtask-data")
-}
-
-// MARK: - Drag Operation Types
-
-enum SubtaskDragOperation {
-    case reorder(from: Int, to: Int)
-    case reparent(task: Task, newParent: Task?)
-    case nestingLevelChange(task: Task, newLevel: Int)
 }
 
 // MARK: - Drag & Drop Validation
@@ -91,6 +103,17 @@ extension Task {
         }
         return false
     }
+
+    /// Helper property to get nesting level (unified calculation)
+    var nestingLevel: Int {
+        var level = 0
+        var current = self.parentTask
+        while current != nil {
+            level += 1
+            current = current?.parentTask
+        }
+        return level
+    }
 }
 
 // MARK: - Drag Preview Configuration
@@ -101,6 +124,11 @@ struct TaskDragPreview: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            // Reordering indicator
+            Image(systemName: "line.3.horizontal")
+                .foregroundColor(.daisyTask)
+                .font(.caption)
+
             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                 .foregroundColor(task.isCompleted ? .daisySuccess : .daisyTextSecondary)
 
@@ -114,6 +142,11 @@ struct TaskDragPreview: View {
                     .foregroundColor(.daisyTextSecondary)
             }
 
+            Text("reordering")
+                .font(.caption2)
+                .foregroundColor(.daisyTask)
+                .italic()
+
             Spacer()
         }
         .padding(.horizontal, 12)
@@ -121,62 +154,9 @@ struct TaskDragPreview: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.daisyTask, lineWidth: 1)
+                .stroke(Color.daisyTask, lineWidth: 2) // Thicker border for better visibility
         )
-        .shadow(radius: 4)
+        .shadow(color: .daisyTask.opacity(0.3), radius: 8, x: 0, y: 4) // Colored shadow
     }
 }
 
-// MARK: - Drop Handling
-
-struct SubtaskDropHandler {
-    let parentTask: Task
-    let taskManager: TaskManager
-
-    func canAcceptDrop(of draggedTasks: [Task]) -> Bool {
-        guard let draggedTask = draggedTasks.first else { return false }
-
-        // Basic validation
-        return draggedTask.canBeMovedTo(newParent: parentTask) &&
-               draggedTask.canBeMovedToNestingLevel(parentTask.nestingLevel + 1)
-    }
-
-    func performDrop(of draggedTasks: [Task], at index: Int? = nil) -> Bool {
-        guard let draggedTask = draggedTasks.first,
-              canAcceptDrop(of: draggedTasks) else {
-            return false
-        }
-
-        // Move the task to the new parent
-        let result = taskManager.moveSubtask(draggedTask, to: parentTask)
-
-        switch result {
-        case .success:
-            // If an index was specified, reorder within the parent's subtasks
-            if let index = index {
-                reorderSubtask(draggedTask, to: index)
-            }
-            return true
-        case .failure:
-            return false
-        }
-    }
-
-    private func reorderSubtask(_ subtask: Task, to index: Int) {
-        // This would be implemented as part of enhanced TaskManager functionality
-        // For now, we'll rely on the natural sorting in SubtaskListView
-    }
-}
-
-extension Task {
-    /// Helper property to get nesting level
-    var nestingLevel: Int {
-        var level = 0
-        var current = self.parentTask
-        while current != nil {
-            level += 1
-            current = current?.parentTask
-        }
-        return level
-    }
-}

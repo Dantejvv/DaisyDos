@@ -121,6 +121,14 @@ DaisyDos has a comprehensive task management system with full CRUD operations, a
 - ✅ **TaskDetailView Integration**: Seamless subtask management within task detail interface
 - ✅ **Performance Optimization**: Efficient rendering for deep hierarchies (10+ levels)
 - ✅ **Root Task Filtering**: Subtasks properly contained within parent task detail views
+- ✅ **SwiftData-Compatible Ordering**: Order-based subtask reordering with persistent sequence using `subtaskOrder` property
+
+**Subtask Reordering Implementation (Phase 2.3.2+ Complete):**
+- ✅ **Order-Based System**: Uses explicit `subtaskOrder` property instead of array manipulation for SwiftData compatibility
+- ✅ **Persistent Ordering**: Subtask order maintained across app restarts and database operations
+- ✅ **SwiftData Relationship Optimization**: Proper inverse relationship configuration without circular references
+- ✅ **Automatic Order Assignment**: Legacy subtasks automatically receive proper sequential order values
+- ✅ **Production-Ready Implementation**: Clean, debugged code with all temporary logging removed
 
 ### Phase 2.3 Next Goals
 Remaining Advanced Task Management Features:
@@ -142,7 +150,7 @@ Remaining Advanced Task Management Features:
   - `AddTaskView.swift` - Enhanced task creation with validation and tag assignment
 - **Subtask Management**: Complete subtask system (`/Views/Subtasks/`)
   - `SubtaskRowView.swift` - Recursive subtask display with unlimited nesting
-  - `SubtaskListView.swift` - Drag & drop management with visual feedback
+  - `SubtaskListView.swift` - Order-based reordering with arrow controls (SwiftData compatible)
   - `SubtaskCreationView.swift` - Comprehensive subtask creation interface
   - `SubtaskProgressView.swift` - Rich progress visualization components
 - **Tag UI Components**: Complete tag system interface
@@ -167,6 +175,7 @@ Remaining Advanced Task Management Features:
 8. **Developer Experience**: Semantic APIs (`.asCard()`, `DaisyButton.primary()`) with comprehensive documentation and previews
 9. **SwiftData Integration**: Use @Query for automatic UI updates and computed properties for business logic in @Observable managers
 10. **Hierarchical Data Management**: Proper root/child task separation with intelligent filtering and completion propagation
+11. **SwiftData Ordering Patterns**: Use explicit order properties for array relationships instead of relying on insertion order, as SwiftData relationships are unordered collections
 
 Refer to `/Docs/implementation_roadmap.md` for the detailed development plan and `/Docs/daisydos_prd.md` and `/Docs/daisydos_plan.md` for comprehensive product requirements.
 

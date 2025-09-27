@@ -332,7 +332,7 @@ struct TaskDetailView: View {
     @ViewBuilder
     private var subtaskPreview: some View {
         VStack(spacing: 8) {
-            ForEach(task.subtasks.prefix(3), id: \.id) { subtask in
+            ForEach(task.orderedSubtasks.prefix(3), id: \.id) { subtask in
                 HStack {
                     Button(action: {
                         toggleSubtaskCompletion(subtask)

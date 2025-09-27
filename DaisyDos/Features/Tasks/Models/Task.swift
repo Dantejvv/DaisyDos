@@ -25,6 +25,9 @@ class Task {
     var recurrenceRule: RecurrenceRule?
     var completedDate: Date?
 
+    // MARK: - Ordering Properties
+    var subtaskOrder: Int = 0 // For ordering within parent's subtask list
+
     // MARK: - Relationships
     @Relationship(deleteRule: .nullify, inverse: \Tag.tasks)
     var tags: [Tag] = [] {
@@ -88,6 +91,26 @@ class Task {
 
     var hasSubtasks: Bool {
         !subtasks.isEmpty
+    }
+
+    /// Returns subtasks ordered by their subtaskOrder property
+    var orderedSubtasks: [Task] {
+        // Ensure order values are assigned for existing tasks
+        ensureSubtaskOrderValues()
+        return subtasks.sorted { $0.subtaskOrder < $1.subtaskOrder }
+    }
+
+    /// Ensures all subtasks have proper order values assigned
+    private func ensureSubtaskOrderValues() {
+        // Check if all subtasks have the default order value (0)
+        let allHaveZeroOrder = subtasks.allSatisfy { $0.subtaskOrder == 0 }
+
+        if allHaveZeroOrder && subtasks.count > 1 {
+            // Assign sequential order values to all subtasks
+            for (index, subtask) in subtasks.enumerated() {
+                subtask.subtaskOrder = index
+            }
+        }
     }
 
     var isRootTask: Bool {
@@ -191,6 +214,10 @@ class Task {
             return false // Prevent circular references
         }
 
+        // Assign the next order value
+        let maxOrder = subtasks.map(\.subtaskOrder).max() ?? -1
+        subtask.subtaskOrder = maxOrder + 1
+
         subtasks.append(subtask)
         subtask.parentTask = self
         modifiedDate = Date()
@@ -200,6 +227,44 @@ class Task {
     func removeSubtask(_ subtask: Task) {
         subtasks.removeAll { $0 == subtask }
         subtask.parentTask = nil
+        modifiedDate = Date()
+    }
+
+    /// Moves a subtask up one position by adjusting order values
+    func moveSubtaskUp(_ subtask: Task) {
+        let orderedTasks = orderedSubtasks
+        guard let currentIndex = orderedTasks.firstIndex(of: subtask),
+              currentIndex > 0 else {
+            return
+        }
+
+        // Get the target task to swap orders with
+        let targetTask = orderedTasks[currentIndex - 1]
+
+        // Swap the order values
+        let tempOrder = subtask.subtaskOrder
+        subtask.subtaskOrder = targetTask.subtaskOrder
+        targetTask.subtaskOrder = tempOrder
+
+        modifiedDate = Date()
+    }
+
+    /// Moves a subtask down one position by adjusting order values
+    func moveSubtaskDown(_ subtask: Task) {
+        let orderedTasks = orderedSubtasks
+        guard let currentIndex = orderedTasks.firstIndex(of: subtask),
+              currentIndex < orderedTasks.count - 1 else {
+            return
+        }
+
+        // Get the target task to swap orders with
+        let targetTask = orderedTasks[currentIndex + 1]
+
+        // Swap the order values
+        let tempOrder = subtask.subtaskOrder
+        subtask.subtaskOrder = targetTask.subtaskOrder
+        targetTask.subtaskOrder = tempOrder
+
         modifiedDate = Date()
     }
 
@@ -352,16 +417,7 @@ class Task {
     }
 
     // MARK: - Hierarchy Helpers
-
-    var depth: Int {
-        var depth = 0
-        var current = self.parentTask
-        while current != nil {
-            depth += 1
-            current = current?.parentTask
-        }
-        return depth
-    }
+    // Note: nestingLevel calculation is now unified in Task+Transferable.swift
 
     var rootTask: Task {
         var current = self

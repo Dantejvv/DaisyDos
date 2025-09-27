@@ -16,7 +16,38 @@ struct SubtaskRowView: View {
     let onDelete: () -> Void
     let onAddSubtask: () -> Void
 
+    // Optional action forwarders for nested subtasks
+    var onNestedToggleCompletion: ((Task) -> Void)? = nil
+    var onNestedEdit: ((Task) -> Void)? = nil
+    var onNestedDelete: ((Task) -> Void)? = nil
+    var onNestedAddSubtask: ((Task) -> Void)? = nil
+
     @State private var isExpanded: Bool = true
+
+    // Convenience initializer for top-level subtasks with action forwarding
+    init(
+        subtask: Task,
+        nestingLevel: Int,
+        onToggleCompletion: @escaping () -> Void,
+        onEdit: @escaping () -> Void,
+        onDelete: @escaping () -> Void,
+        onAddSubtask: @escaping () -> Void,
+        onNestedToggleCompletion: ((Task) -> Void)? = nil,
+        onNestedEdit: ((Task) -> Void)? = nil,
+        onNestedDelete: ((Task) -> Void)? = nil,
+        onNestedAddSubtask: ((Task) -> Void)? = nil
+    ) {
+        self.subtask = subtask
+        self.nestingLevel = nestingLevel
+        self.onToggleCompletion = onToggleCompletion
+        self.onEdit = onEdit
+        self.onDelete = onDelete
+        self.onAddSubtask = onAddSubtask
+        self.onNestedToggleCompletion = onNestedToggleCompletion
+        self.onNestedEdit = onNestedEdit
+        self.onNestedDelete = onNestedDelete
+        self.onNestedAddSubtask = onNestedAddSubtask
+    }
 
     private var indentationWidth: CGFloat {
         CGFloat(nestingLevel) * 20.0
@@ -143,22 +174,26 @@ struct SubtaskRowView: View {
             // Nested subtasks (recursive)
             if hasSubtasks && isExpanded {
                 VStack(spacing: 0) {
-                    ForEach(subtask.subtasks.sorted(by: { !$0.isCompleted && $1.isCompleted }), id: \.id) { nestedSubtask in
+                    ForEach(subtask.orderedSubtasks.sorted(by: { !$0.isCompleted && $1.isCompleted }), id: \.id) { nestedSubtask in
                         SubtaskRowView(
                             subtask: nestedSubtask,
                             nestingLevel: nestingLevel + 1,
                             onToggleCompletion: {
-                                // This will be handled by the parent component
+                                onNestedToggleCompletion?(nestedSubtask)
                             },
                             onEdit: {
-                                // This will be handled by the parent component
+                                onNestedEdit?(nestedSubtask)
                             },
                             onDelete: {
-                                // This will be handled by the parent component
+                                onNestedDelete?(nestedSubtask)
                             },
                             onAddSubtask: {
-                                // This will be handled by the parent component
-                            }
+                                onNestedAddSubtask?(nestedSubtask)
+                            },
+                            onNestedToggleCompletion: onNestedToggleCompletion,
+                            onNestedEdit: onNestedEdit,
+                            onNestedDelete: onNestedDelete,
+                            onNestedAddSubtask: onNestedAddSubtask
                         )
                     }
                 }

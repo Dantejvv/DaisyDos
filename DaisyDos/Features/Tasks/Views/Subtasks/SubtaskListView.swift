@@ -17,22 +17,16 @@ struct SubtaskListView: View {
     @State private var subtaskToEdit: Task?
     @State private var subtaskToDelete: Task?
     @State private var showingDeleteConfirmation = false
-    @State private var draggedSubtask: Task?
 
-    private var sortedSubtasks: [Task] {
-        parentTask.subtasks.sorted { first, second in
-            // Incomplete tasks first, then by creation date
-            if first.isCompleted != second.isCompleted {
-                return !first.isCompleted
-            }
-            return first.createdDate < second.createdDate
-        }
+    private var displayedSubtasks: [Task] {
+        // Use ordered subtasks which respects the subtaskOrder property
+        return parentTask.orderedSubtasks
     }
 
     var body: some View {
         VStack(spacing: 0) {
             if parentTask.hasSubtasks {
-                ForEach(sortedSubtasks, id: \.id) { subtask in
+                ForEach(displayedSubtasks, id: \.id) { subtask in
                     SubtaskRowView(
                         subtask: subtask,
                         nestingLevel: nestingLevel,
@@ -48,20 +42,57 @@ struct SubtaskListView: View {
                         },
                         onAddSubtask: {
                             createNestedSubtask(for: subtask)
+                        },
+                        onNestedToggleCompletion: { nestedTask in
+                            toggleSubtaskCompletion(nestedTask)
+                        },
+                        onNestedEdit: { nestedTask in
+                            subtaskToEdit = nestedTask
+                        },
+                        onNestedDelete: { nestedTask in
+                            subtaskToDelete = nestedTask
+                            showingDeleteConfirmation = true
+                        },
+                        onNestedAddSubtask: { nestedTask in
+                            createNestedSubtask(for: nestedTask)
                         }
                     )
-                    .background(Color.daisySurface)
                     .cornerRadius(8)
                     .padding(.horizontal, nestingLevel > 0 ? 8 : 16)
                     .padding(.vertical, 2)
-                    .draggable(subtask) {
-                        TaskDragPreview(task: subtask, nestingLevel: nestingLevel)
-                    }
-                    .dropDestination(for: Task.self) { droppedTasks, location in
-                        handleSubtaskDrop(droppedTasks: droppedTasks, relativeTo: subtask)
-                    } isTargeted: { isTargeted in
-                        // Visual feedback for drop targeting could be added here
-                    }
+                    .overlay(
+                        // Reordering arrows (always shown in manage mode)
+                        HStack {
+                            Spacer()
+                            VStack(spacing: 4) {
+                                // Up arrow
+                                Button(action: {
+                                    moveSubtaskUp(subtask)
+                                }) {
+                                    Image(systemName: "chevron.up")
+                                        .font(.caption)
+                                        .foregroundColor(canMoveUp(subtask) ? .daisyTask : .daisyTextSecondary)
+                                        .frame(width: 32, height: 24)
+                                        .background(Color.daisySurface.opacity(0.8), in: RoundedRectangle(cornerRadius: 6))
+                                }
+                                .disabled(!canMoveUp(subtask))
+
+                                // Down arrow
+                                Button(action: {
+                                    moveSubtaskDown(subtask)
+                                }) {
+                                    Image(systemName: "chevron.down")
+                                        .font(.caption)
+                                        .foregroundColor(canMoveDown(subtask) ? .daisyTask : .daisyTextSecondary)
+                                        .frame(width: 32, height: 24)
+                                        .background(Color.daisySurface.opacity(0.8), in: RoundedRectangle(cornerRadius: 6))
+                                }
+                                .disabled(!canMoveDown(subtask))
+                            }
+                            .padding(.trailing, 8)
+                        },
+                        alignment: .trailing
+                    )
                 }
             } else {
                 // Empty state for no subtasks
@@ -142,10 +173,20 @@ struct SubtaskListView: View {
     // MARK: - Actions
 
     private func toggleSubtaskCompletion(_ subtask: Task) {
-        let success = taskManager.toggleTaskCompletionSafely(subtask)
-        if !success {
-            // Handle error - could show toast or alert
-            print("Failed to toggle subtask completion")
+        let result = taskManager.toggleSubtaskCompletion(
+            subtask,
+            strategy: .hybrid,
+            propagateToParent: true
+        )
+
+        switch result {
+        case .success:
+            // Success - UI will update automatically via @Query
+            break
+        case .failure(let error):
+            // Handle error with user feedback
+            print("Failed to toggle subtask completion: \(error)")
+            // TODO: Show user-friendly error message
         }
     }
 
@@ -165,32 +206,40 @@ struct SubtaskListView: View {
 
     // MARK: - Drag & Drop Support
 
-    private func handleSubtaskDrop(droppedTasks: [Task], relativeTo targetSubtask: Task) -> Bool {
-        guard let droppedTask = droppedTasks.first else { return false }
+    // MARK: - Reordering Methods
 
-        let dropHandler = SubtaskDropHandler(parentTask: parentTask, taskManager: taskManager)
-
-        // Check if we can accept this drop
-        guard dropHandler.canAcceptDrop(of: droppedTasks) else {
-            return false
+    private func moveSubtaskUp(_ subtask: Task) {
+        let result = taskManager.moveSubtaskUp(subtask)
+        switch result {
+        case .success:
+            break
+        case .failure(let error):
+            // TODO: Show user-friendly error message
+            print("Failed to move subtask up: \(error)")
         }
-
-        // Perform the drop operation
-        return dropHandler.performDrop(of: droppedTasks)
     }
 
-    private func handleSubtaskReorder(droppedTasks: [Task], at location: Int) {
-        guard let droppedTask = droppedTasks.first else { return }
-
-        // Find the index of the target location in our sorted subtasks
-        let sortedSubtasks = self.sortedSubtasks
-        guard location < sortedSubtasks.count else { return }
-
-        let dropHandler = SubtaskDropHandler(parentTask: parentTask, taskManager: taskManager)
-
-        // Validate and perform the drop
-        _ = dropHandler.performDrop(of: droppedTasks, at: location)
+    private func moveSubtaskDown(_ subtask: Task) {
+        let result = taskManager.moveSubtaskDown(subtask)
+        switch result {
+        case .success:
+            break
+        case .failure(let error):
+            // TODO: Show user-friendly error message
+            print("Failed to move subtask down: \(error)")
+        }
     }
+
+    private func canMoveUp(_ subtask: Task) -> Bool {
+        guard let currentIndex = parentTask.orderedSubtasks.firstIndex(of: subtask) else { return false }
+        return currentIndex > 0
+    }
+
+    private func canMoveDown(_ subtask: Task) -> Bool {
+        guard let currentIndex = parentTask.orderedSubtasks.firstIndex(of: subtask) else { return false }
+        return currentIndex < parentTask.orderedSubtasks.count - 1
+    }
+
 }
 
 

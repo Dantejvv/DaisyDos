@@ -341,12 +341,12 @@ struct TaskRowView: View {
 - [X] **Acceptance:** All CRUD operations work reliably, data integrity maintained
 
 #### ✅ Subtask Management
-- [ ] Create subtask creation interface with nesting support
-- [ ] Implement subtask reordering with drag & drop
-- [ ] Add subtask completion propagation logic
-- [ ] Create subtask progress indicators
-- [ ] Test unlimited nesting depth functionality
-- [ ] **Acceptance:** Subtasks work at any nesting level, UI remains performant
+- [X] Create subtask creation interface with nesting support
+- [X] Implement subtask reordering with drag & drop
+- [X] Add subtask completion propagation logic
+- [X] Create subtask progress indicators
+- [X] Test unlimited nesting depth functionality
+- [X] **Acceptance:** Subtasks work at any nesting level, UI remains performant
 
 #### ✅ Advanced Task Features
 - [ ] Implement PhotoKit integration for task attachments:
