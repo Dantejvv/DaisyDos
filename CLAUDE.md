@@ -19,6 +19,7 @@ This is a standard Xcode project. Use Xcode to build and run:
 
 - **PhotoKit**: Not available on iOS Simulator. Code uses conditional import `#if canImport(PhotoKit)` to handle simulator builds
 - **EventKit/UserNotifications/CloudKit**: Work on both simulator and device
+- **Charts Framework**: Available for habit progress visualization (iOS 16+)
 
 ## Architecture Overview
 
@@ -30,10 +31,10 @@ This is a standard Xcode project. Use Xcode to build and run:
 
 ### Key Architectural Patterns
 
-**Model-View with Services Pattern:**
-- Models: @Observable classes with business logic (TaskManager, HabitManager, TagManager)
+**Apple's Model-View (MV) Pattern:**
+- Models: @Observable classes with business logic (Task, Habit models + Manager services)
 - Views: Pure SwiftUI presentation, no business logic
-- Services: External I/O operations (EventKit, PhotoKit, UserNotifications)
+- Services: Lightweight coordinators for queries and external I/O
 - No ViewModels: Business logic lives directly in observable models
 
 **Shared Component Strategy:**
@@ -50,7 +51,7 @@ This is a standard Xcode project. Use Xcode to build and run:
 
 **Data Layer:**
 - SwiftData models: `Task.swift`, `Habit.swift`, `Tag.swift` with full @Model implementation
-- Manager classes: `TaskManager.swift`, `HabitManager.swift`, `TagManager.swift` with @Observable business logic
+- Manager services: `TaskManager.swift`, `HabitManager.swift`, `TagManager.swift` with @Observable business logic
 - Three-tier error handling: Platform → App → User error transformation
 - Privacy-first approach with local-only mode default
 
@@ -60,181 +61,187 @@ This is a standard Xcode project. Use Xcode to build and run:
 - Full accessibility compliance with VoiceOver support and Dynamic Type scaling
 - Performance optimized for large datasets (1000+ items)
 
-## Development Context
+## Current Development Status
 
-**Phase 1.0 Complete - Phase 2.5 Complete: Advanced Task Management with Full Recurrence System**
-
-### Current Status
-DaisyDos has a comprehensive task management system with full CRUD operations, advanced subtask hierarchies, complete attachment management, and production-ready recurrence system. The app currently features:
-
-**Core Foundation (Phase 1.0 Complete):**
+### ✅ **Phase 1.0 Complete: Foundation & Architecture**
 - Complete tab-based navigation (Today, Tasks, Habits, Tags, Settings)
-- Basic task management capabilities (CRUD operations, search)
 - Privacy-first local-only data storage
 - WCAG AA accessibility compliance
 - Professional UI with liquid glass design aesthetic
 - Performance monitoring and developer tools
 
-**Enhanced Task Model (Phase 2.1 Complete):**
-- ✅ **Priority System**: Low/Medium/High with visual indicators (colors, SF symbols)
-- ✅ **Due Dates & Start Dates**: Full date management with timezone support
-- ✅ **Task Descriptions**: Rich text descriptions for detailed task information
-- ✅ **Subtask Relationships**: Unlimited nesting with circular reference protection
-- ✅ **File Attachments**: PhotoKit integration, 50MB per file, 200MB per task limit
-- ✅ **Recurrence Rules**: Daily/weekly/monthly/yearly patterns with dynamic calculations
-- ✅ **Advanced Filtering**: Priority, due date, overdue, and smart today's tasks
-- ✅ **Enhanced TaskManager**: 60+ new methods for comprehensive task operations
-- ✅ **SwiftData V2 Schema**: Migration-ready with robust error handling
+### ✅ **Phase 2.0 Complete: Advanced Task Management**
+**Task Model & Features:**
+- Priority System: Low/Medium/High with visual indicators
+- Due Dates & Start Dates: Full date management with validation
+- Task Descriptions: Rich text descriptions
+- Subtask Relationships: Unlimited nesting with circular reference protection
+- File Attachments: PhotoKit integration, 50MB per file, 200MB per task limit
+- Recurrence Rules: Daily/weekly/monthly/yearly patterns with dynamic calculations
+- Advanced Filtering: Priority, due date, overdue, smart sectioning
 
-**Tag System Implementation (Phase 2.1 Complete):**
-- ✅ **Tag Assignment Validation**: 3-tag limit per task/habit with automatic enforcement via `didSet` observers
-- ✅ **Tag Pool Management**: 30-tag system limit with real-time validation and visual feedback
-- ✅ **SF Symbol & Color Selection**: Complete visual picker interfaces with predefined options
-- ✅ **Tag Creation & Editing UI**: Full CRUD operations with live preview and validation
-- ✅ **Tag Selection Interface**: Multi-select with drag support foundation and 3-tag limit visual feedback
-- ✅ **Task Integration**: Tag assignment in TaskRowView and AddTaskView with real-time updates
-- ✅ **SwiftData Query Integration**: TagsView uses @Query for automatic database change detection
+**TaskRowView Reusability Pattern (PROVEN ARCHITECTURE):**
+- ✅ **Composition Pattern API**: Action closures for maximum reusability
+- ✅ **Environment Dependencies Removed**: Pure presentation component
+- ✅ **Multiple Display Modes**: .compact, .detailed, .today modes
+- ✅ **Cross-Context Validation**: Works identically across TasksView, search, Today view
+- ✅ **Performance Optimized**: Efficient rendering with conditional UI
 
-**TaskRowView Reusability Pattern (Phase 2.2 Complete):**
-- ✅ **Composition Pattern API**: Action closures for maximum reusability (onToggleCompletion, onEdit, onDelete, onTagAssignment)
-- ✅ **Environment Dependencies Removed**: Pure presentation component with no business logic
-- ✅ **Multiple Display Modes**: .compact, .detailed, .today modes for different contexts
-- ✅ **Accessibility Excellence**: 44pt touch targets, comprehensive VoiceOver labels, Dynamic Type support
-- ✅ **Cross-Context Validation**: Proven to work identically in TasksView, search results, and Today view contexts
-- ✅ **Performance Optimized**: Efficient rendering with conditional UI based on display modes
-- ✅ **Comprehensive Previews**: Multiple preview configurations for testing all display modes and accessibility
+**Complete Task Management:**
+- TaskDetailView: Comprehensive display with subtask and attachment management
+- TaskEditView: Dedicated editing with validation and change detection
+- Enhanced TasksView: Multi-select, bulk operations, context menus
+- Subtask Management: Order-based reordering, progress visualization
+- Attachment System: Complete PhotoKit integration with gallery and preview
+- Recurrence System: Full UI integration with preset and custom patterns
 
-**Complete Task CRUD Operations (Phase 2.3.1 Complete):**
-- ✅ **TaskEditView**: Dedicated task editing interface with pre-populated forms and change detection
-- ✅ **TaskDetailView**: Comprehensive task display with inline editing and action menus
-- ✅ **Enhanced TasksView**: Multi-select, bulk operations, context menus, and detail navigation
-- ✅ **Task Duplication**: Smart duplication with date adjustment and tag preservation
-- ✅ **Enhanced Form Validation**: Real-time feedback, character limits, and date validation
-- ✅ **Bulk Operations**: Multi-select mode with completion toggle and batch deletion
+**Tag System:**
+- 3-tag limit per task/habit with automatic enforcement
+- 30-tag system limit with real-time validation
+- SF Symbol & Color selection interfaces
+- Full CRUD operations with tag assignment UI
 
-**Advanced Subtask Management (Phase 2.3.2 Complete):**
-- ✅ **SubtaskRowView**: Recursive subtask display with unlimited nesting and visual depth indicators
-- ✅ **Modern Drag & Drop**: Task+Transferable protocol with circular reference prevention
-- ✅ **SubtaskCreationView**: Comprehensive subtask creation with inheritance and nesting validation
-- ✅ **Rich Progress Visualization**: Progress rings, bars, summaries, and interactive components
-- ✅ **Intelligent Completion Propagation**: Three-strategy system (Automatic, Manual, Hybrid)
-- ✅ **TaskDetailView Integration**: Seamless subtask management within task detail interface
-- ✅ **Performance Optimization**: Efficient rendering for deep hierarchies (10+ levels)
-- ✅ **Root Task Filtering**: Subtasks properly contained within parent task detail views
-- ✅ **SwiftData-Compatible Ordering**: Order-based subtask reordering with persistent sequence using `subtaskOrder` property
+### 🚧 **Phase 3.0 In Progress: Habit Management & Component Consistency**
+**Current Status: ~25% Complete - CRITICAL GAPS IDENTIFIED**
 
-**Subtask Reordering Implementation (Phase 2.3.2+ Complete):**
-- ✅ **Order-Based System**: Uses explicit `subtaskOrder` property instead of array manipulation for SwiftData compatibility
-- ✅ **Persistent Ordering**: Subtask order maintained across app restarts and database operations
-- ✅ **SwiftData Relationship Optimization**: Proper inverse relationship configuration without circular references
-- ✅ **Automatic Order Assignment**: Legacy subtasks automatically receive proper sequential order values
-- ✅ **Production-Ready Implementation**: Clean, debugged code with all temporary logging removed
+**⚠️ BLOCKING ISSUES FOR PHASE 4:**
+1. **HabitRowView NOT REUSABLE** - Currently embedded in HabitsView, violates established patterns
+2. **Missing Component Consistency** - HabitRowView doesn't follow TaskRowView composition pattern
+3. **Incomplete Data Models** - Missing HabitCompletion, HabitStreak models, RecurrenceRule integration
 
-**TaskDetailView Enhancement with Full Attachment Management (Phase 2.4 Complete):**
-- ✅ **AttachmentPreviewCard**: Reusable component with grid/list/compact display modes, thumbnail loading, and context menus
-- ✅ **AttachmentGalleryView**: Complete gallery with grid/list toggle, search, type-based sectioning, and empty states
-- ✅ **AttachmentDetailSheet**: Full-screen viewer with image zoom, metadata display, and QuickLook integration
-- ✅ **AttachmentPickerSheet**: Multi-input picker supporting PhotosPicker, document picker, and camera capture
-- ✅ **TaskShareSheet**: Modern sharing with ShareLink support and attachment inclusion options
-- ✅ **Enhanced TaskManager+Attachments**: Batch operations, validation, file management, and cleanup utilities
-- ✅ **TaskDetailView Integration**: Complete attachment lifecycle (add, view, share, delete) within task detail
-- ✅ **Modern iOS APIs**: PhotosPicker (iOS 16+), ShareLink, UIDocumentPickerViewController, QuickLook
-- ✅ **Accessibility Excellence**: VoiceOver support, Dynamic Type scaling, 44pt touch targets
-- ✅ **Performance Optimized**: Lazy loading, background thumbnail generation, efficient file operations
+### 🎯 **Phase 3 Immediate Development Priorities**
 
-**PhotoKit Integration UI (Phase 2.5.1 Complete):**
-- ✅ **Modern PhotosPicker Integration**: iOS 16+ PhotosPicker with multiple selection support (up to 5 items)
-- ✅ **Comprehensive File Support**: Images, videos, documents (PDF, TXT, RTF, CSV) with proper UTType validation
-- ✅ **Multi-Input Architecture**: PhotosPicker, UIDocumentPickerViewController, and camera capture in unified interface
-- ✅ **Size Limit Enforcement**: 50MB per file, 200MB total per task with real-time validation and user feedback
-- ✅ **Progress Tracking**: Real-time upload progress with overlays and processing status messages
-- ✅ **Security & Privacy**: Proper permission handling with `#if canImport(PhotoKit)` conditional compilation
-- ✅ **File Management**: Secure storage in app documents directory with thumbnail generation
-- ✅ **Error Handling**: Comprehensive validation with user-friendly error messages and recovery options
-- ✅ **Camera Integration**: Full camera capture via UIImagePickerController with processing pipeline
-- ✅ **Modern UI Patterns**: SwiftUI with liquid glass design, accessibility compliance, and touch targets
+#### **Priority 1: Critical Architecture (Phase 4 Blocker)**
+**HabitRowView Reusability** - MUST follow TaskRowView patterns exactly:
+```swift
+// REQUIRED: Standalone, reusable HabitRowView
+struct HabitRowView: View {
+    let habit: Habit
+    let onMarkComplete: () -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    let onSkip: () -> Void
+    let displayMode: HabitRowDisplayMode // .compact, .detailed, .today
+    let showsStreak: Bool
+}
+```
 
-**Recurrence System UI Integration (Phase 2.5.2 Complete):**
-- ✅ **RecurrenceRulePickerView**: Complete interface with preset options and custom configuration
-- ✅ **Quick Preset Selection**: Daily, Weekdays, Weekends, Monthly, Yearly with one-tap access
-- ✅ **Custom Pattern Builder**: Full frequency, interval, days of week, and end condition controls
-- ✅ **Smart Interval Ranges**: Dynamic picker ranges (Daily: 1-365, Weekly: 1-42, Monthly: 1-12, Yearly: 1-10)
-- ✅ **Real-Time Preview**: Shows next 5 occurrences as user configures patterns
-- ✅ **RecurrenceVisualizationView**: Complete visualization with pattern description and upcoming dates
-- ✅ **Cross-View Integration**: Full integration in AddTaskView, TaskEditView, and TaskDetailView
-- ✅ **TaskRowView Indicators**: Visual recurrence badges in all display modes with accessibility support
-- ✅ **Comprehensive Testing**: RecurrenceTestView with 7 test scenarios and timezone validation
-- ✅ **Accessibility Excellence**: Full VoiceOver support, dynamic accessibility hints, 44pt touch targets
-- ✅ **Production Ready**: Build-tested, user-friendly picker interactions, proper error handling
+#### **Priority 2: Essential Models**
+**Missing Data Models for proper habit tracking:**
+- `HabitCompletion.swift` - Individual completion tracking with timestamps
+- `HabitStreak.swift` - Dedicated streak calculation and management
+- RecurrenceRule integration in Habit model
+- Grace period logic with skip functionality
 
-### Phase 2.5 Remaining Goals
-Advanced Task Management Features:
-- **Advanced Task Organization**: Enhanced filtering, smart suggestions, and analytics
-- **EventKit Integration**: Calendar sync and reminders
-- **Quick Actions**: Swipe gestures and context menus
-- **Advanced Tag Features**: Drag & drop with Transferable protocol
+#### **Priority 3: Core UI Components**
+**Missing Habit Management UI:**
+- `HabitDetailView.swift` - Comprehensive statistics and editing
+- `HabitEditView.swift` - Dedicated editing interface
+- `AddHabitView.swift` - Standalone creation form (currently embedded)
+- Progress visualization components
 
-### File Organization
-- **Enhanced Models**: `Task.swift` (V2), `Priority.swift`, `RecurrenceRule.swift`, `TaskAttachment.swift` - Full featured models
-- **Transferable Extensions**: `Task+Transferable.swift` - Modern drag & drop support with validation
-- **Core Models**: `Habit.swift`, `Tag.swift` - SwiftData models with @Model macro and Identifiable conformance
-- **Managers**: `TaskManager.swift` (enhanced), `TaskManager+Subtasks.swift`, `HabitManager.swift`, `TagManager.swift` - @Observable business logic
-- **Task Views**: Complete task management interface
-  - `TasksView.swift` - Main task list with multi-select, bulk operations, and root task filtering
-  - `TaskDetailView.swift` - Comprehensive task display with integrated subtask and attachment management
-  - `TaskEditView.swift` - Dedicated task editing with validation and change detection
-  - `TaskRowView.swift` - Maximally reusable task component with composition pattern API
-  - `AddTaskView.swift` - Enhanced task creation with validation and tag assignment
-  - `TaskShareSheet.swift` - Modern sharing functionality with ShareLink and attachment options
-- **Subtask Management**: Complete subtask system (`/Views/Subtasks/`)
-  - `SubtaskRowView.swift` - Recursive subtask display with unlimited nesting
-  - `SubtaskListView.swift` - Order-based reordering with arrow controls (SwiftData compatible)
-  - `SubtaskCreationView.swift` - Comprehensive subtask creation interface
-  - `SubtaskProgressView.swift` - Rich progress visualization components
-- **Attachment Management**: Complete attachment system (`/Views/Attachments/`)
-  - `AttachmentGalleryView.swift` - Complete gallery with grid/list toggle, search, and sectioning
-  - `AttachmentPreviewCard.swift` - Reusable component with multiple display modes and context menus
-  - `AttachmentDetailSheet.swift` - Full-screen viewer with zoom, metadata, and QuickLook integration
-  - `AttachmentPickerSheet.swift` - Multi-input picker (PhotosPicker, documents, camera)
-  - `TaskManager+Attachments.swift` - Enhanced attachment operations and validation
-- **Recurrence System**: Complete recurrence UI system (`/Views/Recurrence/`)
-  - `RecurrenceRulePickerView.swift` - Main picker interface with presets and custom configuration
-  - `RecurrenceVisualizationView.swift` - Task detail visualization with pattern description
-  - `RecurrencePresetCard.swift` - Visual preset option cards with selection states
-  - `RecurrenceToggleRow.swift` - Form toggle component for task creation/editing
-  - `DayOfWeekSelector.swift` - Multi-select day picker for weekly patterns
-  - `RecurrenceTestView.swift` - Comprehensive testing suite with 7 test scenarios
-  - `RecurrenceAccessibilityTestView.swift` - Accessibility validation and compliance testing
-- **Tag UI Components**: Complete tag system interface
-  - `TagCreationView.swift`, `TagEditView.swift` - Tag CRUD operations
-  - `TagColorPicker.swift`, `TagSymbolPicker.swift` - Visual selection interfaces
-  - `TagChipView.swift` - Reusable tag display component
-  - `TagSelectionView.swift`, `TagAssignmentSheet.swift` - Tag assignment interfaces
-- **Core Components**: `CardView`, `DaisyButton`, `InputField`, `StateViews` - reusable UI components
-- **Design System**: Complete system with spacing, typography, colors, accessibility helpers
-- **Schema Management**: `DaisyDosSchemaV2.swift`, migration plan - SwiftData V2 with clean slate approach
-- **Infrastructure**: CloudKit foundation (disabled), comprehensive error handling
+#### **Priority 4: Charts Integration**
+**Visual Progress Tracking:**
+- Charts framework integration for habit progress
+- HabitProgressChart components for trend visualization
+- Heatmap views for completion history (GitHub-style)
+
+## File Organization
+
+### Current Architecture
+```
+DaisyDos/
+├── Features/
+│   ├── Tasks/ ✅ COMPLETE
+│   │   ├── Models/ (Task.swift, Priority.swift, RecurrenceRule.swift, TaskAttachment.swift)
+│   │   ├── Views/ (TaskRowView.swift, TaskDetailView.swift, TaskEditView.swift, etc.)
+│   │   ├── Services/ (TaskManager.swift, TaskManager+Subtasks.swift, TaskManager+Attachments.swift)
+│   │   └── Subtasks/, Attachments/, Recurrence/ (Complete subsystems)
+│   │
+│   ├── Habits/ ⚠️ PARTIAL - NEEDS COMPLETION
+│   │   ├── Models/ (Habit.swift ⚠️ missing HabitCompletion, HabitStreak)
+│   │   ├── Views/ (HabitsView.swift ⚠️ embedded components, missing dedicated views)
+│   │   └── Services/ (HabitManager.swift ⚠️ basic implementation)
+│   │
+│   ├── Tags/ ✅ COMPLETE
+│   ├── Today/ ⚠️ BLOCKED - Needs Phase 3 completion
+│   └── Settings/ ✅ BASIC
+│
+├── Core/ ✅ COMPLETE
+│   ├── Design/ (Complete design system)
+│   ├── Data/ (SwiftData schemas, CloudKit foundation)
+│   ├── ErrorHandling/ (Three-tier error system)
+│   └── Navigation/ (NavigationManager, TabConfiguration)
+```
+
+### Target Architecture for Phase 3
+```
+Features/Habits/
+├── Models/
+│   ├── Habit.swift ✅ (enhance with RecurrenceRule)
+│   ├── HabitCompletion.swift ❌ TO CREATE
+│   └── HabitStreak.swift ❌ TO CREATE
+├── Views/
+│   ├── HabitRowView.swift ❌ TO CREATE (standalone, reusable)
+│   ├── HabitDetailView.swift ❌ TO CREATE
+│   ├── HabitEditView.swift ❌ TO CREATE
+│   ├── AddHabitView.swift ❌ TO CREATE (extract from HabitsView)
+│   ├── HabitsView.swift ✅ (refactor to use new components)
+│   └── Analytics/
+│       ├── HabitProgressChart.swift ❌ TO CREATE
+│       ├── HabitHeatmapView.swift ❌ TO CREATE
+│       └── StreakVisualizationView.swift ❌ TO CREATE
+└── Services/
+    └── HabitManager.swift ✅ (enhance with advanced features)
+```
 
 ## Key Implementation Principles
 
-1. **Component Reusability**: TaskRowView, SubtaskRowView, and AttachmentPreviewCard proven to work identically across all contexts using composition pattern
-2. **@Observable First**: Use @Observable pattern throughout, no traditional ViewModels
-3. **Privacy by Default**: All features work locally before any cloud integration
-4. **Error Handling Excellence**: Three-tier system transforms all errors to user-friendly messages with recovery actions
-5. **Accessibility Excellence**: WCAG 2.1 AA compliance from the start with 48pt touch targets and full VoiceOver support
-6. **Performance Focus**: Designed to handle large datasets and deep hierarchies efficiently with optimized components
-7. **Design System Consistency**: All UI components use established spacing, typography, colors, and liquid glass aesthetic
-8. **Developer Experience**: Semantic APIs (`.asCard()`, `DaisyButton.primary()`) with comprehensive documentation and previews
-9. **SwiftData Integration**: Use @Query for automatic UI updates and computed properties for business logic in @Observable managers
-10. **Hierarchical Data Management**: Proper root/child task separation with intelligent filtering and completion propagation
-11. **SwiftData Ordering Patterns**: Use explicit order properties for array relationships instead of relying on insertion order, as SwiftData relationships are unordered collections
-12. **Modern iOS API Integration**: Use PhotosPicker, ShareLink, QuickLook, and UIDocumentPickerViewController for native iOS experiences
-13. **Task Concurrency Handling**: Use `_Concurrency.Task` to avoid naming conflicts with SwiftData Task model in attachment processing
-14. **File Management Excellence**: Implement proper security-scoped resource handling, thumbnail generation, and cleanup utilities
-15. **Recurrence UI Patterns**: Progressive disclosure design (presets → custom → advanced) with smart picker ranges and real-time preview
-16. **Dynamic Component Behavior**: Use computed properties for context-sensitive UI elements (intervalRange based on frequency)
-17. **Accessibility-First Development**: Include accessibility labels, hints, and Dynamic Type support from initial implementation
+### **Critical: Component Consistency**
+1. **HabitRowView MUST follow TaskRowView patterns exactly** - This is non-negotiable for Phase 4
+2. **Composition over Inheritance** - Use action closures for reusability
+3. **Display Mode Support** - .compact, .detailed, .today modes required
+4. **Cross-Context Validation** - Must work in HabitsView, Today view, search results
 
-Refer to `/Docs/implementation_roadmap.md` for the detailed development plan and `/Docs/daisydos_prd.md` and `/Docs/daisydos_plan.md` for comprehensive product requirements.
+### **Established Patterns (DO NOT CHANGE)**
+1. **@Observable First**: Use @Observable pattern throughout, no traditional ViewModels
+2. **Privacy by Default**: All features work locally before any cloud integration
+3. **Error Handling Excellence**: Three-tier system transforms errors to user-friendly messages
+4. **Accessibility Excellence**: WCAG 2.1 AA compliance with 44pt touch targets
+5. **Performance Focus**: Optimized for large datasets with efficient SwiftData queries
+6. **SwiftData Patterns**: Use @Query for UI updates, explicit order properties for relationships
 
-**🔍 IMPORTANT: Always use Context7 to check up-to-date documentation when implementing new libraries, frameworks, or adding features using external dependencies. This ensures accurate and current implementation patterns.**
+### **New Patterns for Phase 3**
+1. **Charts Integration**: Use Charts framework for habit progress visualization
+2. **Streak Calculations**: Implement grace periods and intelligent streak logic
+3. **Completion Tracking**: Separate HabitCompletion model for individual completion entries
+4. **Visual Feedback**: Rich progress indicators and heatmap visualizations
+
+## Development Guidelines
+
+### **Phase 3 Success Criteria (MUST ACHIEVE)**
+- [ ] HabitRowView proven reusable across 3+ contexts (HabitsView, Today view, search)
+- [ ] Shared UI patterns consistent with TaskRowView (composition pattern, display modes)
+- [ ] Accurate streak calculations with grace periods
+- [ ] Visual progress feedback compelling and motivating
+- [ ] Recurrence system working for both tasks and habits
+- [ ] Component reusability patterns proven scalable
+
+### **Quality Gates**
+- **Build Status**: Must build cleanly with no warnings
+- **Cross-Context Testing**: HabitRowView must work in Today view context
+- **Performance**: Must handle 100+ habits efficiently
+- **Accessibility**: Full VoiceOver support with proper labels and navigation
+
+### **Phase 4 Readiness Checklist**
+- [ ] Standalone HabitRowView component created and tested
+- [ ] HabitRowView supports all display modes (.compact, .detailed, .today)
+- [ ] Action closure pattern implemented for cross-context reusability
+- [ ] Basic habit completion and streak tracking functional
+- [ ] Performance validated with realistic data sets
+
+Refer to `/Docs/implementation_roadmap.md` for detailed development tasks and `/Docs/daisydos_prd.md` for comprehensive requirements.
+
+**🔍 IMPORTANT: Always use Context7 to check up-to-date documentation when implementing new libraries, frameworks, or adding features using external dependencies.**
+
+**🚨 CRITICAL: Phase 4 (Today View) cannot proceed until HabitRowView reusability is proven. Focus on component consistency first.**
