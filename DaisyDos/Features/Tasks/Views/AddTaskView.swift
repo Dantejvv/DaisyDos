@@ -19,6 +19,8 @@ struct AddTaskView: View {
     @State private var hasDueDate = false
     @State private var selectedTags: [Tag] = []
     @State private var showingTagSelection = false
+    @State private var recurrenceRule: RecurrenceRule?
+    @State private var showingRecurrencePicker = false
     @State private var showingError = false
     @State private var errorMessage = ""
 
@@ -203,6 +205,13 @@ struct AddTaskView: View {
                         }
                     }
                 }
+
+                Section("Recurrence") {
+                    RecurrenceToggleRow(
+                        recurrenceRule: $recurrenceRule,
+                        showingPicker: $showingRecurrencePicker
+                    )
+                }
             }
             .navigationTitle("New Task")
             .navigationBarTitleDisplayMode(.inline)
@@ -234,6 +243,9 @@ struct AddTaskView: View {
                         }
                 }
             }
+            .sheet(isPresented: $showingRecurrencePicker) {
+                RecurrenceRulePickerView(recurrenceRule: $recurrenceRule)
+            }
             .alert("Error Creating Task", isPresented: $showingError) {
                 Button("OK") { }
             } message: {
@@ -254,7 +266,8 @@ struct AddTaskView: View {
             title: trimmedTitle,
             taskDescription: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),
             priority: priority,
-            dueDate: hasDueDate ? dueDate : nil
+            dueDate: hasDueDate ? dueDate : nil,
+            recurrenceRule: recurrenceRule
         )
 
         switch result {

@@ -383,19 +383,19 @@ struct TaskRowView: View {
 
 ### 2.5 Extended Task Features (Effort: Medium)
 
-#### 🔄 PhotoKit Integration UI
-- [ ] Create file attachment picker UI with proper permissions
-- [ ] Implement attachment gallery and preview in TaskDetailView
-- [ ] Add attachment management (delete, rename, organize)
-- [ ] Build camera integration for quick photo attachments
-- [ ] **Acceptance:** Attachments work seamlessly, 50MB per file limit enforced
+#### ✅ PhotoKit Integration UI
+- [X] Create file attachment picker UI with proper permissions
+- [X] Implement attachment gallery and preview in TaskDetailView
+- [X] Add attachment management (delete, rename, organize)
+- [X] Build camera integration for quick photo attachments
+- [X] **Acceptance:** Attachments work seamlessly, 50MB per file limit enforced
 
-#### 🔄 Recurrence System UI Integration
-- [ ] Create recurrence rule creation and editing interface
-- [ ] Implement recurrence pattern picker with common presets
-- [ ] Add recurrence visualization in task detail views
-- [ ] Test recurrence calculations across timezone changes
-- [ ] **Acceptance:** Recurrence UI intuitive, calculations accurate across scenarios
+#### ✅ Recurrence System UI Integration
+- [X] Create recurrence rule creation and editing interface
+- [X] Implement recurrence pattern picker with common presets
+- [X] Add recurrence visualization in task detail views
+- [X] Test recurrence calculations across timezone changes
+- [X] **Acceptance:** Recurrence UI intuitive, calculations accurate across scenarios
 
 #### 🔄 Advanced Task Organization
 - [ ] Add enhanced task priority sorting and filtering

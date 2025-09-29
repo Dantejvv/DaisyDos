@@ -23,6 +23,7 @@ struct TaskDetailView: View {
     @State private var showingAttachmentPicker = false
     @State private var showingAttachmentDetail: TaskAttachment?
     @State private var showingTaskShare = false
+    @State private var showingRecurrencePicker = false
 
     var body: some View {
         NavigationStack {
@@ -43,6 +44,16 @@ struct TaskDetailView: View {
                     // MARK: - Dates Section
                     if task.dueDate != nil || task.startDate != nil {
                         datesSection
+                    }
+
+                    // MARK: - Recurrence Section
+                    if task.hasRecurrence {
+                        RecurrenceVisualizationView(
+                            recurrenceRule: task.recurrenceRule,
+                            onEdit: {
+                                showingRecurrencePicker = true
+                            }
+                        )
                     }
 
                     // MARK: - Subtasks Section
@@ -347,6 +358,22 @@ struct TaskDetailView: View {
         }
         .sheet(isPresented: $showingTaskShare) {
             TaskShareSheet(task: task, includeAttachments: false)
+        }
+        .sheet(isPresented: $showingRecurrencePicker) {
+            RecurrenceRulePickerView(recurrenceRule: .init(
+                get: { task.recurrenceRule },
+                set: { newRule in
+                    let _ = taskManager.updateTask(
+                        task,
+                        title: task.title,
+                        taskDescription: task.taskDescription,
+                        priority: task.priority,
+                        dueDate: task.dueDate,
+                        startDate: task.startDate,
+                        recurrenceRule: newRule
+                    )
+                }
+            ))
         }
     }
 

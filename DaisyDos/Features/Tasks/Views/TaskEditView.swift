@@ -23,6 +23,8 @@ struct TaskEditView: View {
     @State private var hasStartDate: Bool
     @State private var selectedTags: [Tag]
     @State private var showingTagSelection = false
+    @State private var recurrenceRule: RecurrenceRule?
+    @State private var showingRecurrencePicker = false
     @State private var showingError = false
     @State private var errorMessage = ""
     @State private var showingUnsavedChangesAlert = false
@@ -37,6 +39,7 @@ struct TaskEditView: View {
         self._startDate = State(initialValue: task.startDate)
         self._hasStartDate = State(initialValue: task.startDate != nil)
         self._selectedTags = State(initialValue: task.tags)
+        self._recurrenceRule = State(initialValue: task.recurrenceRule)
     }
 
     var isFormValid: Bool {
@@ -244,20 +247,11 @@ struct TaskEditView: View {
                     }
                 }
 
-                if task.hasRecurrence {
-                    Section("Recurrence") {
-                        HStack {
-                            Image(systemName: "repeat")
-                                .foregroundColor(.daisyTask)
-                            Text("This task has a recurrence rule")
-                                .font(.subheadline)
-                            Spacer()
-                        }
-
-                        Text("Recurrence rule editing will be available in future updates.")
-                            .font(.caption)
-                            .foregroundColor(.daisyTextSecondary)
-                    }
+                Section("Recurrence") {
+                    RecurrenceToggleRow(
+                        recurrenceRule: $recurrenceRule,
+                        showingPicker: $showingRecurrencePicker
+                    )
                 }
             }
             .navigationTitle("Edit Task")
@@ -293,6 +287,9 @@ struct TaskEditView: View {
                             }
                         }
                 }
+            }
+            .sheet(isPresented: $showingRecurrencePicker) {
+                RecurrenceRulePickerView(recurrenceRule: $recurrenceRule)
             }
             .alert("Unsaved Changes", isPresented: $showingUnsavedChangesAlert) {
                 Button("Discard Changes", role: .destructive) {
@@ -330,7 +327,8 @@ struct TaskEditView: View {
             taskDescription: trimmedDescription,
             priority: priority,
             dueDate: hasDueDate ? dueDate : nil,
-            startDate: hasStartDate ? startDate : nil
+            startDate: hasStartDate ? startDate : nil,
+            recurrenceRule: recurrenceRule
         )
 
         switch result {

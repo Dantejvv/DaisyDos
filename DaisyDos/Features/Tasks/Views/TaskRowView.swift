@@ -91,10 +91,21 @@ struct TaskRowView: View {
 
             Spacer()
 
-            // Priority indicator
-            if task.priority != .medium {
-                task.priority.indicatorView()
-                    .font(.caption2)
+            // Indicators
+            HStack(spacing: 4) {
+                // Recurrence indicator
+                if task.hasRecurrence {
+                    Image(systemName: "repeat.circle.fill")
+                        .foregroundColor(.daisyTask)
+                        .font(.caption2)
+                        .accessibilityLabel("Recurring task")
+                }
+
+                // Priority indicator
+                if task.priority != .medium {
+                    task.priority.indicatorView()
+                        .font(.caption2)
+                }
             }
         }
         .padding(.horizontal, 16)
@@ -129,10 +140,21 @@ struct TaskRowView: View {
 
                 Spacer()
 
-                // Priority indicator
-                if task.priority != .medium {
-                    task.priority.indicatorView()
-                        .font(.caption)
+                // Indicators
+                VStack(spacing: 4) {
+                    // Recurrence indicator
+                    if task.hasRecurrence {
+                        Image(systemName: "repeat.circle.fill")
+                            .foregroundColor(.daisyTask)
+                            .font(.caption)
+                            .accessibilityLabel("Recurring task")
+                    }
+
+                    // Priority indicator
+                    if task.priority != .medium {
+                        task.priority.indicatorView()
+                            .font(.caption)
+                    }
                 }
             }
 
@@ -168,10 +190,21 @@ struct TaskRowView: View {
 
                     Spacer()
 
-                    // Priority and due date in header for today view
-                    if task.priority != .medium {
-                        task.priority.indicatorView()
-                            .font(.caption)
+                    // Indicators for today view
+                    HStack(spacing: 4) {
+                        // Recurrence indicator
+                        if task.hasRecurrence {
+                            Image(systemName: "repeat.circle.fill")
+                                .foregroundColor(.daisyTask)
+                                .font(.caption)
+                                .accessibilityLabel("Recurring task")
+                        }
+
+                        // Priority indicator
+                        if task.priority != .medium {
+                            task.priority.indicatorView()
+                                .font(.caption)
+                        }
                     }
 
                     if task.hasOverdueStatus {
@@ -310,6 +343,13 @@ struct TaskRowView: View {
         }
         if task.hasOverdueStatus {
             label += ", overdue"
+        }
+        if task.hasRecurrence {
+            if let recurrenceRule = task.recurrenceRule {
+                label += ", recurring \(recurrenceRule.displayDescription.lowercased())"
+            } else {
+                label += ", recurring task"
+            }
         }
         return label
     }
