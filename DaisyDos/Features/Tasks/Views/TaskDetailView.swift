@@ -20,6 +20,9 @@ struct TaskDetailView: View {
     @State private var showingShareSheet = false
     @State private var showingSubtaskManagement = false
     @State private var showingSubtaskCreation = false
+    @State private var showingAttachmentPicker = false
+    @State private var showingAttachmentDetail: TaskAttachment?
+    @State private var showingTaskShare = false
 
     var body: some View {
         NavigationStack {
@@ -46,9 +49,7 @@ struct TaskDetailView: View {
                     enhancedSubtasksSection
 
                     // MARK: - Attachments Section
-                    if !task.attachments.isEmpty {
-                        attachmentsSection
-                    }
+                    enhancedAttachmentsSection
 
                     // MARK: - Metadata Section
                     metadataSection
@@ -83,7 +84,7 @@ struct TaskDetailView: View {
                         Divider()
 
                         Button(action: {
-                            showingShareSheet = true
+                            showingTaskShare = true
                         }) {
                             Label("Share", systemImage: "square.and.arrow.up")
                         }
@@ -327,6 +328,26 @@ struct TaskDetailView: View {
         .sheet(isPresented: $showingSubtaskCreation) {
             SubtaskCreationView(parentTask: task)
         }
+        .sheet(isPresented: $showingAttachmentPicker) {
+            AttachmentPickerSheet(task: task) { attachment in
+                // Refresh UI when attachment is added
+            }
+        }
+        .sheet(item: $showingAttachmentDetail) { attachment in
+            AttachmentDetailSheet(
+                attachment: attachment,
+                onDelete: {
+                    deleteAttachment(attachment)
+                    showingAttachmentDetail = nil
+                },
+                onShare: {
+                    shareAttachment(attachment)
+                }
+            )
+        }
+        .sheet(isPresented: $showingTaskShare) {
+            TaskShareSheet(task: task, includeAttachments: false)
+        }
     }
 
     @ViewBuilder
@@ -381,38 +402,22 @@ struct TaskDetailView: View {
         }
     }
 
-    // MARK: - Attachments Section
+    // MARK: - Enhanced Attachments Section
 
     @ViewBuilder
-    private var attachmentsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Attachments")
-                    .font(.headline)
-                Spacer()
-                Text("\(task.attachmentCount)")
-                    .font(.caption)
-                    .foregroundColor(.daisyTextSecondary)
+    private var enhancedAttachmentsSection: some View {
+        AttachmentGalleryView(
+            task: task,
+            onAttachmentTap: { attachment in
+                showingAttachmentDetail = attachment
+            },
+            onAddAttachment: {
+                showingAttachmentPicker = true
+            },
+            onShareAttachment: { attachment in
+                shareAttachment(attachment)
             }
-
-            LazyVGrid(columns: gridColumns, spacing: 8) {
-                ForEach(Array(task.attachments.prefix(4)), id: \.id) { attachment in
-                    attachmentCard(for: attachment)
-                }
-            }
-
-            if task.attachmentCount > 4 {
-                Text("+ \(task.attachmentCount - 4) more attachments")
-                    .font(.caption)
-                    .foregroundColor(.daisyTextSecondary)
-            }
-
-            Text("Attachment management will be available in future updates.")
-                .font(.caption)
-                .foregroundColor(.daisyTextSecondary)
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+        )
     }
 
     // MARK: - Metadata Section
@@ -471,26 +476,6 @@ struct TaskDetailView: View {
         .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
     }
 
-    // MARK: - Helper Properties and Views
-
-    private var gridColumns: [GridItem] {
-        [GridItem(.flexible()), GridItem(.flexible())]
-    }
-
-    @ViewBuilder
-    private func attachmentCard(for attachment: TaskAttachment) -> some View {
-        VStack {
-            Image(systemName: "doc.fill")
-                .font(.largeTitle)
-                .foregroundColor(.daisyTextSecondary)
-            Text(attachment.fileName)
-                .font(.caption)
-                .lineLimit(1)
-        }
-        .frame(height: 80)
-        .frame(maxWidth: .infinity)
-        .background(Color.daisySurface.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
-    }
 
     // MARK: - Helper Methods
 
@@ -523,6 +508,35 @@ struct TaskDetailView: View {
 
     private func toggleSubtaskCompletion(_ subtask: Task) {
         _ = taskManager.toggleSubtaskCompletionSafely(subtask)
+    }
+
+    private func deleteAttachment(_ attachment: TaskAttachment) {
+        _ = taskManager.removeAttachmentSafely(attachment, from: task)
+    }
+
+    private func shareAttachment(_ attachment: TaskAttachment) {
+        guard let fileURL = attachment.fullFilePath,
+              FileManager.default.fileExists(atPath: fileURL.path) else {
+            return
+        }
+
+        let activityVC = UIActivityViewController(
+            activityItems: [fileURL],
+            applicationActivities: nil
+        )
+
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootVC = window.rootViewController {
+            activityVC.popoverPresentationController?.sourceView = window
+            activityVC.popoverPresentationController?.sourceRect = CGRect(
+                x: window.bounds.midX,
+                y: window.bounds.midY,
+                width: 0,
+                height: 0
+            )
+            rootVC.present(activityVC, animated: true)
+        }
     }
 }
 

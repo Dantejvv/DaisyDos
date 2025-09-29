@@ -62,7 +62,7 @@ This is a standard Xcode project. Use Xcode to build and run:
 
 ## Development Context
 
-**Phase 1.0 Complete - Phase 2.3.2 Complete: Advanced Task Management with Subtasks**
+**Phase 1.0 Complete - Phase 2.4 Complete: TaskDetailView Enhancement with Full Attachment Management**
 
 ### Current Status
 DaisyDos has a comprehensive task management system with full CRUD operations, advanced subtask hierarchies, and proven architectural patterns. The app currently features:
@@ -130,12 +130,24 @@ DaisyDos has a comprehensive task management system with full CRUD operations, a
 - ✅ **Automatic Order Assignment**: Legacy subtasks automatically receive proper sequential order values
 - ✅ **Production-Ready Implementation**: Clean, debugged code with all temporary logging removed
 
-### Phase 2.3 Next Goals
+**TaskDetailView Enhancement with Full Attachment Management (Phase 2.4 Complete):**
+- ✅ **AttachmentPreviewCard**: Reusable component with grid/list/compact display modes, thumbnail loading, and context menus
+- ✅ **AttachmentGalleryView**: Complete gallery with grid/list toggle, search, type-based sectioning, and empty states
+- ✅ **AttachmentDetailSheet**: Full-screen viewer with image zoom, metadata display, and QuickLook integration
+- ✅ **AttachmentPickerSheet**: Multi-input picker supporting PhotosPicker, document picker, and camera capture
+- ✅ **TaskShareSheet**: Modern sharing with ShareLink support and attachment inclusion options
+- ✅ **Enhanced TaskManager+Attachments**: Batch operations, validation, file management, and cleanup utilities
+- ✅ **TaskDetailView Integration**: Complete attachment lifecycle (add, view, share, delete) within task detail
+- ✅ **Modern iOS APIs**: PhotosPicker (iOS 16+), ShareLink, UIDocumentPickerViewController, QuickLook
+- ✅ **Accessibility Excellence**: VoiceOver support, Dynamic Type scaling, 44pt touch targets
+- ✅ **Performance Optimized**: Lazy loading, background thumbnail generation, efficient file operations
+
+### Phase 2.5 Next Goals
 Remaining Advanced Task Management Features:
 - **EventKit Integration**: Calendar sync and reminders
 - **Quick Actions**: Swipe gestures and context menus
 - **Advanced Tag Features**: Drag & drop with Transferable protocol
-- **Attachment Management**: File upload, preview, and organization
+- **Recurrence System UI**: Complete recurrence pattern interface
 
 ### File Organization
 - **Enhanced Models**: `Task.swift` (V2), `Priority.swift`, `RecurrenceRule.swift`, `TaskAttachment.swift` - Full featured models
@@ -144,15 +156,22 @@ Remaining Advanced Task Management Features:
 - **Managers**: `TaskManager.swift` (enhanced), `TaskManager+Subtasks.swift`, `HabitManager.swift`, `TagManager.swift` - @Observable business logic
 - **Task Views**: Complete task management interface
   - `TasksView.swift` - Main task list with multi-select, bulk operations, and root task filtering
-  - `TaskDetailView.swift` - Comprehensive task display with integrated subtask management
+  - `TaskDetailView.swift` - Comprehensive task display with integrated subtask and attachment management
   - `TaskEditView.swift` - Dedicated task editing with validation and change detection
   - `TaskRowView.swift` - Maximally reusable task component with composition pattern API
   - `AddTaskView.swift` - Enhanced task creation with validation and tag assignment
+  - `TaskShareSheet.swift` - Modern sharing functionality with ShareLink and attachment options
 - **Subtask Management**: Complete subtask system (`/Views/Subtasks/`)
   - `SubtaskRowView.swift` - Recursive subtask display with unlimited nesting
   - `SubtaskListView.swift` - Order-based reordering with arrow controls (SwiftData compatible)
   - `SubtaskCreationView.swift` - Comprehensive subtask creation interface
   - `SubtaskProgressView.swift` - Rich progress visualization components
+- **Attachment Management**: Complete attachment system (`/Views/Attachments/`)
+  - `AttachmentGalleryView.swift` - Complete gallery with grid/list toggle, search, and sectioning
+  - `AttachmentPreviewCard.swift` - Reusable component with multiple display modes and context menus
+  - `AttachmentDetailSheet.swift` - Full-screen viewer with zoom, metadata, and QuickLook integration
+  - `AttachmentPickerSheet.swift` - Multi-input picker (PhotosPicker, documents, camera)
+  - `TaskManager+Attachments.swift` - Enhanced attachment operations and validation
 - **Tag UI Components**: Complete tag system interface
   - `TagCreationView.swift`, `TagEditView.swift` - Tag CRUD operations
   - `TagColorPicker.swift`, `TagSymbolPicker.swift` - Visual selection interfaces
@@ -165,7 +184,7 @@ Remaining Advanced Task Management Features:
 
 ## Key Implementation Principles
 
-1. **Component Reusability**: TaskRowView and SubtaskRowView proven to work identically across all contexts using composition pattern
+1. **Component Reusability**: TaskRowView, SubtaskRowView, and AttachmentPreviewCard proven to work identically across all contexts using composition pattern
 2. **@Observable First**: Use @Observable pattern throughout, no traditional ViewModels
 3. **Privacy by Default**: All features work locally before any cloud integration
 4. **Error Handling Excellence**: Three-tier system transforms all errors to user-friendly messages with recovery actions
@@ -176,6 +195,9 @@ Remaining Advanced Task Management Features:
 9. **SwiftData Integration**: Use @Query for automatic UI updates and computed properties for business logic in @Observable managers
 10. **Hierarchical Data Management**: Proper root/child task separation with intelligent filtering and completion propagation
 11. **SwiftData Ordering Patterns**: Use explicit order properties for array relationships instead of relying on insertion order, as SwiftData relationships are unordered collections
+12. **Modern iOS API Integration**: Use PhotosPicker, ShareLink, QuickLook, and UIDocumentPickerViewController for native iOS experiences
+13. **Task Concurrency Handling**: Use `_Concurrency.Task` to avoid naming conflicts with SwiftData Task model in attachment processing
+14. **File Management Excellence**: Implement proper security-scoped resource handling, thumbnail generation, and cleanup utilities
 
 Refer to `/Docs/implementation_roadmap.md` for the detailed development plan and `/Docs/daisydos_prd.md` and `/Docs/daisydos_plan.md` for comprehensive product requirements.
 

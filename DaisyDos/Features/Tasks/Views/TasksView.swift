@@ -26,6 +26,8 @@ struct TasksView: View {
     @State private var showingDeleteConfirmation = false
     @State private var isMultiSelectMode = false
     @State private var selectedTasks: Set<Task.ID> = []
+    @State private var sectionType: TaskSectionType = .none
+    @State private var showingSectionPicker = false
 
     var body: some View {
         NavigationStack {
@@ -77,82 +79,22 @@ struct TasksView: View {
                         .padding()
                         Spacer()
                     } else {
-                        // Show task list
+                        // Show sectioned task list
                         List {
-                            ForEach(filteredTasks) { task in
-                                HStack {
-                                    // Multi-select checkbox
-                                    if isMultiSelectMode {
-                                        Button(action: {
-                                            toggleTaskSelection(task)
-                                        }) {
-                                            Image(systemName: selectedTasks.contains(task.id) ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(selectedTasks.contains(task.id) ? .daisyTask : .daisyTextSecondary)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .frame(minWidth: 44, minHeight: 44)
+                            ForEach(sectionedTasks, id: \.0) { section in
+                                if sectionType == .none || sectionedTasks.count == 1 {
+                                    // No sectioning - show tasks directly
+                                    ForEach(section.1) { task in
+                                        taskRow(for: task)
                                     }
-
-                                    TaskRowView(
-                                        task: task,
-                                        onToggleCompletion: {
-                                            if !isMultiSelectMode {
-                                                _ = taskManager.toggleTaskCompletionSafely(task)
-                                            }
-                                        },
-                                        onEdit: {
-                                            if !isMultiSelectMode {
-                                                taskToEdit = task
-                                            }
-                                        },
-                                        onDelete: {
-                                            if !isMultiSelectMode {
-                                                taskToDelete = task
-                                                showingDeleteConfirmation = true
-                                            }
-                                        },
-                                        onTagAssignment: nil, // Removed tag button from TasksView
-                                        displayMode: isMultiSelectMode ? .compact : .detailed,
-                                        showsTagButton: false // Disable tag button
-                                    )
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        if isMultiSelectMode {
-                                            toggleTaskSelection(task)
-                                        } else {
-                                            taskToDetail = task
+                                } else {
+                                    // Show sections with headers
+                                    Section {
+                                        ForEach(section.1) { task in
+                                            taskRow(for: task)
                                         }
-                                    }
-                                    .contextMenu {
-                                        if !isMultiSelectMode {
-                                            Button(action: {
-                                                taskToDetail = task
-                                            }) {
-                                                Label("View Details", systemImage: "info.circle")
-                                            }
-
-                                            Button(action: {
-                                                taskToEdit = task
-                                            }) {
-                                                Label("Edit", systemImage: "pencil")
-                                            }
-
-                                            Button(action: {
-                                                _ = taskManager.duplicateTaskSafely(task)
-                                            }) {
-                                                Label("Duplicate", systemImage: "plus.square.on.square")
-                                            }
-
-                                            Divider()
-
-                                            Button(action: {
-                                                taskToDelete = task
-                                                showingDeleteConfirmation = true
-                                            }) {
-                                                Label("Delete", systemImage: "trash")
-                                            }
-                                            .foregroundColor(.daisyError)
-                                        }
+                                    } header: {
+                                        sectionType.sectionHeader(title: section.0, count: section.1.count)
                                     }
                                 }
                             }
@@ -177,25 +119,37 @@ struct TasksView: View {
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if isMultiSelectMode {
-                        Menu {
-                            Button("Select All") {
-                                selectedTasks = Set(filteredTasks.map(\.id))
+                    HStack {
+                        if !isMultiSelectMode && !rootTasks.isEmpty {
+                            // Section picker button
+                            Button(action: {
+                                showingSectionPicker = true
+                            }) {
+                                Image(systemName: sectionType.sfSymbol)
+                                    .foregroundColor(.daisyTask)
                             }
-                            .disabled(selectedTasks.count == filteredTasks.count)
-
-                            Button("Select None") {
-                                selectedTasks.removeAll()
-                            }
-                            .disabled(selectedTasks.isEmpty)
-                        } label: {
-                            Image(systemName: "ellipsis")
                         }
-                    } else {
-                        Button(action: {
-                            showingAddTask = true
-                        }) {
-                            Image(systemName: "plus")
+
+                        if isMultiSelectMode {
+                            Menu {
+                                Button("Select All") {
+                                    selectedTasks = Set(filteredTasks.map(\.id))
+                                }
+                                .disabled(selectedTasks.count == filteredTasks.count)
+
+                                Button("Select None") {
+                                    selectedTasks.removeAll()
+                                }
+                                .disabled(selectedTasks.isEmpty)
+                            } label: {
+                                Image(systemName: "ellipsis")
+                            }
+                        } else {
+                            Button(action: {
+                                showingAddTask = true
+                            }) {
+                                Image(systemName: "plus")
+                            }
                         }
                     }
                 }
@@ -210,6 +164,9 @@ struct TasksView: View {
             }
             .sheet(item: $taskToEdit) { task in
                 TaskEditView(task: task)
+            }
+            .sheet(isPresented: $showingSectionPicker) {
+                sectionPickerSheet
             }
             .navigationDestination(item: $taskToDetail) { task in
                 TaskDetailView(task: task)
@@ -235,6 +192,125 @@ struct TasksView: View {
         } else {
             // Filter search results to only include root tasks
             return taskManager.searchTasksSafely(query: searchText).filter { $0.parentTask == nil }
+        }
+    }
+
+    private var sectionedTasks: [(String, [Task])] {
+        return sectionType.groupTasks(filteredTasks)
+    }
+
+    // MARK: - Task Row Builder
+
+    @ViewBuilder
+    private func taskRow(for task: Task) -> some View {
+        HStack {
+            // Multi-select checkbox
+            if isMultiSelectMode {
+                Button(action: {
+                    toggleTaskSelection(task)
+                }) {
+                    Image(systemName: selectedTasks.contains(task.id) ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(selectedTasks.contains(task.id) ? .daisyTask : .daisyTextSecondary)
+                }
+                .buttonStyle(.plain)
+                .frame(minWidth: 44, minHeight: 44)
+            }
+
+            TaskRowView(
+                task: task,
+                onToggleCompletion: {
+                    if !isMultiSelectMode {
+                        _ = taskManager.toggleTaskCompletionSafely(task)
+                    }
+                },
+                onEdit: {
+                    if !isMultiSelectMode {
+                        taskToEdit = task
+                    }
+                },
+                onDelete: {
+                    if !isMultiSelectMode {
+                        taskToDelete = task
+                        showingDeleteConfirmation = true
+                    }
+                },
+                onTagAssignment: nil, // Removed tag button from TasksView
+                displayMode: isMultiSelectMode ? .compact : .detailed,
+                showsTagButton: false // Disable tag button
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if isMultiSelectMode {
+                    toggleTaskSelection(task)
+                } else {
+                    taskToDetail = task
+                }
+            }
+            .contextMenu {
+                if !isMultiSelectMode {
+                    Button(action: {
+                        taskToDetail = task
+                    }) {
+                        Label("View Details", systemImage: "info.circle")
+                    }
+
+                    Button(action: {
+                        taskToEdit = task
+                    }) {
+                        Label("Edit", systemImage: "pencil")
+                    }
+
+                    Button(action: {
+                        _ = taskManager.duplicateTaskSafely(task)
+                    }) {
+                        Label("Duplicate", systemImage: "plus.square.on.square")
+                    }
+
+                    Divider()
+
+                    Button(action: {
+                        taskToDelete = task
+                        showingDeleteConfirmation = true
+                    }) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .foregroundColor(.daisyError)
+                }
+            }
+        }
+    }
+
+    // MARK: - Section Picker Sheet
+
+    @ViewBuilder
+    private var sectionPickerSheet: some View {
+        NavigationStack {
+            List {
+                ForEach(TaskSectionType.allCases, id: \.id) { sectionOption in
+                    HStack {
+                        Text(sectionOption.displayName)
+                        Spacer()
+                        if sectionType == sectionOption {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                    .onTapGesture {
+                        withAnimation {
+                            sectionType = sectionOption
+                        }
+                        showingSectionPicker = false
+                    }
+                }
+            }
+            .navigationTitle("Group Tasks")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        showingSectionPicker = false
+                    }
+                }
+            }
         }
     }
 
