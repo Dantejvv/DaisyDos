@@ -11,7 +11,7 @@ import SwiftData
 enum DaisyDosSchemaV1: VersionedSchema {
     static var versionIdentifier = Schema.Version(1, 0, 0)
     static var models: [any PersistentModel.Type] {
-        [TaskV1.self, Habit.self, Tag.self]
+        [TaskV1.self, Habit.self, Tag.self, HabitCompletion.self, HabitStreak.self]
     }
 
     // MARK: - V1 Task Model (Original)

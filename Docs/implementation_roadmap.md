@@ -423,7 +423,7 @@ struct TaskRowView: View {
 ### 3.1 Complete Habit Data Models (Effort: Medium)
 
 #### ✅ Enhanced Habit Model
-- [ ] Create comprehensive `Habit` model with `@Model` macro:
+- [X] Create comprehensive `Habit` model with `@Model` macro:
 ```swift
 @Model
 class Habit {
@@ -438,14 +438,14 @@ class Habit {
     @Relationship var tags: [Tag] = []
 }
 ```
-- [ ] Create `HabitCompletion` model for tracking individual completions
-- [ ] Create `HabitStreak` model for streak calculation and management
-- [ ] Implement grace period logic for streak maintenance
-- [ ] Add skip functionality with reason tracking
-- [ ] **Acceptance:** Models persist correctly, streak calculations accurate, grace periods functional
+- [X] Create `HabitCompletion` model for tracking individual completions
+- [X] Create `HabitStreak` model for streak calculation and management
+- [X] Implement grace period logic for streak maintenance
+- [X] Add skip functionality with reason tracking
+- [X] **Acceptance:** Models persist correctly, streak calculations accurate, grace periods functional
 
 #### ✅ Recurrence System Integration
-- [ ] Implement `RecurrenceRule` struct with shared usage across tasks and habits:
+- [X] Implement `RecurrenceRule` struct with shared usage across tasks and habits:
 ```swift
 struct RecurrenceRule: Codable {
     enum Frequency: String, CaseIterable, Codable {
@@ -461,10 +461,10 @@ struct RecurrenceRule: Codable {
     }
 }
 ```
-- [ ] Test recurrence calculations for complex patterns
-- [ ] Validate recurrence rule editing updates future occurrences
-- [ ] Implement timezone handling for recurrence calculations
-- [ ] **Acceptance:** Recurrence works for both tasks and habits, calculations accurate across time zones
+- [X] Test recurrence calculations for complex patterns
+- [X] Validate recurrence rule editing updates future occurrences
+- [X] Implement timezone handling for recurrence calculations
+- [X] **Acceptance:** Recurrence works for both tasks and habits, calculations accurate across time zones
 
 ### 3.2 HabitRowView - Component Consistency Validation (Effort: Medium)
 
