@@ -57,6 +57,7 @@ struct TasksView: View {
                         Image(systemName: "magnifyingglass")
                             .foregroundColor(.secondary)
                         TextField("Search tasks...", text: $searchText)
+                            .autocorrectionDisabled(true)
                     }
                     .padding()
                     .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))

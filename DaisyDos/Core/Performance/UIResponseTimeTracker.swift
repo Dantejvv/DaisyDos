@@ -347,12 +347,12 @@ extension UIResponseTimeTracker {
         }
 
         let responseTimes = events.map { $0.responseTime }
-        let averageTime = responseTimes.reduce(0, +) / Double(responseTimes.count)
+        let averageTime = responseTimes.count > 0 ? responseTimes.reduce(0, +) / Double(responseTimes.count) : 0.0
         let maxTime = responseTimes.max() ?? 0
         let minTime = responseTimes.min() ?? 0
 
         let meetsTargetCount = events.filter { $0.meetsTartget }.count
-        let targetComplianceRate = Double(meetsTargetCount) / Double(events.count)
+        let targetComplianceRate = events.count > 0 ? Double(meetsTargetCount) / Double(events.count) : 0.0
 
         let slowEvents = events.filter { $0.responseTime > 0.2 } // Over 200ms
         let criticalEvents = events.filter { $0.responseTime > 0.5 } // Over 500ms
@@ -375,7 +375,7 @@ extension UIResponseTimeTracker {
     ) -> [String] {
         var recommendations: [String] = []
 
-        let averageTime = events.map { $0.responseTime }.reduce(0, +) / Double(events.count)
+        let averageTime = events.count > 0 ? events.map { $0.responseTime }.reduce(0, +) / Double(events.count) : 0.0
         let slowEvents = events.filter { $0.responseTime > 0.2 }
 
         if averageTime > 0.1 {

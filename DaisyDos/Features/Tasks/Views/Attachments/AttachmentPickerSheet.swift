@@ -327,7 +327,7 @@ struct AttachmentPickerSheet: View {
 
             for item in items {
                 await MainActor.run {
-                    processingProgress = Double(processedCount) / Double(totalItems)
+                    processingProgress = totalItems > 0 ? Double(processedCount) / Double(totalItems) : 0.0
                     processingMessage = "Processing photo \(processedCount + 1) of \(totalItems)"
                 }
 
@@ -439,7 +439,7 @@ struct AttachmentPickerSheet: View {
 
             for url in urls {
                 await MainActor.run {
-                    processingProgress = Double(processedCount) / Double(totalFiles)
+                    processingProgress = totalFiles > 0 ? Double(processedCount) / Double(totalFiles) : 0.0
                     processingMessage = "Processing document \(processedCount + 1) of \(totalFiles)"
                 }
 

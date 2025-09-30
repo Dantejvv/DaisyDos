@@ -184,11 +184,13 @@ struct InputField: View {
             if isSecure {
                 SecureField(placeholder, text: $text)
                     .textContentType(textContentType)
+                    .autocorrectionDisabled(true)
             } else {
                 TextField(placeholder, text: $text, axis: .horizontal)
                     .keyboardType(keyboardType)
                     .textContentType(textContentType)
                     .textInputAutocapitalization(autocapitalization)
+                    .autocorrectionDisabled(true)
                     .onSubmit {
                         onCommit?()
                     }

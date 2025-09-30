@@ -224,7 +224,7 @@ class PerformanceMonitor {
         }
 
         let totalTime = uiResponseTimes.reduce(0) { $0 + $1.responseTime }
-        averageResponseTime = totalTime / Double(uiResponseTimes.count)
+        averageResponseTime = uiResponseTimes.count > 0 ? totalTime / Double(uiResponseTimes.count) : 0.0
     }
 
     // MARK: - Performance Alerts

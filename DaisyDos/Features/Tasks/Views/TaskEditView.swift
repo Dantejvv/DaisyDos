@@ -62,11 +62,15 @@ struct TaskEditView: View {
     }
 
     private var titleCountColor: Color {
-        titleCharacterCount > Int(Double(maxTitleLength) * 0.8) ? .daisyError : .daisyTextSecondary
+        let threshold = Double(maxTitleLength) * 0.8
+        guard threshold.isFinite && !threshold.isNaN else { return .daisyTextSecondary }
+        return titleCharacterCount > Int(threshold) ? .daisyError : .daisyTextSecondary
     }
 
     private var descriptionCountColor: Color {
-        descriptionCharacterCount > Int(Double(maxDescriptionLength) * 0.8) ? .daisyError : .daisyTextSecondary
+        let threshold = Double(maxDescriptionLength) * 0.8
+        guard threshold.isFinite && !threshold.isNaN else { return .daisyTextSecondary }
+        return descriptionCharacterCount > Int(threshold) ? .daisyError : .daisyTextSecondary
     }
 
     var hasChanges: Bool {
@@ -96,6 +100,7 @@ struct TaskEditView: View {
                 Section("Task Details") {
                     VStack(alignment: .leading, spacing: 4) {
                         TextField("Title", text: $title)
+                            .autocorrectionDisabled(true)
                             .accessibilityLabel("Task title")
                             .onChange(of: title) { _, newValue in
                                 if newValue.count > maxTitleLength {

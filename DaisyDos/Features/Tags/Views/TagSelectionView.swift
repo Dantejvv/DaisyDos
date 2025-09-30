@@ -170,6 +170,8 @@ struct TagSelectionView: View {
 }
 
 #Preview {
+    @Previewable @State var selectedTags: [Tag] = []
+
     let container = try! ModelContainer(for: Tag.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     let tagManager = TagManager(modelContext: container.mainContext)
 
@@ -178,9 +180,7 @@ struct TagSelectionView: View {
     let _ = tagManager.createTag(name: "Personal", sfSymbolName: "house", colorName: "green")
     let _ = tagManager.createTag(name: "Health", sfSymbolName: "heart", colorName: "red")
 
-    @State var selectedTags: [Tag] = []
-
-    return TagSelectionView(selectedTags: $selectedTags)
+    TagSelectionView(selectedTags: $selectedTags)
         .modelContainer(container)
         .environment(tagManager)
 }

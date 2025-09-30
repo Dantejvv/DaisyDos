@@ -85,6 +85,8 @@ extension TagAssignmentSheet {
 }
 
 #Preview {
+    @Previewable @State var selectedTags: [Tag] = []
+
     let container = try! ModelContainer(for: Tag.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     let tagManager = TagManager(modelContext: container.mainContext)
 
@@ -92,9 +94,9 @@ extension TagAssignmentSheet {
     let tag1 = tagManager.createTag(name: "Work", sfSymbolName: "briefcase", colorName: "blue")!
     let tag2 = tagManager.createTag(name: "Personal", sfSymbolName: "house", colorName: "green")!
 
-    @State var selectedTags: [Tag] = [tag1]
+    selectedTags.append(tag1)
 
-    TagAssignmentSheet(
+    return TagAssignmentSheet(
         title: "Select Tags",
         selectedTags: $selectedTags,
         onSave: { newTags in

@@ -121,7 +121,7 @@ class AccessibilityAuditor: ObservableObject {
         }
 
         let totalPoints = results.reduce(0) { $0 + $1.score.value }
-        let averageScore = Double(totalPoints) / Double(results.count)
+        let averageScore = results.count > 0 ? Double(totalPoints) / Double(results.count) : 0.0
 
         let totalIssues = results.reduce(0) { $0 + $1.issues.count }
         let totalWarnings = results.reduce(0) { $0 + $1.warnings.count }

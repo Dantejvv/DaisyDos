@@ -144,6 +144,7 @@ class Task {
 
     var subtaskCompletionPercentage: Double {
         guard hasSubtasks else { return isCompleted ? 1.0 : 0.0 }
+        guard subtaskCount > 0 else { return 0.0 } // Prevent division by zero
         return Double(completedSubtaskCount) / Double(subtaskCount)
     }
 

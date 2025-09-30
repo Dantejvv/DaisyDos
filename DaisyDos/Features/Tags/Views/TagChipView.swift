@@ -136,12 +136,12 @@ struct DraggableTagChipView: View {
     return VStack(spacing: 16) {
         TagChipView(tag: tag)
         TagChipView(tag: tag, isSelected: true)
-        TagChipView(tag: tag, isRemovable: true) {
+        TagChipView(tag: tag, isRemovable: true, onRemove: {
             print("Remove tapped")
-        }
-        TagChipView(tag: tag, isSelected: true, isRemovable: true) {
+        })
+        TagChipView(tag: tag, isSelected: true, isRemovable: true, onRemove: {
             print("Remove tapped")
-        }
+        })
     }
     .padding()
 }

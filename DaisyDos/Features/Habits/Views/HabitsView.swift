@@ -83,6 +83,9 @@ private struct HabitRowView: View {
                     .font(.title3)
             }
             .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel(habit.isCompletedToday ? "Mark habit incomplete" : "Mark habit complete")
+            .accessibilityAddTraits(.isButton)
+            .frame(minWidth: 44, minHeight: 44) // Ensure 44pt touch target
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(habit.title)
@@ -97,6 +100,8 @@ private struct HabitRowView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Current streak: \(habit.currentStreak) days")
 
                     if !habit.tags.isEmpty {
                         Text("• \(habit.tags.count) tag\(habit.tags.count == 1 ? "" : "s")")
@@ -115,8 +120,36 @@ private struct HabitRowView: View {
                     .foregroundColor(.red)
             }
             .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel("Delete habit")
+            .accessibilityAddTraits(.isButton)
+            .frame(minWidth: 44, minHeight: 44) // Ensure 44pt touch target
         }
         .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint)
+    }
+
+    // MARK: - Accessibility Helpers
+
+    private var accessibilityLabel: String {
+        var label = habit.title
+        if habit.isCompletedToday {
+            label += ", completed today"
+        }
+        label += ", \(habit.currentStreak) day streak"
+        if !habit.tags.isEmpty {
+            label += ", \(habit.tags.count) tag\(habit.tags.count == 1 ? "" : "s")"
+        }
+        return label
+    }
+
+    private var accessibilityHint: String {
+        if habit.isCompletedToday {
+            return "Double tap completion button to mark as incomplete"
+        } else {
+            return "Double tap completion button to mark as complete"
+        }
     }
 }
 

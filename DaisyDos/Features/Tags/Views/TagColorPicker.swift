@@ -79,8 +79,8 @@ private struct ColorOption: View {
 }
 
 #Preview {
-    @State var selectedColor = "blue"
+    @Previewable @State var selectedColor = "blue"
 
-    return TagColorPicker(selectedColor: $selectedColor)
+    TagColorPicker(selectedColor: $selectedColor)
         .padding()
 }

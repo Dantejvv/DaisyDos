@@ -59,8 +59,8 @@ private struct SymbolOption: View {
 }
 
 #Preview {
-    @State var selectedSymbol = "tag"
+    @Previewable @State var selectedSymbol = "tag"
 
-    return TagSymbolPicker(selectedSymbol: $selectedSymbol)
+    TagSymbolPicker(selectedSymbol: $selectedSymbol)
         .padding()
 }

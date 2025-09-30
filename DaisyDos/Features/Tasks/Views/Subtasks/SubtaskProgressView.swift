@@ -15,7 +15,8 @@ struct SubtaskProgressRing: View {
     let lineWidth: CGFloat
 
     private var progress: Double {
-        task.subtaskCompletionPercentage
+        let percentage = task.subtaskCompletionPercentage
+        return percentage.isNaN || percentage.isInfinite ? 0.0 : percentage
     }
 
     private var completedCount: Int {
@@ -79,7 +80,8 @@ struct SubtaskProgressBar: View {
     let height: CGFloat
 
     private var progress: Double {
-        task.subtaskCompletionPercentage
+        let percentage = task.subtaskCompletionPercentage
+        return percentage.isNaN || percentage.isInfinite ? 0.0 : percentage
     }
 
     private var segments: [SubtaskSegment] {
@@ -157,7 +159,8 @@ struct SubtaskProgressSummary: View {
     }
 
     private var progress: Double {
-        task.subtaskCompletionPercentage
+        let percentage = task.subtaskCompletionPercentage
+        return percentage.isNaN || percentage.isInfinite ? 0.0 : percentage
     }
 
     var body: some View {

@@ -17,6 +17,8 @@ struct SubtaskListView: View {
     @State private var subtaskToEdit: Task?
     @State private var subtaskToDelete: Task?
     @State private var showingDeleteConfirmation = false
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
 
     private var displayedSubtasks: [Task] {
         // Use ordered subtasks which respects the subtaskOrder property
@@ -121,6 +123,11 @@ struct SubtaskListView: View {
         } message: { subtask in
             Text("Are you sure you want to delete '\(subtask.title)' and all its subtasks?")
         }
+        .alert("Subtask Error", isPresented: $showingErrorAlert) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage)
+        }
     }
 
     // MARK: - Empty State
@@ -186,7 +193,8 @@ struct SubtaskListView: View {
         case .failure(let error):
             // Handle error with user feedback
             print("Failed to toggle subtask completion: \(error)")
-            // TODO: Show user-friendly error message
+            errorMessage = "Unable to update subtask completion. Please try again."
+            showingErrorAlert = true
         }
     }
 
@@ -214,8 +222,9 @@ struct SubtaskListView: View {
         case .success:
             break
         case .failure(let error):
-            // TODO: Show user-friendly error message
             print("Failed to move subtask up: \(error)")
+            errorMessage = "Unable to reorder subtasks. Please try again."
+            showingErrorAlert = true
         }
     }
 
@@ -225,8 +234,9 @@ struct SubtaskListView: View {
         case .success:
             break
         case .failure(let error):
-            // TODO: Show user-friendly error message
             print("Failed to move subtask down: \(error)")
+            errorMessage = "Unable to reorder subtasks. Please try again."
+            showingErrorAlert = true
         }
     }
 
