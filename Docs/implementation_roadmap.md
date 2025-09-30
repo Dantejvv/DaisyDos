@@ -491,12 +491,12 @@ struct HabitRowView: View {
 - [X] **Acceptance:** HabitRowView behaves consistently with TaskRowView, habit-specific features work
 
 #### ✅ Cross-Context Consistency Testing
-- [ ] Test HabitRowView in `HabitListView` context
-- [ ] Test HabitRowView in search results context  
-- [ ] Test HabitRowView in Today View mockup context
-- [ ] Validate visual consistency with TaskRowView
-- [ ] Performance test with 100+ HabitRowView instances
-- [ ] **Acceptance:** Component works consistently across contexts, performance matches TaskRowView
+- [X] Test HabitRowView in `HabitListView` context
+- [X] Test HabitRowView in search results context  
+- [X] Test HabitRowView in Today View mockup context
+- [X] Validate visual consistency with TaskRowView
+- [X] Performance test with 100+ HabitRowView instances
+- [X] **Acceptance:** Component works consistently across contexts, performance matches TaskRowView
 
 ### 3.3 Habit Analytics & Progress Tracking (Effort: Medium)
 
