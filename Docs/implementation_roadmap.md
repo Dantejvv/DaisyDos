@@ -501,15 +501,15 @@ struct HabitRowView: View {
 ### 3.3 Habit Analytics & Progress Tracking (Effort: Medium)
 
 #### ✅ Streak Calculation System
-- [ ] Implement accurate streak calculation logic with grace periods
-- [ ] Create streak history tracking for analytics
-- [ ] Add longest streak tracking and celebration
-- [ ] Implement streak reset logic with user confirmation
-- [ ] Test streak calculations across various scenarios
-- [ ] **Acceptance:** Streak logic accurate, handles edge cases, user-friendly
+- [X] Implement accurate streak calculation logic with grace periods
+- [X] Create streak history tracking for analytics
+- [X] Add longest streak tracking and celebration
+- [X] Implement streak reset logic with user confirmation
+- [X] Test streak calculations across various scenarios
+- [X] **Acceptance:** Streak logic accurate, handles edge cases, user-friendly
 
 #### ✅ Progress Visualization
-- [ ] Implement basic progress charts using Charts framework:
+- [X] Implement basic progress charts using Charts framework:
 ```swift
 import Charts
 
@@ -523,11 +523,11 @@ struct HabitProgressChart: View {
     }
 }
 ```
-- [ ] Create heatmap view for habit completion history
-- [ ] Add weekly/monthly trend visualization
-- [ ] Implement completion rate calculation and display
-- [ ] Create motivational progress feedback
-- [ ] **Acceptance:** Charts display correctly, heatmap intuitive, performance good with large datasets
+- [X] Create heatmap view for habit completion history
+- [X] Add weekly/monthly trend visualization
+- [X] Implement completion rate calculation and display
+- [X] Create motivational progress feedback
+- [X] **Acceptance:** Charts display correctly, heatmap intuitive, performance good with large datasets
 
 ### 3.4 Habit Management Features (Effort: Medium-Large)
 

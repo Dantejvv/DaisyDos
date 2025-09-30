@@ -1,0 +1,663 @@
+//
+//  HabitDetailView.swift
+//  DaisyDos
+//
+//  Created by Claude Code on 9/29/25.
+//
+
+import SwiftUI
+import SwiftData
+
+struct HabitDetailView: View {
+    // MARK: - Properties
+
+    @Bindable var habit: Habit
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var habitManager: HabitManager
+    @State private var selectedTab: DetailTab = .overview
+    @State private var showingEditView = false
+    @State private var showingDeleteAlert = false
+
+    // MARK: - Initializer
+
+    init(habit: Habit, modelContext: ModelContext) {
+        self.habit = habit
+        self._habitManager = State(initialValue: HabitManager(modelContext: modelContext))
+    }
+
+    // MARK: - Detail Tabs
+
+    enum DetailTab: String, CaseIterable {
+        case overview = "Overview"
+        case analytics = "Analytics"
+        case history = "History"
+
+        var icon: String {
+            switch self {
+            case .overview: return "info.circle"
+            case .analytics: return "chart.bar"
+            case .history: return "calendar"
+            }
+        }
+    }
+
+    // MARK: - Body
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Custom Tab Picker
+                tabPicker
+
+                // Tab Content
+                TabView(selection: $selectedTab) {
+                    overviewTab
+                        .tag(DetailTab.overview)
+
+                    analyticsTab
+                        .tag(DetailTab.analytics)
+
+                    historyTab
+                        .tag(DetailTab.history)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+            }
+            .navigationTitle(habit.title)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button("Edit Habit") {
+                            showingEditView = true
+                        }
+
+                        Button("Delete Habit", role: .destructive) {
+                            showingDeleteAlert = true
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingEditView) {
+            HabitEditView(habit: habit)
+        }
+        .alert("Delete Habit", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteHabit()
+            }
+        } message: {
+            Text("Are you sure you want to delete '\(habit.title)'? This action cannot be undone.")
+        }
+    }
+
+    // MARK: - Tab Picker
+
+    @ViewBuilder
+    private var tabPicker: some View {
+        HStack(spacing: 0) {
+            ForEach(DetailTab.allCases, id: \.self) { tab in
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        selectedTab = tab
+                    }
+                }) {
+                    VStack(spacing: 4) {
+                        Image(systemName: tab.icon)
+                            .font(.system(size: 16, weight: .medium))
+
+                        Text(tab.rawValue)
+                            .font(.caption.weight(.medium))
+                    }
+                    .foregroundColor(selectedTab == tab ? .daisyHabit : .daisyTextSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                }
+                .background(
+                    Rectangle()
+                        .fill(selectedTab == tab ? Color.daisyHabit.opacity(0.1) : Color.clear)
+                        .animation(.easeInOut(duration: 0.3), value: selectedTab)
+                )
+            }
+        }
+        .background(Color.daisySurface)
+        .overlay(
+            // Selection indicator
+            VStack {
+                Spacer()
+                Rectangle()
+                    .fill(Color.daisyHabit)
+                    .frame(height: 2)
+                    .offset(x: tabIndicatorOffset)
+                    .animation(.easeInOut(duration: 0.3), value: selectedTab)
+            }
+        )
+    }
+
+    private var tabIndicatorOffset: CGFloat {
+        let tabWidth = UIScreen.main.bounds.width / CGFloat(DetailTab.allCases.count)
+        let index = DetailTab.allCases.firstIndex(of: selectedTab) ?? 0
+        return (CGFloat(index) - 1) * tabWidth
+    }
+
+    // MARK: - Overview Tab
+
+    @ViewBuilder
+    private var overviewTab: some View {
+        ScrollView {
+            LazyVStack(spacing: 20) {
+                // Habit Information Card
+                habitInfoCard
+
+                // Current Status Card
+                currentStatusCard
+
+                // Quick Actions Card
+                quickActionsCard
+
+                // Tags Section
+                if !habit.tags.isEmpty {
+                    tagsCard
+                }
+
+                // Recent Completions Preview
+                recentCompletionsPreview
+            }
+            .padding()
+        }
+        .background(Color.daisyBackground)
+    }
+
+    // MARK: - Analytics Tab
+
+    @ViewBuilder
+    private var analyticsTab: some View {
+        ScrollView {
+            LazyVStack(spacing: 20) {
+                // Progress Chart
+                HabitProgressChart(
+                    habit: habit,
+                    timeframe: .month,
+                    habitManager: habitManager
+                )
+
+                // Streak Visualization
+                StreakVisualizationView(
+                    habit: habit,
+                    habitManager: habitManager
+                )
+
+                // Progress Metrics Summary
+                progressMetricsCard
+            }
+            .padding()
+        }
+        .background(Color.daisyBackground)
+    }
+
+    // MARK: - History Tab
+
+    @ViewBuilder
+    private var historyTab: some View {
+        ScrollView {
+            LazyVStack(spacing: 20) {
+                // Heatmap
+                let endDate = Date()
+                let startDate = Calendar.current.date(byAdding: .month, value: -6, to: endDate) ?? endDate
+
+                HabitHeatmapView(
+                    habit: habit,
+                    habitManager: habitManager,
+                    dateRange: startDate...endDate
+                )
+
+                // Completion History List
+                completionHistoryCard
+            }
+            .padding()
+        }
+        .background(Color.daisyBackground)
+    }
+
+    // MARK: - Overview Cards
+
+    @ViewBuilder
+    private var habitInfoCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("About")
+                .font(.headline)
+                .foregroundColor(.daisyText)
+
+            if !habit.habitDescription.isEmpty {
+                Text(habit.habitDescription)
+                    .font(.body)
+                    .foregroundColor(.daisyTextSecondary)
+            }
+
+            if let recurrenceRule = habit.recurrenceRule {
+                Label(
+                    recurrenceRule.displayDescription,
+                    systemImage: "repeat"
+                )
+                .font(.caption)
+                .foregroundColor(.daisyTextSecondary)
+            }
+
+            HStack {
+                Label(
+                    "Created \(DateFormatter.mediumDate.string(from: habit.createdDate))",
+                    systemImage: "calendar"
+                )
+
+                Spacer()
+
+                Label(
+                    "\(habit.gracePeriodDays) day grace period",
+                    systemImage: "clock"
+                )
+            }
+            .font(.caption)
+            .foregroundColor(.daisyTextSecondary)
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private var currentStatusCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Current Status")
+                .font(.headline)
+                .foregroundColor(.daisyText)
+
+            HStack {
+                // Current Streak
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill")
+                            .foregroundColor(.orange)
+
+                        Text("\(habit.currentStreak)")
+                            .font(.title2.weight(.bold))
+                            .foregroundColor(.daisyText)
+
+                        Text("days")
+                            .font(.caption)
+                            .foregroundColor(.daisyTextSecondary)
+                    }
+
+                    Text("Current Streak")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+
+                Spacer()
+
+                // Completion Status
+                VStack(alignment: .trailing, spacing: 4) {
+                    Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
+                        .font(.title2)
+                        .foregroundColor(habit.isCompletedToday ? .daisySuccess : .daisyTextSecondary)
+
+                    Text(habit.isCompletedToday ? "Completed Today" : "Not Completed")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+            }
+
+            // Grace Period Warning
+            if habit.isInGracePeriod {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+
+                    Text("In grace period")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+
+                    Spacer()
+
+                    if let expiryDate = habit.gracePeriodExpiryDate {
+                        Text("Expires \(DateFormatter.shortDate.string(from: expiryDate))")
+                            .font(.caption2)
+                            .foregroundColor(.daisyTextSecondary)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Colors.Accent.warningBackground, in: RoundedRectangle(cornerRadius: 8))
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private var quickActionsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Quick Actions")
+                .font(.headline)
+                .foregroundColor(.daisyText)
+
+            HStack(spacing: 12) {
+                // Mark Complete/Incomplete Button
+                Button(action: {
+                    if habit.isCompletedToday {
+                        habitManager.resetHabitStreak(habit)
+                    } else {
+                        _ = habitManager.markHabitCompleted(habit)
+                    }
+                }) {
+                    Label(
+                        habit.isCompletedToday ? "Mark Incomplete" : "Mark Complete",
+                        systemImage: habit.isCompletedToday ? "minus.circle" : "checkmark.circle"
+                    )
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        habit.isCompletedToday ? Color.daisyError.opacity(0.1) : Color.daisySuccess.opacity(0.1),
+                        in: RoundedRectangle(cornerRadius: 8)
+                    )
+                    .foregroundColor(habit.isCompletedToday ? .daisyError : .daisySuccess)
+                }
+
+                // Skip Button
+                Button(action: {
+                    // Skip functionality would go here
+                }) {
+                    Label("Skip Today", systemImage: "forward.end")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundColor(.orange)
+                }
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private var tagsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Tags")
+                .font(.headline)
+                .foregroundColor(.daisyText)
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
+                ForEach(habit.tags, id: \.id) { tag in
+                    TagChipView(tag: tag)
+                }
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private var recentCompletionsPreview: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Recent Activity")
+                    .font(.headline)
+                    .foregroundColor(.daisyText)
+
+                Spacer()
+
+                Button("View All") {
+                    selectedTab = .history
+                }
+                .font(.caption)
+                .foregroundColor(.daisyHabit)
+            }
+
+            let recentCompletions = habit.completionEntries
+                .sorted { $0.completedDate > $1.completedDate }
+                .prefix(5)
+
+            if recentCompletions.isEmpty {
+                Text("No completions yet")
+                    .font(.body)
+                    .foregroundColor(.daisyTextSecondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
+            } else {
+                ForEach(Array(recentCompletions), id: \.id) { completion in
+                    CompletionRowView(completion: completion)
+                }
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    // MARK: - Analytics Cards
+
+    @ViewBuilder
+    private var progressMetricsCard: some View {
+        let metrics = habitManager.getProgressMetrics(for: habit, period: .month)
+
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Monthly Progress Summary")
+                .font(.headline)
+                .foregroundColor(.daisyText)
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
+                MetricTile(
+                    title: "Completion Rate",
+                    value: String(format: "%.0f%%", metrics.completionRate * 100),
+                    color: .daisySuccess
+                )
+
+                MetricTile(
+                    title: "Average Mood",
+                    value: String(format: "%.1f", metrics.averageMood),
+                    color: .purple
+                )
+
+                MetricTile(
+                    title: "Consistency",
+                    value: String(format: "%.0f%%", metrics.consistency * 100),
+                    color: .daisyTask
+                )
+
+                MetricTile(
+                    title: "Momentum",
+                    value: metrics.momentum.displayName,
+                    color: .orange
+                )
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    // MARK: - History Cards
+
+    @ViewBuilder
+    private var completionHistoryCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Completion History")
+                .font(.headline)
+                .foregroundColor(.daisyText)
+
+            let sortedCompletions = habit.completionEntries
+                .sorted { $0.completedDate > $1.completedDate }
+
+            if sortedCompletions.isEmpty {
+                Text("No completions recorded yet")
+                    .font(.body)
+                    .foregroundColor(.daisyTextSecondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 40)
+            } else {
+                LazyVStack(spacing: 8) {
+                    ForEach(sortedCompletions.prefix(20), id: \.id) { completion in
+                        CompletionRowView(completion: completion, showDetails: true)
+                    }
+
+                    if sortedCompletions.count > 20 {
+                        Text("\(sortedCompletions.count - 20) more completions")
+                            .font(.caption)
+                            .foregroundColor(.daisyTextSecondary)
+                            .padding(.top, 8)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    // MARK: - Helper Methods
+
+    private func deleteHabit() {
+        habitManager.deleteHabit(habit)
+        dismiss()
+    }
+}
+
+// MARK: - Supporting Views
+
+struct CompletionRowView: View {
+    let completion: HabitCompletion
+    var showDetails: Bool = false
+
+    var body: some View {
+        HStack {
+            // Date
+            VStack(alignment: .leading, spacing: 2) {
+                Text(DateFormatter.mediumDate.string(from: completion.completedDate))
+                    .font(.caption.weight(.medium))
+                    .foregroundColor(.daisyText)
+
+                if showDetails {
+                    Text(completion.timeOfDay.displayName)
+                        .font(.caption2)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+            }
+
+            Spacer()
+
+            // Mood
+            HStack(spacing: 4) {
+                Text(completion.mood.emoji)
+                    .font(.caption)
+
+                if showDetails {
+                    Text(completion.mood.displayName)
+                        .font(.caption2)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+            }
+
+            // Duration
+            if let duration = completion.formattedDuration {
+                Text(duration)
+                    .font(.caption2)
+                    .foregroundColor(.daisyTextSecondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.daisyBackground, in: Capsule())
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct MetricTile: View {
+    let title: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(value)
+                .font(.title2.weight(.bold))
+                .foregroundColor(color)
+
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.daisyTextSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, minHeight: 60)
+        .padding()
+        .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+// MARK: - Date Formatters
+
+private extension DateFormatter {
+    static let mediumDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
+    }()
+
+    static let shortDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        return formatter
+    }()
+}
+
+// MARK: - Preview
+
+#Preview("Habit Detail") {
+    HabitDetailViewPreview()
+}
+
+struct HabitDetailViewPreview: View {
+    var body: some View {
+        let container = try! ModelContainer(
+            for: Habit.self, HabitCompletion.self, HabitStreak.self, Tag.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let tagManager = TagManager(modelContext: context)
+
+        // Create sample tags
+        let workoutTag = tagManager.createTag(name: "Workout", sfSymbolName: "figure.run", colorName: "red")!
+        let healthTag = tagManager.createTag(name: "Health", sfSymbolName: "heart", colorName: "green")!
+
+        // Create sample habit
+        let habit = Habit(
+            title: "Morning Exercise",
+            habitDescription: "30 minutes of cardio or strength training to energize the day and maintain physical health",
+            recurrenceRule: .daily(),
+            gracePeriodDays: 1
+        )
+        habit.currentStreak = 15
+        habit.longestStreak = 32
+        _ = habit.addTag(workoutTag)
+        _ = habit.addTag(healthTag)
+        context.insert(habit)
+
+        // Add sample completions
+        let calendar = Calendar.current
+        for i in 0..<30 {
+            if Int.random(in: 0...100) < 80 { // 80% completion rate
+                let date = calendar.date(byAdding: .day, value: -i, to: Date()) ?? Date()
+                let completion = HabitCompletion(
+                    habit: habit,
+                    completedDate: date,
+                    mood: HabitCompletion.Mood.allCases.randomElement() ?? .neutral,
+                    duration: TimeInterval.random(in: 1200...2400) // 20-40 minutes
+                )
+                context.insert(completion)
+            }
+        }
+
+        try! context.save()
+
+        return HabitDetailView(habit: habit, modelContext: context)
+            .modelContainer(container)
+    }
+}
