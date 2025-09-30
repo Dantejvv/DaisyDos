@@ -44,7 +44,27 @@ struct HabitsView: View {
                     // Habit list
                     List {
                         ForEach(allHabits) { habit in
-                            HabitRowView(habit: habit)
+                            HabitRowView(
+                                habit: habit,
+                                onMarkComplete: {
+                                    let _ = habitManager.markHabitCompleted(habit)
+                                },
+                                onEdit: {
+                                    // TODO: Implement habit editing
+                                    print("Edit habit: \(habit.title)")
+                                },
+                                onDelete: {
+                                    habitManager.deleteHabit(habit)
+                                },
+                                onSkip: {
+                                    // TODO: Implement habit skipping
+                                    print("Skip habit: \(habit.title)")
+                                },
+                                onTagAssignment: {
+                                    // TODO: Implement tag assignment
+                                    print("Assign tags to habit: \(habit.title)")
+                                }
+                            )
                         }
                     }
                     .listStyle(PlainListStyle())
@@ -67,91 +87,6 @@ struct HabitsView: View {
     }
 }
 
-// MARK: - Habit Row View
-
-private struct HabitRowView: View {
-    let habit: Habit
-    @Environment(HabitManager.self) private var habitManager
-
-    var body: some View {
-        HStack {
-            Button(action: {
-                let _ = habitManager.markHabitCompleted(habit)
-            }) {
-                Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(habit.isCompletedToday ? Color(.systemGreen) : .secondary)
-                    .font(.title3)
-            }
-            .buttonStyle(PlainButtonStyle())
-            .accessibilityLabel(habit.isCompletedToday ? "Mark habit incomplete" : "Mark habit complete")
-            .accessibilityAddTraits(.isButton)
-            .frame(minWidth: 44, minHeight: 44) // Ensure 44pt touch target
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(habit.title)
-                    .font(.body)
-
-                HStack {
-                    HStack(spacing: 4) {
-                        Image(systemName: "flame.fill")
-                            .font(.caption)
-                            .foregroundColor(habit.currentStreak > 0 ? Color(.systemOrange) : .secondary)
-                        Text("\(habit.currentStreak) day streak")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Current streak: \(habit.currentStreak) days")
-
-                    if !habit.tags.isEmpty {
-                        Text("• \(habit.tags.count) tag\(habit.tags.count == 1 ? "" : "s")")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-
-            Spacer()
-
-            Button(action: {
-                habitManager.deleteHabit(habit)
-            }) {
-                Image(systemName: "trash")
-                    .foregroundColor(.red)
-            }
-            .buttonStyle(PlainButtonStyle())
-            .accessibilityLabel("Delete habit")
-            .accessibilityAddTraits(.isButton)
-            .frame(minWidth: 44, minHeight: 44) // Ensure 44pt touch target
-        }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(accessibilityHint)
-    }
-
-    // MARK: - Accessibility Helpers
-
-    private var accessibilityLabel: String {
-        var label = habit.title
-        if habit.isCompletedToday {
-            label += ", completed today"
-        }
-        label += ", \(habit.currentStreak) day streak"
-        if !habit.tags.isEmpty {
-            label += ", \(habit.tags.count) tag\(habit.tags.count == 1 ? "" : "s")"
-        }
-        return label
-    }
-
-    private var accessibilityHint: String {
-        if habit.isCompletedToday {
-            return "Double tap completion button to mark as incomplete"
-        } else {
-            return "Double tap completion button to mark as complete"
-        }
-    }
-}
 
 // MARK: - Add Habit View
 
