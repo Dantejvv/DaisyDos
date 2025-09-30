@@ -23,15 +23,6 @@ class Habit {
     /// Recurrence rule for habit scheduling (optional for flexible habits)
     var recurrenceRule: RecurrenceRule?
 
-    /// Grace period in days for maintaining streaks when missed
-    var gracePeriodDays: Int = 1
-
-    /// Date when grace period expires (if applicable)
-    var gracePeriodExpiryDate: Date?
-
-    /// Track if habit is currently in grace period
-    var isInGracePeriod: Bool = false
-
     // MARK: - Relationships
 
     @Relationship(deleteRule: .nullify, inverse: \Tag.habits)
@@ -49,7 +40,7 @@ class Habit {
     /// Streak history and management
     var streaks: [HabitStreak] = []
 
-    init(title: String, habitDescription: String = "", recurrenceRule: RecurrenceRule? = nil, gracePeriodDays: Int = 1) {
+    init(title: String, habitDescription: String = "", recurrenceRule: RecurrenceRule? = nil) {
         self.id = UUID()
         self.title = title
         self.habitDescription = habitDescription
@@ -58,9 +49,6 @@ class Habit {
         self.createdDate = Date()
         self.lastCompletedDate = nil
         self.recurrenceRule = recurrenceRule
-        self.gracePeriodDays = gracePeriodDays
-        self.gracePeriodExpiryDate = nil
-        self.isInGracePeriod = false
     }
 
     var tagCount: Int {
@@ -127,7 +115,7 @@ class Habit {
 
     // MARK: - Enhanced Business Logic for Phase 3
 
-    /// Enhanced completion tracking with grace period logic
+    /// Enhanced completion tracking
     func markCompletedWithTracking(notes: String = "", mood: HabitCompletion.Mood = .neutral) -> HabitCompletion? {
         let today = Calendar.current.startOfDay(for: Date())
 
@@ -144,33 +132,24 @@ class Habit {
             mood: mood
         )
 
-        // Update streak with grace period logic
-        updateStreakWithGracePeriod(completionDate: today)
-
-        // Clear grace period if we were in one
-        if isInGracePeriod {
-            isInGracePeriod = false
-            gracePeriodExpiryDate = nil
-        }
+        // Update streak with simple consecutive day logic
+        updateStreak(completionDate: today)
 
         lastCompletedDate = today
         return completion
     }
 
-    /// Skip habit with reason tracking
-    func skipHabit(reason: HabitSkip.SkipReason, notes: String = "") -> HabitSkip {
+    /// Skip habit with optional reason
+    func skipHabit(reason: String? = nil) -> HabitSkip {
         let today = Calendar.current.startOfDay(for: Date())
 
         let skip = HabitSkip(
             habit: self,
             skippedDate: today,
-            reason: reason,
-            notes: notes
+            reason: reason
         )
 
-        // Handle grace period logic for skips
-        handleSkipGracePeriod(skipDate: today, reason: reason)
-
+        // Simple skip functionality
         return skip
     }
 
@@ -213,7 +192,7 @@ class Habit {
 
     // MARK: - Private Helper Methods
 
-    private func updateStreakWithGracePeriod(completionDate: Date) {
+    private func updateStreak(completionDate: Date) {
         guard let lastCompleted = lastCompletedDate else {
             // First completion
             currentStreak = 1
@@ -226,37 +205,14 @@ class Habit {
         if daysBetween == 1 {
             // Consecutive day
             currentStreak += 1
-        } else if daysBetween <= gracePeriodDays + 1 {
-            // Within grace period
-            currentStreak += 1
         } else {
-            // Too many days missed, restart streak
+            // Gap in days, restart streak
             currentStreak = 1
         }
 
         // Update longest streak
         if currentStreak > longestStreak {
             longestStreak = currentStreak
-        }
-    }
-
-    private func handleSkipGracePeriod(skipDate: Date, reason: HabitSkip.SkipReason) {
-        let calendar = Calendar.current
-
-        // Some skip reasons preserve streaks
-        switch reason {
-        case .vacation, .sick, .emergency:
-            // Don't break streak, extend grace period
-            let extendedGracePeriod = calendar.date(byAdding: .day, value: gracePeriodDays, to: skipDate)
-            gracePeriodExpiryDate = extendedGracePeriod
-            isInGracePeriod = true
-        case .noTime, .forgotTo, .notMotivated, .other:
-            // Standard grace period logic applies
-            if !isInGracePeriod {
-                let gracePeriodEnd = calendar.date(byAdding: .day, value: gracePeriodDays, to: skipDate)
-                gracePeriodExpiryDate = gracePeriodEnd
-                isInGracePeriod = true
-            }
         }
     }
 
@@ -275,50 +231,17 @@ class Habit {
 // MARK: - Skip Functionality
 
 class HabitSkip {
-    enum SkipReason: String, CaseIterable, Codable {
-        case vacation = "vacation"
-        case sick = "sick"
-        case emergency = "emergency"
-        case noTime = "no_time"
-        case forgotTo = "forgot_to"
-        case notMotivated = "not_motivated"
-        case other = "other"
-
-        var displayName: String {
-            switch self {
-            case .vacation: return "Vacation"
-            case .sick: return "Sick"
-            case .emergency: return "Emergency"
-            case .noTime: return "No Time"
-            case .forgotTo: return "Forgot To"
-            case .notMotivated: return "Not Motivated"
-            case .other: return "Other"
-            }
-        }
-
-        var preservesStreak: Bool {
-            switch self {
-            case .vacation, .sick, .emergency:
-                return true
-            case .noTime, .forgotTo, .notMotivated, .other:
-                return false
-            }
-        }
-    }
-
     let id: UUID
     weak var habit: Habit?
     let skippedDate: Date
-    let reason: SkipReason
-    let notes: String
+    let reason: String?
     let createdDate: Date
 
-    init(habit: Habit, skippedDate: Date, reason: SkipReason, notes: String = "") {
+    init(habit: Habit, skippedDate: Date, reason: String? = nil) {
         self.id = UUID()
         self.habit = habit
         self.skippedDate = skippedDate
         self.reason = reason
-        self.notes = notes
         self.createdDate = Date()
     }
 }

@@ -124,7 +124,7 @@ extension HabitManager {
 
     // MARK: - Streak Analysis
 
-    /// Calculate accurate streak with grace period considerations
+    /// Calculate accurate streak
     func calculateAccurateStreak(for habit: Habit) -> Int {
         let completions = habit.completionEntries
             .sorted { $0.completedDate < $1.completedDate }
@@ -158,12 +158,8 @@ extension HabitManager {
                     // Consecutive day
                     currentStreak += 1
                     lastCompletionDate = completionDate
-                } else if daysBetween <= habit.gracePeriodDays + 1 {
-                    // Within grace period
-                    currentStreak += 1
-                    lastCompletionDate = completionDate
                 } else {
-                    // Gap too large, end streak
+                    // Gap in days, end streak
                     break
                 }
             }
@@ -175,11 +171,11 @@ extension HabitManager {
     /// Get streak quality assessment
     func getStreakQuality(for habit: Habit) -> HabitStreak.StreakQuality {
         let currentStreak = calculateAccurateStreak(for: habit)
-        let gracePeriodUsage = getGracePeriodUsage(for: habit)
 
-        let efficiency = 1.0 - gracePeriodUsage
+        // Simplified quality based on streak length and consistency
         let lengthScore = min(Double(currentStreak) / 30.0, 1.0)
-        let qualityScore = (efficiency * 0.7) + (lengthScore * 0.3)
+        let consistencyScore = calculateConsistencyScore(for: habit)
+        let qualityScore = (consistencyScore * 0.7) + (lengthScore * 0.3)
 
         switch qualityScore {
         case 0.9...1.0: return .excellent
@@ -355,12 +351,12 @@ extension HabitManager {
 
     // MARK: - Private Helper Methods
 
-    private func getGracePeriodUsage(for habit: Habit) -> Double {
-        // Calculate how often grace periods are used (simplified)
+    private func calculateConsistencyScore(for habit: Habit) -> Double {
+        // Calculate consistency based on completion regularity
         let recentCompletions = habit.completionEntries.suffix(30) // Last 30 completions
-        guard recentCompletions.count > 1 else { return 0.0 }
+        guard recentCompletions.count > 1 else { return 1.0 }
 
-        var gracePeriodUsages = 0
+        var consecutiveDays = 0
         let calendar = Calendar.current
 
         for i in 1..<recentCompletions.count {
@@ -370,12 +366,12 @@ extension HabitManager {
             let daysBetween = calendar.dateComponents([.day],
                 from: previous.completedDate, to: current.completedDate).day ?? 0
 
-            if daysBetween > 1 && daysBetween <= habit.gracePeriodDays + 1 {
-                gracePeriodUsages += 1
+            if daysBetween == 1 {
+                consecutiveDays += 1
             }
         }
 
-        return Double(gracePeriodUsages) / Double(recentCompletions.count - 1)
+        return Double(consecutiveDays) / Double(recentCompletions.count - 1)
     }
 
     private func getMilestoneType(for days: Int) -> HabitStreak.Milestone.MilestoneType {

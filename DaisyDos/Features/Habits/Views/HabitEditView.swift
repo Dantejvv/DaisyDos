@@ -18,7 +18,6 @@ struct HabitEditView: View {
     @State private var habitManager: HabitManager
     @State private var title: String
     @State private var habitDescription: String
-    @State private var gracePeriodDays: Int
 
     // MARK: - Initializer
 
@@ -27,7 +26,6 @@ struct HabitEditView: View {
         self._habitManager = State(initialValue: HabitManager(modelContext: ModelContext(habit.modelContext!.container)))
         self._title = State(initialValue: habit.title)
         self._habitDescription = State(initialValue: habit.habitDescription)
-        self._gracePeriodDays = State(initialValue: habit.gracePeriodDays)
     }
 
     // MARK: - Body
@@ -38,16 +36,14 @@ struct HabitEditView: View {
                 Section("Basic Information") {
                     TextField("Habit Title", text: $title)
                         .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled(true)
 
                     TextField("Description (Optional)", text: $habitDescription, axis: .vertical)
                         .lineLimit(3...6)
                         .textInputAutocapitalization(.sentences)
+                        .autocorrectionDisabled(true)
                 }
 
-                Section("Settings") {
-                    Stepper("Grace Period: \(gracePeriodDays) day\(gracePeriodDays == 1 ? "" : "s")",
-                           value: $gracePeriodDays, in: 0...7)
-                }
 
                 Section("Tags") {
                     // Placeholder for tag management
@@ -82,7 +78,6 @@ struct HabitEditView: View {
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             habitDescription: habitDescription.trimmingCharacters(in: .whitespacesAndNewlines)
         )
-        habit.gracePeriodDays = gracePeriodDays
 
         do {
             try modelContext.save()
@@ -104,8 +99,7 @@ struct HabitEditView: View {
 
     let habit = Habit(
         title: "Morning Exercise",
-        habitDescription: "30 minutes of cardio to start the day",
-        gracePeriodDays: 1
+        habitDescription: "30 minutes of cardio to start the day"
     )
     context.insert(habit)
 

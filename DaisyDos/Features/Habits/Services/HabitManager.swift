@@ -109,6 +109,18 @@ class HabitManager {
         }
     }
 
+    func skipHabit(_ habit: Habit, reason: String? = nil) -> HabitSkip? {
+        let skip = habit.skipHabit(reason: reason)
+
+        do {
+            try modelContext.save()
+            return skip
+        } catch {
+            lastError = ErrorTransformer.transformHabitError(error, operation: "skip habit")
+            return nil
+        }
+    }
+
     func resetHabitStreak(_ habit: Habit) {
         habit.resetStreak()
 

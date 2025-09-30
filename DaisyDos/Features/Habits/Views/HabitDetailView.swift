@@ -255,10 +255,6 @@ struct HabitDetailView: View {
 
                 Spacer()
 
-                Label(
-                    "\(habit.gracePeriodDays) day grace period",
-                    systemImage: "clock"
-                )
             }
             .font(.caption)
             .foregroundColor(.daisyTextSecondary)
@@ -309,28 +305,6 @@ struct HabitDetailView: View {
                 }
             }
 
-            // Grace Period Warning
-            if habit.isInGracePeriod {
-                HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
-
-                    Text("In grace period")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-
-                    Spacer()
-
-                    if let expiryDate = habit.gracePeriodExpiryDate {
-                        Text("Expires \(DateFormatter.shortDate.string(from: expiryDate))")
-                            .font(.caption2)
-                            .foregroundColor(.daisyTextSecondary)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Colors.Accent.warningBackground, in: RoundedRectangle(cornerRadius: 8))
-            }
         }
         .padding()
         .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
@@ -632,7 +606,6 @@ struct HabitDetailViewPreview: View {
             title: "Morning Exercise",
             habitDescription: "30 minutes of cardio or strength training to energize the day and maintain physical health",
             recurrenceRule: .daily(),
-            gracePeriodDays: 1
         )
         habit.currentStreak = 15
         habit.longestStreak = 32

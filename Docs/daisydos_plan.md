@@ -313,7 +313,7 @@ struct RecurrenceRule: Codable {
 26. **Habit Streak Visualization** - Current streak with history
 27. **Habit Progress Heatmap** - GitHub-style yearly view
 28. **Habit Analytics Charts** - Weekly/monthly trends
-29. **Habit Skip Interface** - Grace periods and skip reasons
+29. **Habit Skip Interface** - Simple skip with optional reason input
 30. **Habit Schedule Customization** - Flexible scheduling options
 
 #### **Search & Organization (4 wireframes)**

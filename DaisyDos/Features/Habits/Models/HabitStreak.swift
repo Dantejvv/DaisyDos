@@ -18,8 +18,6 @@ class HabitStreak {
     var endDate: Date?
     var length: Int
     var isActive: Bool
-    var gracePeriodUsed: Int = 0
-    var totalGracePeriodDays: Int = 0
     var streakType: StreakType
     var notes: String = ""
 
@@ -53,8 +51,6 @@ class HabitStreak {
         self.length = 1
         self.isActive = true
         self.streakType = streakType
-        self.gracePeriodUsed = 0
-        self.totalGracePeriodDays = 0
     }
 
     // MARK: - Computed Properties
@@ -74,16 +70,10 @@ class HabitStreak {
         return isActive && endDate == nil
     }
 
-    var gracePeriodEfficiency: Double {
-        guard totalGracePeriodDays > 0 else { return 1.0 }
-        return Double(totalGracePeriodDays - gracePeriodUsed) / Double(totalGracePeriodDays)
-    }
-
     var streakQuality: StreakQuality {
-        let efficiency = gracePeriodEfficiency
         let lengthScore = min(Double(length) / 30.0, 1.0) // 30 days = perfect length score
 
-        let qualityScore = (efficiency * 0.7) + (lengthScore * 0.3)
+        let qualityScore = lengthScore
 
         switch qualityScore {
         case 0.9...1.0:
@@ -111,18 +101,6 @@ class HabitStreak {
         endDate = date
     }
 
-    /// Use a grace period day
-    func useGracePeriod() -> Bool {
-        guard isActive, gracePeriodUsed < totalGracePeriodDays else { return false }
-        gracePeriodUsed += 1
-        return true
-    }
-
-    /// Check if streak should be broken based on missed days
-    func shouldBreak(missedDays: Int, gracePeriodDays: Int) -> Bool {
-        self.totalGracePeriodDays = gracePeriodDays
-        return missedDays > gracePeriodDays
-    }
 
     /// Calculate streak momentum (rate of recent progress)
     func momentum() -> StreakMomentum {

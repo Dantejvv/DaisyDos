@@ -104,13 +104,6 @@ struct HabitRowView: View {
                         .accessibilityLabel("Due today")
                 }
 
-                // Grace period indicator
-                if habit.isInGracePeriod {
-                    Image(systemName: "clock.circle.fill")
-                        .foregroundColor(.orange)
-                        .font(.caption2)
-                        .accessibilityLabel("In grace period")
-                }
             }
         }
         .padding(.horizontal, 16)
@@ -155,13 +148,6 @@ struct HabitRowView: View {
                             .accessibilityLabel("Recurring habit: \(recurrenceRule.displayDescription)")
                     }
 
-                    // Grace period indicator
-                    if habit.isInGracePeriod {
-                        Image(systemName: "clock.circle.fill")
-                            .foregroundColor(.orange)
-                            .font(.caption)
-                            .accessibilityLabel("In grace period")
-                    }
                 }
             }
 
@@ -207,15 +193,6 @@ struct HabitRowView: View {
                                 .accessibilityLabel("Due today")
                         }
 
-                        // Grace period warning
-                        if habit.isInGracePeriod {
-                            Text("Grace Period")
-                                .font(.caption2.weight(.medium))
-                                .foregroundColor(.orange)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Colors.Accent.warningBackground, in: Capsule())
-                        }
                     }
                 }
 
@@ -398,9 +375,6 @@ struct HabitRowView: View {
         if let recurrenceRule = habit.recurrenceRule {
             label += ", recurring \(recurrenceRule.displayDescription.lowercased())"
         }
-        if habit.isInGracePeriod {
-            label += ", in grace period"
-        }
         if !habit.tags.isEmpty {
             label += ", \(habit.tags.count) tag\(habit.tags.count == 1 ? "" : "s")"
         }
@@ -458,8 +432,7 @@ struct HabitRowViewPreview: View {
         let habit = Habit(
             title: "Morning Exercise",
             habitDescription: "30 minutes of cardio or strength training to start the day",
-            recurrenceRule: .daily(),
-            gracePeriodDays: 1
+            recurrenceRule: .daily()
         )
         habit.currentStreak = 14
         habit.longestStreak = 21
@@ -479,15 +452,6 @@ struct HabitRowViewPreview: View {
         _ = completedHabit.addTag(mindfulTag)
         context.insert(completedHabit)
 
-        // Create grace period habit
-        let gracePeriodHabit = Habit(
-            title: "Meditation",
-            habitDescription: "10 minutes of mindfulness practice"
-        )
-        gracePeriodHabit.currentStreak = 5
-        gracePeriodHabit.isInGracePeriod = true
-        gracePeriodHabit.gracePeriodExpiryDate = Calendar.current.date(byAdding: .day, value: 1, to: Date())
-        context.insert(gracePeriodHabit)
 
         try! context.save()
 
@@ -524,17 +488,6 @@ struct HabitRowViewPreview: View {
                 displayMode: displayMode
             )
 
-            // Show grace period version
-            HabitRowView(
-                habit: gracePeriodHabit,
-                onMarkComplete: {
-                    gracePeriodHabit.markCompleted()
-                },
-                onEdit: {},
-                onDelete: {},
-                onSkip: {},
-                displayMode: displayMode
-            )
         }
         .modelContainer(container)
         .padding()

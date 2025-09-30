@@ -13,6 +13,8 @@ struct HabitsView: View {
     @Query(sort: \Habit.createdDate, order: .reverse) private var allHabits: [Habit]
     @State private var searchText = ""
     @State private var showingAddHabit = false
+    @State private var habitToDelete: Habit?
+    @State private var showingDeleteConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -54,7 +56,8 @@ struct HabitsView: View {
                                     print("Edit habit: \(habit.title)")
                                 },
                                 onDelete: {
-                                    habitManager.deleteHabit(habit)
+                                    habitToDelete = habit
+                                    showingDeleteConfirmation = true
                                 },
                                 onSkip: {
                                     // TODO: Implement habit skipping
@@ -83,59 +86,22 @@ struct HabitsView: View {
             .sheet(isPresented: $showingAddHabit) {
                 AddHabitView()
             }
-        }
-    }
-}
-
-
-// MARK: - Add Habit View
-
-private struct AddHabitView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(HabitManager.self) private var habitManager
-    @State private var habitTitle = ""
-    @State private var habitDescription = ""
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("New Habit") {
-                    TextField("Habit title", text: $habitTitle)
-                    TextField("Description (optional)", text: $habitDescription, axis: .vertical)
-                        .lineLimit(2...4)
+            .alert(
+                "Delete Habit",
+                isPresented: $showingDeleteConfirmation,
+                presenting: habitToDelete
+            ) { habit in
+                Button("Delete", role: .destructive) {
+                    habitManager.deleteHabit(habit)
                 }
-
-                Section {
-                    Text("Habit tracking features like streaks and schedules will be enhanced in future updates.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .navigationTitle("Add Habit")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        if !habitTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            let _ = habitManager.createHabit(
-                                title: habitTitle,
-                                habitDescription: habitDescription.isEmpty ? "" : habitDescription
-                            )
-                            dismiss()
-                        }
-                    }
-                    .disabled(habitTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
+                Button("Cancel", role: .cancel) { }
+            } message: { habit in
+                Text("Are you sure you want to delete '\(habit.title)'?")
             }
         }
     }
 }
+
 
 #Preview {
     let container = try! ModelContainer(for: Habit.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))

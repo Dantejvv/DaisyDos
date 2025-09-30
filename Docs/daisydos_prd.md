@@ -101,7 +101,7 @@ iOS (iPhone and iPad) - iOS 17.0+
 - As a user, I want to create habits with flexible scheduling options
 - As a user, I want to see my streak progress and habit history
 - As a user, I want visual progress tracking (charts, heatmaps)
-- As a user, I want to skip habits with grace periods when life happens
+- As a user, I want to skip habits when needed
 - As a user, I want to organize habits with the same tag system as tasks
 
 ### 5.4 Epic: Organization & Search
@@ -148,10 +148,10 @@ iOS (iPhone and iPad) - iOS 17.0+
 - **Details**:
   - Create, read, update, delete habits
   - Flexible scheduling (daily, weekly, custom patterns)
-  - Streak tracking with grace periods
+  - Simple streak tracking
   - Progress visualization (charts, heatmaps)
   - Tag assignment (maximum 3 tags per habit)
-  - Skip options with reasons
+  - Skip options with optional reason text
 
 #### 6.1.3 Today View
 - **Requirement ID**: FR-003

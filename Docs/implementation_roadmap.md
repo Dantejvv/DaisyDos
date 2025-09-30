@@ -11,6 +11,10 @@ This roadmap provides both strategic direction and granular implementation tasks
 - Privacy-first approach with local-only mode
 - Feature-based organization aligning with SwiftUI's reactive nature
 
+**🔄 Recent Updates:**
+- **Skip System Simplified (Phase 3.4)**: Replaced complex enum-based skip reasons with simple optional string input for better UX and reduced complexity
+- **Grace Period System Removed (Phase 3.4)**: Eliminated grace period complexity in favor of simple consecutive day streak tracking
+
 ---
 
 ## Phase 1.0: Foundation & Architecture
@@ -440,9 +444,9 @@ class Habit {
 ```
 - [X] Create `HabitCompletion` model for tracking individual completions
 - [X] Create `HabitStreak` model for streak calculation and management
-- [X] Implement grace period logic for streak maintenance
-- [X] Add skip functionality with reason tracking
-- [X] **Acceptance:** Models persist correctly, streak calculations accurate, grace periods functional
+- [X] Implement simple consecutive day streak tracking
+- [X] Add simplified skip functionality with optional reason text
+- [X] **Acceptance:** Models persist correctly, streak calculations accurate, simple consecutive day tracking functional
 
 #### ✅ Recurrence System Integration
 - [X] Implement `RecurrenceRule` struct with shared usage across tasks and habits:
@@ -501,7 +505,7 @@ struct HabitRowView: View {
 ### 3.3 Habit Analytics & Progress Tracking (Effort: Medium)
 
 #### ✅ Streak Calculation System
-- [X] Implement accurate streak calculation logic with grace periods
+- [X] Implement accurate streak calculation logic with simple consecutive day tracking
 - [X] Create streak history tracking for analytics
 - [X] Add longest streak tracking and celebration
 - [X] Implement streak reset logic with user confirmation
@@ -535,15 +539,12 @@ struct HabitProgressChart: View {
 - [ ] Implement create habit functionality with validation
 - [ ] Create habit editing interface with schedule customization
 - [ ] Implement habit deletion with completion history handling
-- [ ] Add habit archiving functionality for inactive habits
-- [ ] Create habit template system for common habits
-- [ ] **Acceptance:** All operations work reliably, data preserved, templates useful
+- [ ] **Acceptance:** All operations work reliably, data preserved
 
 #### ✅ Habit Completion System
 - [ ] Implement mark complete functionality with timestamp
 - [ ] Create undo completion functionality
-- [ ] Add skip functionality with reason selection
-- [ ] Implement bulk completion for multiple days
+- [ ] Add skip functionality with simplified reason input
 - [ ] Create completion reminder system
 - [ ] **Acceptance:** Completion system intuitive, undo works, reminders functional
 
@@ -554,22 +555,17 @@ struct HabitProgressChart: View {
 - [ ] Implement sectioning by frequency, streak status, or tags
 - [ ] Add progress indicators showing completion rates
 - [ ] Create sorting options (streak length, creation date, completion rate)
-- [ ] Implement habit archival interface
 - [ ] **Acceptance:** List performs well, progress clear, sorting responsive
 
 #### ✅ HabitDetailView with Analytics
 - [ ] Create comprehensive habit detail view with statistics
-- [ ] Implement inline editing for habit properties
 - [ ] Add completion history view with calendar display
 - [ ] Create streak milestone celebrations
-- [ ] Implement habit sharing functionality
 - [ ] **Acceptance:** Detail view comprehensive, statistics accurate, celebrations motivating
 
 #### ✅ Habit Creation & Scheduling Forms
 - [ ] Create intuitive habit creation form
 - [ ] Implement flexible scheduling interface (daily, weekly, custom)
-- [ ] Add goal setting functionality (streak targets, completion rates)
-- [ ] Create habit category selection
 - [ ] Implement form validation specific to habits
 - [ ] **Acceptance:** Scheduling flexible, goals motivating, validation appropriate
 
@@ -577,7 +573,7 @@ struct HabitProgressChart: View {
 - [ ] Complete habit tracking workflow functional
 - [ ] HabitRowView proven reusable across multiple contexts using identical patterns as TaskRowView
 - [ ] Shared UI patterns consistent between Task and Habit components
-- [ ] Accurate streak calculations with proper grace period handling
+- [ ] Accurate streak calculations with simple consecutive day tracking
 - [ ] Visual progress feedback compelling and motivating
 - [ ] Tag system validated for both content types simultaneously
 - [ ] Recurrence system working for both tasks and habits
