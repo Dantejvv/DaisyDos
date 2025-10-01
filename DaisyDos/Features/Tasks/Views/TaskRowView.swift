@@ -220,12 +220,11 @@ struct TaskRowView: View {
                 // Tags for today view (more compact)
                 if !task.tags.isEmpty {
                     HStack(spacing: 4) {
-                        ForEach(task.tags.prefix(2), id: \.id) { tag in
-                            TagChipView(tag: tag)
-                                .scaleEffect(0.8)
+                        ForEach(task.tags.prefix(3), id: \.id) { tag in
+                            IconOnlyTagChipView(tag: tag)
                         }
-                        if task.tags.count > 2 {
-                            Text("+\(task.tags.count - 2)")
+                        if task.tags.count > 3 {
+                            Text("+\(task.tags.count - 3)")
                                 .font(.caption2)
                                 .foregroundColor(.daisyTextSecondary)
                         }
@@ -259,9 +258,9 @@ struct TaskRowView: View {
     @ViewBuilder
     private var tagsSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(task.tags, id: \.id) { tag in
-                    TagChipView(tag: tag)
+                    IconOnlyTagChipView(tag: tag)
                 }
             }
             .padding(.horizontal, 4)

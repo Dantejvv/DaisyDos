@@ -19,7 +19,19 @@ struct TagCreationView: View {
     @State private var errorMessage = ""
 
     var isFormValid: Bool {
-        !tagName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !tagName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        tagName.count <= DesignSystem.inputValidation.CharacterLimits.tagName
+    }
+
+    var tagNameCharacterCount: Int {
+        tagName.count
+    }
+
+    private var tagNameCountColor: Color {
+        return DesignSystem.inputValidation.characterCountColorExact(
+            currentCount: tagNameCharacterCount,
+            maxLength: DesignSystem.inputValidation.CharacterLimits.tagName
+        )
     }
 
     var remainingSlots: Int {
@@ -30,15 +42,32 @@ struct TagCreationView: View {
         NavigationStack {
             Form {
                 Section("Tag Details") {
-                    HStack {
-                        Text("Name")
-                        Spacer()
-                        TextField("Tag name", text: $tagName)
-                            .multilineTextAlignment(.trailing)
-                            .textFieldStyle(.plain)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Name")
+                            Spacer()
+                            TextField("Tag name", text: $tagName)
+                                .multilineTextAlignment(.trailing)
+                                .textFieldStyle(.plain)
+                                .autocorrectionDisabled(true)
+                                .onChange(of: tagName) { _, newValue in
+                                    DesignSystem.inputValidation.enforceCharacterLimit(
+                                        &tagName,
+                                        newValue: newValue,
+                                        maxLength: DesignSystem.inputValidation.CharacterLimits.tagName
+                                    )
+                                }
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Tag name field")
+
+                        HStack {
+                            Spacer()
+                            Text("\(tagNameCharacterCount)/\(DesignSystem.inputValidation.CharacterLimits.tagName)")
+                                .font(.caption2)
+                                .foregroundColor(tagNameCountColor)
+                        }
                     }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Tag name field")
                 }
 
                 Section("Preview") {

@@ -54,23 +54,25 @@ struct TaskEditView: View {
         taskDescription.count
     }
 
-    private let maxTitleLength = 100
-    private let maxDescriptionLength = 500
+    private let maxTitleLength = DesignSystem.inputValidation.CharacterLimits.title
+    private let maxDescriptionLength = DesignSystem.inputValidation.CharacterLimits.description
 
     private var showTitleError: Bool {
         title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !title.isEmpty
     }
 
     private var titleCountColor: Color {
-        let threshold = Double(maxTitleLength) * 0.8
-        guard threshold.isFinite && !threshold.isNaN else { return .daisyTextSecondary }
-        return titleCharacterCount > Int(threshold) ? .daisyError : .daisyTextSecondary
+        return DesignSystem.inputValidation.characterCountColorExact(
+            currentCount: titleCharacterCount,
+            maxLength: maxTitleLength
+        )
     }
 
     private var descriptionCountColor: Color {
-        let threshold = Double(maxDescriptionLength) * 0.8
-        guard threshold.isFinite && !threshold.isNaN else { return .daisyTextSecondary }
-        return descriptionCharacterCount > Int(threshold) ? .daisyError : .daisyTextSecondary
+        return DesignSystem.inputValidation.characterCountColorExact(
+            currentCount: descriptionCharacterCount,
+            maxLength: maxDescriptionLength
+        )
     }
 
     var hasChanges: Bool {
@@ -103,9 +105,11 @@ struct TaskEditView: View {
                             .autocorrectionDisabled(true)
                             .accessibilityLabel("Task title")
                             .onChange(of: title) { _, newValue in
-                                if newValue.count > maxTitleLength {
-                                    title = String(newValue.prefix(maxTitleLength))
-                                }
+                                DesignSystem.inputValidation.enforceCharacterLimit(
+                                    &title,
+                                    newValue: newValue,
+                                    maxLength: maxTitleLength
+                                )
                             }
 
                         HStack {
@@ -132,9 +136,11 @@ struct TaskEditView: View {
                             .lineLimit(3...6)
                             .accessibilityLabel("Task description")
                             .onChange(of: taskDescription) { _, newValue in
-                                if newValue.count > maxDescriptionLength {
-                                    taskDescription = String(newValue.prefix(maxDescriptionLength))
-                                }
+                                DesignSystem.inputValidation.enforceCharacterLimit(
+                                    &taskDescription,
+                                    newValue: newValue,
+                                    maxLength: maxDescriptionLength
+                                )
                             }
 
                         HStack {

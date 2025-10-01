@@ -226,12 +226,11 @@ struct HabitRowView: View {
                 // Tags for today view (more compact)
                 if !habit.tags.isEmpty {
                     HStack(spacing: 4) {
-                        ForEach(habit.tags.prefix(2), id: \.id) { tag in
-                            TagChipView(tag: tag)
-                                .scaleEffect(0.8)
+                        ForEach(habit.tags.prefix(3), id: \.id) { tag in
+                            IconOnlyTagChipView(tag: tag)
                         }
-                        if habit.tags.count > 2 {
-                            Text("+\(habit.tags.count - 2)")
+                        if habit.tags.count > 3 {
+                            Text("+\(habit.tags.count - 3)")
                                 .font(.caption2)
                                 .foregroundColor(.daisyTextSecondary)
                         }
@@ -295,9 +294,9 @@ struct HabitRowView: View {
     @ViewBuilder
     private var tagsSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(habit.tags, id: \.id) { tag in
-                    TagChipView(tag: tag)
+                    IconOnlyTagChipView(tag: tag)
                 }
             }
             .padding(.horizontal, 4)

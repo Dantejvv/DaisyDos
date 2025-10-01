@@ -26,6 +26,9 @@ struct DesignSystem {
     /// Centralized access to accessibility helpers
     static let accessibility = AccessibilityHelpers.self
 
+    /// Centralized access to input validation utilities
+    static let inputValidation = InputValidation.self
+
     // MARK: - Design Principles
 
     /// Design principles that guide all visual decisions in DaisyDos

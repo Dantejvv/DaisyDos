@@ -30,14 +30,23 @@ struct AddHabitView: View {
 
     // MARK: - Validation
 
-    enum ValidationError: String, CaseIterable {
-        case emptyTitle = "Habit title is required"
-        case titleTooLong = "Habit title must be 50 characters or less"
-        case descriptionTooLong = "Description must be 200 characters or less"
-        case tooManyTags = "Maximum 3 tags allowed"
+    enum ValidationError: CaseIterable {
+        case emptyTitle
+        case titleTooLong
+        case descriptionTooLong
+        case tooManyTags
 
         var message: String {
-            return self.rawValue
+            switch self {
+            case .emptyTitle:
+                return "Habit title is required"
+            case .titleTooLong:
+                return "Habit title must be \(DesignSystem.inputValidation.CharacterLimits.title) characters or less"
+            case .descriptionTooLong:
+                return "Description must be \(DesignSystem.inputValidation.CharacterLimits.description) characters or less"
+            case .tooManyTags:
+                return "Maximum 3 tags allowed"
+            }
         }
 
         var severity: ValidationSeverity {
@@ -68,6 +77,22 @@ struct AddHabitView: View {
             case .warning: return "exclamationmark.circle.fill"
             }
         }
+    }
+
+    // MARK: - Character Count Colors
+
+    private var titleCountColor: Color {
+        return DesignSystem.inputValidation.characterCountColorExact(
+            currentCount: habitTitle.count,
+            maxLength: DesignSystem.inputValidation.CharacterLimits.title
+        )
+    }
+
+    private var descriptionCountColor: Color {
+        return DesignSystem.inputValidation.characterCountColorExact(
+            currentCount: habitDescription.count,
+            maxLength: DesignSystem.inputValidation.CharacterLimits.description
+        )
     }
 
     // MARK: - Body
@@ -135,17 +160,20 @@ struct AddHabitView: View {
                 TextField("Habit title", text: $habitTitle)
                     .textInputAutocapitalization(.words)
                     .autocorrectionDisabled(true)
-                    .onChange(of: habitTitle) { _, _ in
+                    .onChange(of: habitTitle) { _, newValue in
+                        DesignSystem.inputValidation.enforceCharacterLimit(
+                            &habitTitle,
+                            newValue: newValue,
+                            maxLength: DesignSystem.inputValidation.CharacterLimits.title
+                        )
                         validateForm()
                     }
 
                 HStack {
                     Spacer()
-                    let titleColor: Color = habitTitle.count > 50 ? .orange :
-                                           habitTitle.count > 40 ? .yellow : .daisyTextSecondary
-                    Text("\(habitTitle.count)/50")
+                    Text("\(habitTitle.count)/\(DesignSystem.inputValidation.CharacterLimits.title)")
                         .font(.caption2)
-                        .foregroundColor(titleColor)
+                        .foregroundColor(titleCountColor)
                 }
             }
 
@@ -154,17 +182,20 @@ struct AddHabitView: View {
                     .lineLimit(3...6)
                     .textInputAutocapitalization(.sentences)
                     .autocorrectionDisabled(true)
-                    .onChange(of: habitDescription) { _, _ in
+                    .onChange(of: habitDescription) { _, newValue in
+                        DesignSystem.inputValidation.enforceCharacterLimit(
+                            &habitDescription,
+                            newValue: newValue,
+                            maxLength: DesignSystem.inputValidation.CharacterLimits.description
+                        )
                         validateForm()
                     }
 
                 HStack {
                     Spacer()
-                    let descColor: Color = habitDescription.count > 200 ? .orange :
-                                          habitDescription.count > 160 ? .yellow : .daisyTextSecondary
-                    Text("\(habitDescription.count)/200")
+                    Text("\(habitDescription.count)/\(DesignSystem.inputValidation.CharacterLimits.description)")
                         .font(.caption2)
-                        .foregroundColor(descColor)
+                        .foregroundColor(descriptionCountColor)
                 }
             }
         }
@@ -298,12 +329,12 @@ struct AddHabitView: View {
         // Title validation
         if trimmedTitle.isEmpty {
             errors.insert(.emptyTitle)
-        } else if trimmedTitle.count > 50 {
+        } else if trimmedTitle.count > DesignSystem.inputValidation.CharacterLimits.title {
             errors.insert(.titleTooLong)
         }
 
         // Description validation
-        if trimmedDescription.count > 200 {
+        if trimmedDescription.count > DesignSystem.inputValidation.CharacterLimits.description {
             errors.insert(.descriptionTooLong)
         }
 
