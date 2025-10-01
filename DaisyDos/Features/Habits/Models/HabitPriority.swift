@@ -1,16 +1,16 @@
 //
-//  Priority.swift
+//  HabitPriority.swift
 //  DaisyDos
 //
-//  Created by Claude Code on 9/25/25.
+//  Created by Claude Code on 10/1/25.
 //
 
 import Foundation
 import SwiftUI
 
-/// Priority levels for tasks with visual indicators and accessibility support
-/// Follows the roadmap specification for Low, Medium, High priority system
-enum Priority: String, CaseIterable, Codable, Identifiable {
+/// Priority levels for habits with visual indicators and accessibility support
+/// Adapted from task priorities but with habit-specific semantics and symbols
+enum HabitPriority: String, CaseIterable, Codable, Identifiable {
     case low = "Low"
     case medium = "Medium"
     case high = "High"
@@ -31,7 +31,7 @@ enum Priority: String, CaseIterable, Codable, Identifiable {
         }
     }
 
-    /// SF Symbol for each priority level
+    /// SF Symbol for each priority level (habit-specific symbols)
     var sfSymbol: String {
         switch self {
         case .low:
@@ -61,11 +61,11 @@ enum Priority: String, CaseIterable, Codable, Identifiable {
     var displayName: String {
         switch self {
         case .low:
-            return "Low Priority"
+            return "Aspirational Habit"
         case .medium:
-            return "Medium Priority"
+            return "Regular Habit"
         case .high:
-            return "High Priority"
+            return "Core Habit"
         }
     }
 
@@ -73,11 +73,11 @@ enum Priority: String, CaseIterable, Codable, Identifiable {
     var description: String {
         switch self {
         case .low:
-            return "Low priority - can be done when time allows"
+            return "Aspirational habit - nice to have, bonus activity"
         case .medium:
-            return "Medium priority - should be completed reasonably soon"
+            return "Regular habit - standard daily routine"
         case .high:
-            return "High priority - needs immediate attention"
+            return "Core habit - essential daily practice, non-negotiable"
         }
     }
 
@@ -85,11 +85,11 @@ enum Priority: String, CaseIterable, Codable, Identifiable {
     var shortName: String {
         switch self {
         case .low:
-            return "Low"
+            return "Aspirational"
         case .medium:
-            return "Med"
+            return "Regular"
         case .high:
-            return "High"
+            return "Core"
         }
     }
 
@@ -101,7 +101,7 @@ enum Priority: String, CaseIterable, Codable, Identifiable {
         case .medium:
             return "⚫"  // Medium black circle
         case .high:
-            return "❗"  // Exclamation mark
+            return "💎"  // Diamond emoji
         }
     }
 
@@ -120,12 +120,12 @@ enum Priority: String, CaseIterable, Codable, Identifiable {
     }
 
     /// All priorities sorted from highest to lowest
-    static var sortedByPriority: [Priority] {
+    static var sortedByPriority: [HabitPriority] {
         return [.high, .medium, .low]
     }
 
     /// All priorities sorted from lowest to highest
-    static var sortedByPriorityAscending: [Priority] {
+    static var sortedByPriorityAscending: [HabitPriority] {
         return [.low, .medium, .high]
     }
 
@@ -135,11 +135,11 @@ enum Priority: String, CaseIterable, Codable, Identifiable {
     var accessibilityLabel: String {
         switch self {
         case .low:
-            return "Low priority task"
+            return "Aspirational habit"
         case .medium:
-            return "Medium priority task"
+            return "Regular habit"
         case .high:
-            return "High priority task"
+            return "Core habit"
         }
     }
 
@@ -147,31 +147,31 @@ enum Priority: String, CaseIterable, Codable, Identifiable {
     var accessibilityHint: String {
         switch self {
         case .low:
-            return "This task has low priority and can be completed when time allows"
+            return "This is an aspirational habit - nice to have when you have extra time"
         case .medium:
-            return "This task has medium priority and should be completed reasonably soon"
+            return "This is a regular habit - part of your standard daily routine"
         case .high:
-            return "This task has high priority and needs immediate attention"
+            return "This is a core habit - an essential daily practice that's non-negotiable"
         }
     }
 
     // MARK: - Default Values
 
-    /// Default priority for new tasks
-    static let `default`: Priority = .medium
+    /// Default priority for new habits
+    static let `default`: HabitPriority = .medium
 }
 
 // MARK: - Comparable Conformance
 
-extension Priority: Comparable {
-    static func < (lhs: Priority, rhs: Priority) -> Bool {
+extension HabitPriority: Comparable {
+    static func < (lhs: HabitPriority, rhs: HabitPriority) -> Bool {
         lhs.sortOrder < rhs.sortOrder
     }
 }
 
 // MARK: - SwiftUI Integration
 
-extension Priority {
+extension HabitPriority {
 
     /// Creates a priority indicator view with icon and color
     @ViewBuilder
@@ -206,37 +206,37 @@ extension Priority {
 
 // MARK: - Filtering Helpers
 
-extension Priority {
+extension HabitPriority {
 
-    /// Filters tasks by priority level
-    static func filter<T: Collection>(_ items: T, by priority: Priority) -> [T.Element] where T.Element: TaskPriorityProvider {
+    /// Filters habits by priority level
+    static func filter<T: Collection>(_ items: T, by priority: HabitPriority) -> [T.Element] where T.Element: HabitPriorityProvider {
         return items.filter { $0.priority == priority }
     }
 
-    /// Groups tasks by priority level
-    static func group<T: Collection>(_ items: T) -> [Priority: [T.Element]] where T.Element: TaskPriorityProvider {
+    /// Groups habits by priority level
+    static func group<T: Collection>(_ items: T) -> [HabitPriority: [T.Element]] where T.Element: HabitPriorityProvider {
         return Dictionary(grouping: items) { $0.priority }
     }
 }
 
-// MARK: - Task Priority Provider Protocol
+// MARK: - Habit Priority Provider Protocol
 
-/// Protocol for types that have a priority property
-protocol TaskPriorityProvider {
-    var priority: Priority { get }
+/// Protocol for types that have a habit priority property
+protocol HabitPriorityProvider {
+    var priority: HabitPriority { get }
 }
 
 // MARK: - Preview Helpers
 
 #if DEBUG
-struct Priority_Previews: PreviewProvider {
+struct HabitPriority_Previews: PreviewProvider {
     static var previews: some View {
         VStack(spacing: Spacing.medium) {
-            Text("Priority Indicators")
+            Text("Habit Priority Indicators")
                 .font(.daisyTitle)
 
             VStack(spacing: Spacing.small) {
-                ForEach(Priority.allCases) { priority in
+                ForEach(HabitPriority.allCases) { priority in
                     HStack {
                         priority.indicatorView()
                         Text(priority.displayName)
@@ -247,12 +247,12 @@ struct Priority_Previews: PreviewProvider {
                 }
             }
 
-            Text("Priority Badges")
+            Text("Habit Priority Badges")
                 .font(.daisyTitle)
                 .padding(.top)
 
             VStack(spacing: Spacing.small) {
-                ForEach(Priority.allCases) { priority in
+                ForEach(HabitPriority.allCases) { priority in
                     priority.badgeView()
                 }
             }

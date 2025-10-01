@@ -23,6 +23,9 @@ class Habit {
     /// Recurrence rule for habit scheduling (optional for flexible habits)
     var recurrenceRule: RecurrenceRule?
 
+    /// Priority level for habit importance and organization
+    var priority: HabitPriority = HabitPriority.medium
+
     // MARK: - Relationships
 
     @Relationship(deleteRule: .nullify, inverse: \Tag.habits)
@@ -43,7 +46,7 @@ class Habit {
     /// Skip entries for tracking when habit was skipped
     @Relationship(deleteRule: .cascade) var skips: [HabitSkip] = []
 
-    init(title: String, habitDescription: String = "", recurrenceRule: RecurrenceRule? = nil) {
+    init(title: String, habitDescription: String = "", recurrenceRule: RecurrenceRule? = nil, priority: HabitPriority = .medium) {
         self.id = UUID()
         self.title = title
         self.habitDescription = habitDescription
@@ -52,6 +55,7 @@ class Habit {
         self.createdDate = Date()
         self.lastCompletedDate = nil
         self.recurrenceRule = recurrenceRule
+        self.priority = priority
     }
 
     var tagCount: Int {
@@ -295,5 +299,11 @@ class Habit {
         let occurrences = recurrenceRule.occurrences(from: startDate, limit: 100)
         return occurrences.filter { $0 <= endDate }.count
     }
+}
+
+// MARK: - HabitPriorityProvider Conformance
+
+extension Habit: HabitPriorityProvider {
+    // Already has priority property defined above
 }
 

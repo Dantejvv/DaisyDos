@@ -47,6 +47,7 @@ struct DaisyDosApp: App {
         #endif
 
         do {
+
             let container = try ModelContainer(for: schema, migrationPlan: DaisyDosMigrationPlan.self, configurations: [modelConfiguration])
             PerformanceMonitor.shared.markModelContainerInitComplete()
             return container

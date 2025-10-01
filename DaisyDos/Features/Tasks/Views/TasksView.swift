@@ -27,7 +27,23 @@ struct TasksView: View {
     @State private var isMultiSelectMode = false
     @State private var selectedTasks: Set<Task.ID> = []
     @State private var sectionType: TaskSectionType = .none
-    @State private var showingSectionPicker = false
+    @State private var sortOption: TaskSortOption = .creationDate
+
+    enum TaskSortOption: String, CaseIterable {
+        case creationDate = "Creation Date"
+        case dueDate = "Due Date"
+        case priority = "Priority"
+        case title = "Title"
+
+        var systemImage: String {
+            switch self {
+            case .creationDate: return "calendar"
+            case .dueDate: return "calendar.badge.clock"
+            case .priority: return "exclamationmark.triangle"
+            case .title: return "textformat.abc"
+            }
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -64,7 +80,7 @@ struct TasksView: View {
                     .padding(.horizontal)
 
                     // Task list or search results
-                    if filteredTasks.isEmpty && !searchText.isEmpty {
+                    if sortedTasks.isEmpty && !searchText.isEmpty {
                         // Show "no search results" state
                         VStack(spacing: 16) {
                             Image(systemName: "magnifyingglass")
@@ -122,10 +138,48 @@ struct TasksView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
                         if !isMultiSelectMode && !rootTasks.isEmpty {
+                            // Sort picker button
+                            Menu {
+                                Text("Sort Tasks By")
+                                    .font(.headline)
+
+                                Divider()
+
+                                ForEach(TaskSortOption.allCases, id: \.self) { option in
+                                    Button(action: {
+                                        sortOption = option
+                                    }) {
+                                        Label(option.rawValue, systemImage: option.systemImage)
+                                        if sortOption == option {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            } label: {
+                                Image(systemName: sortOption.systemImage)
+                                    .foregroundColor(.daisyTask)
+                            }
+
                             // Section picker button
-                            Button(action: {
-                                showingSectionPicker = true
-                            }) {
+                            Menu {
+                                Text("Group Tasks By")
+                                    .font(.headline)
+
+                                Divider()
+
+                                ForEach(TaskSectionType.allCases, id: \.self) { option in
+                                    Button(action: {
+                                        withAnimation {
+                                            sectionType = option
+                                        }
+                                    }) {
+                                        Label(option.displayName, systemImage: option.sfSymbol)
+                                        if sectionType == option {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            } label: {
                                 Image(systemName: sectionType.sfSymbol)
                                     .foregroundColor(.daisyTask)
                             }
@@ -134,9 +188,9 @@ struct TasksView: View {
                         if isMultiSelectMode {
                             Menu {
                                 Button("Select All") {
-                                    selectedTasks = Set(filteredTasks.map(\.id))
+                                    selectedTasks = Set(sortedTasks.map(\.id))
                                 }
-                                .disabled(selectedTasks.count == filteredTasks.count)
+                                .disabled(selectedTasks.count == sortedTasks.count)
 
                                 Button("Select None") {
                                     selectedTasks.removeAll()
@@ -166,9 +220,6 @@ struct TasksView: View {
             .sheet(item: $taskToEdit) { task in
                 TaskEditView(task: task)
             }
-            .sheet(isPresented: $showingSectionPicker) {
-                sectionPickerSheet
-            }
             .navigationDestination(item: $taskToDetail) { task in
                 TaskDetailView(task: task)
             }
@@ -196,8 +247,36 @@ struct TasksView: View {
         }
     }
 
+    private var sortedTasks: [Task] {
+        let tasks = Array(filteredTasks)
+
+        switch sortOption {
+        case .creationDate:
+            return tasks.sorted { $0.createdDate > $1.createdDate }
+        case .dueDate:
+            return tasks.sorted { task1, task2 in
+                // Tasks with no due date go to the end
+                switch (task1.dueDate, task2.dueDate) {
+                case (nil, nil): return task1.createdDate > task2.createdDate
+                case (nil, _): return false
+                case (_, nil): return true
+                case (let date1?, let date2?): return date1 < date2
+                }
+            }
+        case .priority:
+            return tasks.sorted { task1, task2 in
+                if task1.priority == task2.priority {
+                    return task1.createdDate > task2.createdDate
+                }
+                return task1.priority.sortOrder < task2.priority.sortOrder
+            }
+        case .title:
+            return tasks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        }
+    }
+
     private var sectionedTasks: [(String, [Task])] {
-        return sectionType.groupTasks(filteredTasks)
+        return sectionType.groupTasks(sortedTasks)
     }
 
     // MARK: - Task Row Builder
@@ -236,7 +315,7 @@ struct TasksView: View {
                     }
                 },
                 onTagAssignment: nil, // Removed tag button from TasksView
-                displayMode: isMultiSelectMode ? .compact : .detailed,
+                displayMode: .detailed,
                 showsTagButton: false // Disable tag button
             )
             .contentShape(Rectangle())
@@ -281,39 +360,6 @@ struct TasksView: View {
         }
     }
 
-    // MARK: - Section Picker Sheet
-
-    @ViewBuilder
-    private var sectionPickerSheet: some View {
-        NavigationStack {
-            List {
-                ForEach(TaskSectionType.allCases, id: \.id) { sectionOption in
-                    HStack {
-                        Text(sectionOption.displayName)
-                        Spacer()
-                        if sectionType == sectionOption {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                    .onTapGesture {
-                        withAnimation {
-                            sectionType = sectionOption
-                        }
-                        showingSectionPicker = false
-                    }
-                }
-            }
-            .navigationTitle("Group Tasks")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        showingSectionPicker = false
-                    }
-                }
-            }
-        }
-    }
 
     // MARK: - Bulk Action Toolbar
 
@@ -349,6 +395,7 @@ struct TasksView: View {
         .padding()
     }
 
+
     // MARK: - Helper Methods
 
     private func toggleTaskSelection(_ task: Task) {
@@ -360,7 +407,7 @@ struct TasksView: View {
     }
 
     private func bulkToggleCompletion() {
-        let tasksToUpdate = filteredTasks.filter { selectedTasks.contains($0.id) }
+        let tasksToUpdate = sortedTasks.filter { selectedTasks.contains($0.id) }
         for task in tasksToUpdate {
             _ = taskManager.toggleTaskCompletionSafely(task)
         }
@@ -370,7 +417,7 @@ struct TasksView: View {
 
 
     private func bulkDelete() {
-        let tasksToDelete = filteredTasks.filter { selectedTasks.contains($0.id) }
+        let tasksToDelete = sortedTasks.filter { selectedTasks.contains($0.id) }
         for task in tasksToDelete {
             _ = taskManager.deleteTaskSafely(task)
         }

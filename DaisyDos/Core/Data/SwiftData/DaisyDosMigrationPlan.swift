@@ -9,14 +9,14 @@ import Foundation
 import SwiftData
 
 /// Migration plan for DaisyDos database schema versions
-/// Handles migration from V1 (basic Task model) to V2 (enhanced Task model with attachments)
+/// Simple approach: Clear existing data when schema changes to avoid migration complexity
 struct DaisyDosMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
         [DaisyDosSchemaV2.self]
     }
 
     static var stages: [MigrationStage] {
-        // No migrations needed - starting fresh with V2
+        // Starting fresh with priority-enabled schema
         []
     }
 

@@ -99,6 +99,12 @@ struct HabitRowView: View {
 
             // Indicators
             HStack(spacing: 4) {
+                // Priority indicator (only when not medium)
+                if habit.priority != .medium {
+                    habit.priority.indicatorView()
+                        .font(.caption2)
+                }
+
                 // Due indicator based on recurrence
                 if let _ = habit.recurrenceRule,
                    habit.isDueOn(date: Date()) {
@@ -148,6 +154,12 @@ struct HabitRowView: View {
 
                 // Indicators
                 VStack(spacing: 4) {
+                    // Priority indicator (only when not medium)
+                    if habit.priority != .medium {
+                        habit.priority.indicatorView()
+                            .font(.caption)
+                    }
+
                     // Recurrence indicator
                     if let recurrenceRule = habit.recurrenceRule {
                         Image(systemName: "repeat.circle.fill")
@@ -197,6 +209,12 @@ struct HabitRowView: View {
 
                     // Today-specific indicators
                     HStack(spacing: 4) {
+                        // Priority indicator (only when not medium)
+                        if habit.priority != .medium {
+                            habit.priority.indicatorView()
+                                .font(.caption)
+                        }
+
                         // Recurrence indicator
                         if habit.isDueOn(date: Date()) {
                             Image(systemName: "repeat.circle.fill")
@@ -399,6 +417,9 @@ struct HabitRowView: View {
             label += ", completed today"
         } else if habit.isSkippedToday {
             label += ", skipped today"
+        }
+        if habit.priority != .medium {
+            label += ", \(habit.priority.displayName.lowercased())"
         }
         if showsStreak {
             label += ", \(habit.currentStreak) day streak"

@@ -21,6 +21,7 @@ struct HabitEditView: View {
     @State private var habitDescription: String
     @State private var recurrenceRule: RecurrenceRule?
     @State private var selectedTags: [Tag] = []
+    @State private var selectedPriority: HabitPriority
 
     // UI State
     @State private var showingRecurrencePicker = false
@@ -87,6 +88,7 @@ struct HabitEditView: View {
         self._habitDescription = State(initialValue: habit.habitDescription)
         self._recurrenceRule = State(initialValue: habit.recurrenceRule)
         self._selectedTags = State(initialValue: Array(habit.tags))
+        self._selectedPriority = State(initialValue: habit.priority)
     }
 
     // MARK: - Character Count Colors
@@ -207,6 +209,42 @@ struct HabitEditView: View {
                         .font(.caption2)
                         .foregroundColor(descriptionCountColor)
                 }
+            }
+
+            // Priority picker
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Priority")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.daisyText)
+
+                HStack(spacing: 0) {
+                    ForEach(HabitPriority.allCases, id: \.self) { priorityOption in
+                        Button(action: {
+                            selectedPriority = priorityOption
+                        }) {
+                            VStack(spacing: 4) {
+                                priorityOption.indicatorView()
+                                    .font(.caption)
+                                Text(priorityOption.rawValue)
+                                    .font(.caption2)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(selectedPriority == priorityOption ? Color.daisyHabit.opacity(0.2) : Color.clear)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.daisyHabit, lineWidth: selectedPriority == priorityOption ? 2 : 0.5)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(selectedPriority == priorityOption ? .daisyHabit : .daisyText)
+                    }
+                }
+                .padding(.horizontal, 4)
             }
         }
     }
@@ -363,6 +401,7 @@ struct HabitEditView: View {
         habit.title = habitTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         habit.habitDescription = habitDescription.trimmingCharacters(in: .whitespacesAndNewlines)
         habit.recurrenceRule = recurrenceRule
+        habit.priority = selectedPriority
 
         // Update tags
         let currentTags = Set(habit.tags)

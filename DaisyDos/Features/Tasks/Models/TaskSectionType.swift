@@ -11,11 +11,12 @@ import SwiftUI
 /// Section types for organizing tasks in the TasksView list
 /// Supports priority, date-based, and completion status grouping
 enum TaskSectionType: String, CaseIterable, Identifiable {
+    case none = "None"
     case priority = "Priority"
+    case tags = "Tags"
+    case createdDate = "Created"
     case dueDate = "Due Date"
     case completionStatus = "Status"
-    case createdDate = "Created"
-    case none = "None"
 
     var id: String { rawValue }
 
@@ -23,46 +24,52 @@ enum TaskSectionType: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .priority:
-            return "By Priority"
-        case .dueDate:
-            return "By Due Date"
-        case .completionStatus:
-            return "By Status"
-        case .createdDate:
-            return "By Created Date"
         case .none:
-            return "No Sections"
+            return "None"
+        case .priority:
+            return "Priority"
+        case .tags:
+            return "Tags"
+        case .createdDate:
+            return "Created"
+        case .dueDate:
+            return "Due Date"
+        case .completionStatus:
+            return "Status"
         }
     }
 
     var description: String {
         switch self {
+        case .none:
+            return "Show all tasks in a single list"
         case .priority:
             return "Group tasks by High, Medium, and Low priority"
+        case .tags:
+            return "Group tasks by assigned tags"
+        case .createdDate:
+            return "Group tasks by when they were created"
         case .dueDate:
             return "Group tasks by Today, Tomorrow, This Week, and Later"
         case .completionStatus:
             return "Group tasks by To Do, In Progress, and Completed"
-        case .createdDate:
-            return "Group tasks by when they were created"
-        case .none:
-            return "Show all tasks in a single list"
         }
     }
 
     var sfSymbol: String {
         switch self {
+        case .none:
+            return "list.bullet"
         case .priority:
             return "exclamationmark.triangle"
+        case .tags:
+            return "tag"
+        case .createdDate:
+            return "clock"
         case .dueDate:
             return "calendar"
         case .completionStatus:
             return "checkmark.circle"
-        case .createdDate:
-            return "clock"
-        case .none:
-            return "list.bullet"
         }
     }
 
@@ -78,16 +85,18 @@ extension TaskSectionType {
     /// Groups tasks according to this section type
     func groupTasks(_ tasks: [DaisyDos.Task]) -> [(String, [DaisyDos.Task])] {
         switch self {
+        case .none:
+            return [("All Tasks", tasks)]
         case .priority:
             return groupTasksByPriority(tasks)
+        case .tags:
+            return groupTasksByTags(tasks)
+        case .createdDate:
+            return groupTasksByCreatedDate(tasks)
         case .dueDate:
             return groupTasksByDueDate(tasks)
         case .completionStatus:
             return groupTasksByCompletionStatus(tasks)
-        case .createdDate:
-            return groupTasksByCreatedDate(tasks)
-        case .none:
-            return [("All Tasks", tasks)]
         }
     }
 
@@ -106,6 +115,38 @@ extension TaskSectionType {
         }
 
         return sections
+    }
+
+    // MARK: - Tags Grouping
+
+    private func groupTasksByTags(_ tasks: [DaisyDos.Task]) -> [(String, [DaisyDos.Task])] {
+        var taggedTasks: [(String, [DaisyDos.Task])] = []
+        var untaggedTasks: [DaisyDos.Task] = []
+        var usedTags: Set<String> = []
+
+        for task in tasks {
+            if task.tags.isEmpty {
+                untaggedTasks.append(task)
+            } else {
+                for tag in task.tags {
+                    if !usedTags.contains(tag.name) {
+                        usedTags.insert(tag.name)
+                        let tasksWithThisTag = tasks.filter { $0.tags.contains(tag) }
+                        taggedTasks.append(("\(tag.name) (\(tasksWithThisTag.count))", tasksWithThisTag))
+                    }
+                }
+            }
+        }
+
+        // Sort tag sections alphabetically
+        taggedTasks.sort { $0.0 < $1.0 }
+
+        // Add untagged section at the end if there are untagged tasks
+        if !untaggedTasks.isEmpty {
+            taggedTasks.append(("No Tags (\(untaggedTasks.count))", untaggedTasks))
+        }
+
+        return taggedTasks
     }
 
     // MARK: - Due Date Grouping

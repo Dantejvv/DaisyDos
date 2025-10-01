@@ -8,8 +8,8 @@
 import Foundation
 import SwiftData
 
-/// Schema V2 for DaisyDos - Enhanced Task Model
-/// Adds TaskAttachment support, priority levels, due dates, subtasks, and recurrence
+/// Schema V2 for DaisyDos - Enhanced Task and Habit Models
+/// Adds TaskAttachment support, priority levels, due dates, subtasks, recurrence, and habit priorities
 enum DaisyDosSchemaV2: VersionedSchema {
     static var versionIdentifier = Schema.Version(2, 0, 0)
 
