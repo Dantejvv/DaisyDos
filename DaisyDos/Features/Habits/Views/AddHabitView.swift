@@ -32,10 +32,41 @@ struct AddHabitView: View {
 
     enum ValidationError: String, CaseIterable {
         case emptyTitle = "Habit title is required"
+        case titleTooLong = "Habit title must be 50 characters or less"
+        case descriptionTooLong = "Description must be 200 characters or less"
         case tooManyTags = "Maximum 3 tags allowed"
 
         var message: String {
             return self.rawValue
+        }
+
+        var severity: ValidationSeverity {
+            switch self {
+            case .emptyTitle:
+                return .error
+            case .titleTooLong, .descriptionTooLong:
+                return .warning
+            case .tooManyTags:
+                return .error
+            }
+        }
+    }
+
+    enum ValidationSeverity {
+        case error, warning
+
+        var color: Color {
+            switch self {
+            case .error: return .daisyError
+            case .warning: return .orange
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .error: return "exclamationmark.triangle.fill"
+            case .warning: return "exclamationmark.circle.fill"
+            }
         }
     }
 
@@ -100,17 +131,42 @@ struct AddHabitView: View {
     @ViewBuilder
     private var basicInfoSection: some View {
         Section("Habit Details") {
-            TextField("Habit title", text: $habitTitle)
-                .textInputAutocapitalization(.words)
-                .autocorrectionDisabled(true)
-                .onChange(of: habitTitle) { _, _ in
-                    validateForm()
-                }
+            VStack(alignment: .leading, spacing: 4) {
+                TextField("Habit title", text: $habitTitle)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled(true)
+                    .onChange(of: habitTitle) { _, _ in
+                        validateForm()
+                    }
 
-            TextField("Description (optional)", text: $habitDescription, axis: .vertical)
-                .lineLimit(3...6)
-                .textInputAutocapitalization(.sentences)
-                .autocorrectionDisabled(true)
+                HStack {
+                    Spacer()
+                    let titleColor: Color = habitTitle.count > 50 ? .orange :
+                                           habitTitle.count > 40 ? .yellow : .daisyTextSecondary
+                    Text("\(habitTitle.count)/50")
+                        .font(.caption2)
+                        .foregroundColor(titleColor)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                TextField("Description (optional)", text: $habitDescription, axis: .vertical)
+                    .lineLimit(3...6)
+                    .textInputAutocapitalization(.sentences)
+                    .autocorrectionDisabled(true)
+                    .onChange(of: habitDescription) { _, _ in
+                        validateForm()
+                    }
+
+                HStack {
+                    Spacer()
+                    let descColor: Color = habitDescription.count > 200 ? .orange :
+                                          habitDescription.count > 160 ? .yellow : .daisyTextSecondary
+                    Text("\(habitDescription.count)/200")
+                        .font(.caption2)
+                        .foregroundColor(descColor)
+                }
+            }
         }
     }
 
@@ -197,22 +253,38 @@ struct AddHabitView: View {
 
     @ViewBuilder
     private var validationErrorsSection: some View {
+        let errorsByseverity = Dictionary(grouping: validationErrors, by: \.severity)
+
         Section {
-            ForEach(Array(validationErrors), id: \.self) { error in
-                Label(error.message, systemImage: "exclamationmark.triangle.fill")
-                    .foregroundColor(.daisyError)
-                    .font(.caption)
+            // Show errors first
+            if let errors = errorsByseverity[.error], !errors.isEmpty {
+                ForEach(Array(errors), id: \.self) { error in
+                    Label(error.message, systemImage: error.severity.icon)
+                        .foregroundColor(error.severity.color)
+                        .font(.caption)
+                }
+            }
+
+            // Then show warnings
+            if let warnings = errorsByseverity[.warning], !warnings.isEmpty {
+                ForEach(Array(warnings), id: \.self) { warning in
+                    Label(warning.message, systemImage: warning.severity.icon)
+                        .foregroundColor(warning.severity.color)
+                        .font(.caption)
+                }
             }
         } header: {
-            Text("Please Fix These Issues")
-                .foregroundColor(.daisyError)
+            let hasErrors = errorsByseverity[.error]?.isEmpty == false
+            Text(hasErrors ? "Please Fix These Issues" : "Suggestions")
+                .foregroundColor(hasErrors ? .daisyError : .orange)
         }
     }
 
     // MARK: - Computed Properties
 
     private var isFormValid: Bool {
-        validationErrors.isEmpty
+        // Only errors prevent form submission, warnings are just suggestions
+        !validationErrors.contains { $0.severity == .error }
     }
 
     // MARK: - Methods
@@ -220,9 +292,19 @@ struct AddHabitView: View {
     private func validateForm() {
         var errors: Set<ValidationError> = []
 
+        let trimmedTitle = habitTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = habitDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+
         // Title validation
-        if habitTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if trimmedTitle.isEmpty {
             errors.insert(.emptyTitle)
+        } else if trimmedTitle.count > 50 {
+            errors.insert(.titleTooLong)
+        }
+
+        // Description validation
+        if trimmedDescription.count > 200 {
+            errors.insert(.descriptionTooLong)
         }
 
         // Tags validation

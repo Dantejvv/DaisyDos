@@ -14,11 +14,13 @@ struct HabitDetailView: View {
     @Bindable var habit: Habit
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(HabitCompletionToastManager.self) private var toastManager
 
     @State private var habitManager: HabitManager
     @State private var selectedTab: DetailTab = .overview
     @State private var showingEditView = false
     @State private var showingDeleteAlert = false
+    @State private var showingSkipView = false
 
     // MARK: - Initializer
 
@@ -85,6 +87,14 @@ struct HabitDetailView: View {
         .sheet(isPresented: $showingEditView) {
             HabitEditView(habit: habit)
         }
+        .sheet(isPresented: $showingSkipView) {
+            SimpleHabitSkipView(
+                habit: habit,
+                onSkip: { reason in
+                    let _ = habitManager.skipHabit(habit, reason: reason)
+                }
+            )
+        }
         .alert("Delete Habit", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
@@ -127,21 +137,23 @@ struct HabitDetailView: View {
         .background(Color.daisySurface)
         .overlay(
             // Selection indicator
-            VStack {
-                Spacer()
-                Rectangle()
-                    .fill(Color.daisyHabit)
-                    .frame(height: 2)
-                    .offset(x: tabIndicatorOffset)
-                    .animation(.easeInOut(duration: 0.3), value: selectedTab)
+            GeometryReader { geometry in
+                VStack {
+                    Spacer()
+                    Rectangle()
+                        .fill(Color.daisyHabit)
+                        .frame(width: geometry.size.width / CGFloat(DetailTab.allCases.count), height: 2)
+                        .offset(x: tabIndicatorOffset(for: geometry.size.width))
+                        .animation(.easeInOut(duration: 0.3), value: selectedTab)
+                }
             }
         )
     }
 
-    private var tabIndicatorOffset: CGFloat {
-        let tabWidth = UIScreen.main.bounds.width / CGFloat(DetailTab.allCases.count)
+    private func tabIndicatorOffset(for totalWidth: CGFloat) -> CGFloat {
+        let tabWidth = totalWidth / CGFloat(DetailTab.allCases.count)
         let index = DetailTab.allCases.firstIndex(of: selectedTab) ?? 0
-        return (CGFloat(index) - 1) * tabWidth
+        return CGFloat(index) * tabWidth
     }
 
     // MARK: - Overview Tab
@@ -164,8 +176,6 @@ struct HabitDetailView: View {
                     tagsCard
                 }
 
-                // Recent Completions Preview
-                recentCompletionsPreview
             }
             .padding()
         }
@@ -191,8 +201,6 @@ struct HabitDetailView: View {
                     habitManager: habitManager
                 )
 
-                // Progress Metrics Summary
-                progressMetricsCard
             }
             .padding()
         }
@@ -321,9 +329,15 @@ struct HabitDetailView: View {
                 // Mark Complete/Incomplete Button
                 Button(action: {
                     if habit.isCompletedToday {
-                        habitManager.resetHabitStreak(habit)
+                        // Undo completion directly in detail view
+                        let _ = habitManager.undoHabitCompletion(habit)
                     } else {
-                        _ = habitManager.markHabitCompleted(habit)
+                        // Mark complete and show undo toast
+                        if let _ = habitManager.markHabitCompletedWithTracking(habit) {
+                            toastManager.showCompletionToast(for: habit) {
+                                let _ = habitManager.undoHabitCompletion(habit)
+                            }
+                        }
                     }
                 }) {
                     Label(
@@ -341,7 +355,7 @@ struct HabitDetailView: View {
 
                 // Skip Button
                 Button(action: {
-                    // Skip functionality would go here
+                    showingSkipView = true
                 }) {
                     Label("Skip Today", systemImage: "forward.end")
                         .frame(maxWidth: .infinity)
@@ -372,83 +386,7 @@ struct HabitDetailView: View {
         .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
     }
 
-    @ViewBuilder
-    private var recentCompletionsPreview: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Recent Activity")
-                    .font(.headline)
-                    .foregroundColor(.daisyText)
 
-                Spacer()
-
-                Button("View All") {
-                    selectedTab = .history
-                }
-                .font(.caption)
-                .foregroundColor(.daisyHabit)
-            }
-
-            let recentCompletions = habit.completionEntries
-                .sorted { $0.completedDate > $1.completedDate }
-                .prefix(5)
-
-            if recentCompletions.isEmpty {
-                Text("No completions yet")
-                    .font(.body)
-                    .foregroundColor(.daisyTextSecondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 20)
-            } else {
-                ForEach(Array(recentCompletions), id: \.id) { completion in
-                    CompletionRowView(completion: completion)
-                }
-            }
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    // MARK: - Analytics Cards
-
-    @ViewBuilder
-    private var progressMetricsCard: some View {
-        let metrics = habitManager.getProgressMetrics(for: habit, period: .month)
-
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Monthly Progress Summary")
-                .font(.headline)
-                .foregroundColor(.daisyText)
-
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
-                MetricTile(
-                    title: "Completion Rate",
-                    value: String(format: "%.0f%%", metrics.completionRate * 100),
-                    color: .daisySuccess
-                )
-
-                MetricTile(
-                    title: "Average Mood",
-                    value: String(format: "%.1f", metrics.averageMood),
-                    color: .purple
-                )
-
-                MetricTile(
-                    title: "Consistency",
-                    value: String(format: "%.0f%%", metrics.consistency * 100),
-                    color: .daisyTask
-                )
-
-                MetricTile(
-                    title: "Momentum",
-                    value: metrics.momentum.displayName,
-                    color: .orange
-                )
-            }
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
-    }
 
     // MARK: - History Cards
 

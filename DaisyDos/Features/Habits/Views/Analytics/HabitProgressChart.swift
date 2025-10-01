@@ -35,8 +35,62 @@ struct HabitProgressChart: View {
     }
 
     private var yAxisMax: Double {
-        let maxValue = chartData.map(\.value).max() ?? 1.0
-        return max(maxValue * 1.2, 1.0) // Add 20% padding
+        // For completion charts, the maximum should be 1 (100% completion)
+        // Add small padding for visual clarity
+        return 1.1
+    }
+
+    private var xAxisValues: [Date] {
+        guard !chartData.isEmpty else { return [] }
+
+        let allDates = chartData.map(\.date).sorted()
+        guard let firstDate = allDates.first, let lastDate = allDates.last else { return [] }
+
+        var keyDates: Set<Date> = []
+
+        // Always include first date
+        keyDates.insert(firstDate)
+
+        // Always include today as the last point (if it's past the data range, extend to today)
+        let today = Calendar.current.startOfDay(for: Date())
+        keyDates.insert(today)
+
+        // Include the last data date only if it's different from today
+        if !Calendar.current.isDate(lastDate, inSameDayAs: today) {
+            keyDates.insert(lastDate)
+        }
+
+        switch timeframe {
+        case .week:
+            // Show every day for week view
+            return allDates
+        case .month:
+            // Show weekly intervals plus key dates
+            let calendar = Calendar.current
+            var current = firstDate
+            while current <= lastDate {
+                keyDates.insert(current)
+                current = calendar.date(byAdding: .weekOfYear, value: 1, to: current) ?? lastDate
+            }
+        case .quarter:
+            // Show bi-weekly intervals plus key dates
+            let calendar = Calendar.current
+            var current = firstDate
+            while current <= lastDate {
+                keyDates.insert(current)
+                current = calendar.date(byAdding: .weekOfYear, value: 2, to: current) ?? lastDate
+            }
+        case .year:
+            // Show monthly intervals plus key dates
+            let calendar = Calendar.current
+            var current = firstDate
+            while current <= lastDate {
+                keyDates.insert(current)
+                current = calendar.date(byAdding: .month, value: 1, to: current) ?? lastDate
+            }
+        }
+
+        return Array(keyDates).sorted()
     }
 
     // MARK: - Body
@@ -116,13 +170,18 @@ struct HabitProgressChart: View {
         }
         .chartYScale(domain: 0...yAxisMax)
         .chartXAxis {
-            AxisMarks(values: .stride(by: timeAxisStride)) { _ in
+            AxisMarks(values: xAxisValues) { _ in
                 AxisGridLine()
                 AxisValueLabel(format: timeAxisFormat)
             }
         }
         .chartYAxis {
-            AxisMarks(format: IntegerFormatStyle<Int>())
+            AxisMarks(values: [0.0, 1.0]) { value in
+                AxisGridLine()
+                AxisValueLabel {
+                    Text("\(Int(value.as(Double.self) ?? 0))")
+                }
+            }
         }
         .chartBackground { _ in
             Color.daisyBackground.opacity(0.1)

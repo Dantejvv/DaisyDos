@@ -108,15 +108,10 @@ struct HabitHeatmapView: View {
                 .frame(height: 10)
 
             ForEach(Array(weekdays.enumerated()), id: \.offset) { index, weekday in
-                if index % 2 == 1 { // Show only Mon, Wed, Fri
-                    Text(weekday)
-                        .font(.caption2)
-                        .foregroundColor(.daisyTextSecondary)
-                        .frame(width: 24, height: 10)
-                } else {
-                    Color.clear
-                        .frame(width: 24, height: 10)
-                }
+                Text(weekday)
+                    .font(.caption2)
+                    .foregroundColor(.daisyTextSecondary)
+                    .frame(width: 24, height: 10)
             }
         }
     }
@@ -276,6 +271,7 @@ struct HabitHeatmapView: View {
         let cellWidth: CGFloat = 12 // 10 + 2 spacing
         var currentMonth = -1
         var weekIndex = 0
+        var lastLabelPosition: CGFloat = -50 // Start with negative to ensure first label shows
 
         for week in calendarGrid {
             if let firstDay = week.first {
@@ -284,7 +280,12 @@ struct HabitHeatmapView: View {
                     currentMonth = month
                     let monthName = DateFormatter.shortMonth.string(from: firstDay.date)
                     let xPosition = CGFloat(weekIndex) * cellWidth + cellWidth / 2
-                    labels.append((name: monthName, xPosition: xPosition))
+
+                    // Only add label if it's far enough from the last one to avoid overlap
+                    if xPosition - lastLabelPosition >= 35 { // Minimum spacing of ~35pts
+                        labels.append((name: monthName, xPosition: xPosition))
+                        lastLabelPosition = xPosition
+                    }
                 }
             }
             weekIndex += 1

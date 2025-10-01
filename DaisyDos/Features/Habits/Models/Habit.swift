@@ -35,10 +35,13 @@ class Habit {
     }
 
     /// Individual completion entries with detailed tracking
-    var completionEntries: [HabitCompletion] = []
+    @Relationship(deleteRule: .cascade) var completionEntries: [HabitCompletion] = []
 
     /// Streak history and management
-    var streaks: [HabitStreak] = []
+    @Relationship(deleteRule: .cascade) var streaks: [HabitStreak] = []
+
+    /// Skip entries for tracking when habit was skipped
+    @Relationship(deleteRule: .cascade) var skips: [HabitSkip] = []
 
     init(title: String, habitDescription: String = "", recurrenceRule: RecurrenceRule? = nil) {
         self.id = UUID()
@@ -104,13 +107,72 @@ class Habit {
         lastCompletedDate = nil
     }
 
+    /// Undo today's completion and recalculate streak
+    func undoTodaysCompletion() -> Bool {
+        guard isCompletedToday else { return false }
+
+        let today = Calendar.current.startOfDay(for: Date())
+
+        // Remove today's completion entry
+        if let todaysCompletion = completionEntries.first(where: { Calendar.current.isDate($0.completedDate, inSameDayAs: today) }) {
+            completionEntries.removeAll { $0.id == todaysCompletion.id }
+        }
+
+        // Recalculate streak from completion history
+        recalculateStreakFromHistory()
+
+        return true
+    }
+
+    /// Recalculate current streak based on completion history
+    private func recalculateStreakFromHistory() {
+        let sortedCompletions = completionEntries.sorted { $0.completedDate > $1.completedDate }
+
+        guard !sortedCompletions.isEmpty else {
+            currentStreak = 0
+            lastCompletedDate = nil
+            return
+        }
+
+        let mostRecentCompletion = sortedCompletions.first!
+        lastCompletedDate = mostRecentCompletion.completedDate
+
+        // Calculate streak by counting consecutive days from most recent completion
+        var streak = 1
+        let calendar = Calendar.current
+
+        for i in 1..<sortedCompletions.count {
+            let currentDate = sortedCompletions[i-1].completedDate
+            let previousDate = sortedCompletions[i].completedDate
+
+            let daysBetween = calendar.dateComponents([.day], from: previousDate, to: currentDate).day ?? 0
+
+            if daysBetween == 1 {
+                streak += 1
+            } else {
+                break // Streak broken
+            }
+        }
+
+        currentStreak = streak
+    }
+
     var isCompletedToday: Bool {
         guard let lastCompleted = lastCompletedDate else { return false }
         return Calendar.current.isDate(lastCompleted, inSameDayAs: Date())
     }
 
+    var isSkippedToday: Bool {
+        let today = Calendar.current.startOfDay(for: Date())
+        return skips.contains { Calendar.current.isDate($0.skippedDate, inSameDayAs: today) }
+    }
+
     func canMarkCompleted() -> Bool {
-        return !isCompletedToday
+        return !isCompletedToday && !isSkippedToday
+    }
+
+    func canSkip() -> Bool {
+        return !isCompletedToday && !isSkippedToday
     }
 
     // MARK: - Enhanced Business Logic for Phase 3
@@ -132,6 +194,9 @@ class Habit {
             mood: mood
         )
 
+        // Add to completion entries
+        completionEntries.append(completion)
+
         // Update streak with simple consecutive day logic
         updateStreak(completionDate: today)
 
@@ -140,7 +205,9 @@ class Habit {
     }
 
     /// Skip habit with optional reason
-    func skipHabit(reason: String? = nil) -> HabitSkip {
+    func skipHabit(reason: String? = nil) -> HabitSkip? {
+        guard canSkip() else { return nil }
+
         let today = Calendar.current.startOfDay(for: Date())
 
         let skip = HabitSkip(
@@ -149,7 +216,9 @@ class Habit {
             reason: reason
         )
 
-        // Simple skip functionality
+        // Add to skip entries
+        skips.append(skip)
+
         return skip
     }
 
@@ -228,20 +297,3 @@ class Habit {
     }
 }
 
-// MARK: - Skip Functionality
-
-class HabitSkip {
-    let id: UUID
-    weak var habit: Habit?
-    let skippedDate: Date
-    let reason: String?
-    let createdDate: Date
-
-    init(habit: Habit, skippedDate: Date, reason: String? = nil) {
-        self.id = UUID()
-        self.habit = habit
-        self.skippedDate = skippedDate
-        self.reason = reason
-        self.createdDate = Date()
-    }
-}

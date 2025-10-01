@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftData
+import SwiftUI
 
 @Model
 class HabitStreak {
@@ -198,12 +199,12 @@ extension HabitStreak {
             }
         }
 
-        var color: String {
+        var color: Color {
             switch self {
-            case .excellent: return "green"
-            case .good: return "blue"
-            case .fair: return "orange"
-            case .needsImprovement: return "red"
+            case .excellent: return .green
+            case .good: return .blue
+            case .fair: return .orange
+            case .needsImprovement: return .red
             }
         }
 

@@ -109,8 +109,49 @@ class HabitManager {
         }
     }
 
+    /// Mark habit completed with detailed tracking
+    func markHabitCompletedWithTracking(_ habit: Habit, notes: String = "", mood: HabitCompletion.Mood = .neutral) -> HabitCompletion? {
+        guard habit.canMarkCompleted() else {
+            return nil // Already completed today
+        }
+
+        let completion = habit.markCompletedWithTracking(notes: notes, mood: mood)
+
+        if let completion = completion {
+            modelContext.insert(completion)
+        }
+
+        do {
+            try modelContext.save()
+            return completion
+        } catch {
+            lastError = ErrorTransformer.transformHabitError(error, operation: "mark habit completed with tracking")
+            return nil
+        }
+    }
+
+    /// Undo today's habit completion
+    func undoHabitCompletion(_ habit: Habit) -> Bool {
+        guard habit.undoTodaysCompletion() else {
+            return false // Nothing to undo
+        }
+
+        do {
+            try modelContext.save()
+            return true
+        } catch {
+            lastError = ErrorTransformer.transformHabitError(error, operation: "undo habit completion")
+            return false
+        }
+    }
+
     func skipHabit(_ habit: Habit, reason: String? = nil) -> HabitSkip? {
-        let skip = habit.skipHabit(reason: reason)
+        guard let skip = habit.skipHabit(reason: reason) else {
+            return nil // Already completed or skipped today
+        }
+
+        // Insert the skip into the model context
+        modelContext.insert(skip)
 
         do {
             try modelContext.save()

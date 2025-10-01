@@ -126,6 +126,7 @@ struct HabitCompletionUndoToast: View {
 @Observable
 class HabitCompletionToastManager {
     private(set) var activeToast: ToastItem?
+    private var autoHideWorkItem: DispatchWorkItem?
 
     struct ToastItem: Identifiable {
         let id = UUID()
@@ -134,17 +135,24 @@ class HabitCompletionToastManager {
     }
 
     func showCompletionToast(for habit: Habit, onUndo: @escaping () -> Void) {
+        // Cancel any existing auto-hide timer
+        autoHideWorkItem?.cancel()
+
         activeToast = ToastItem(habit: habit, onUndo: onUndo)
 
-        // Auto-hide after 5 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) { [self] in
-            if self.activeToast?.id == activeToast?.id {
-                self.hideToast()
-            }
+        // Create new auto-hide timer
+        autoHideWorkItem = DispatchWorkItem { [weak self] in
+            self?.hideToast()
         }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: autoHideWorkItem!)
     }
 
     func hideToast() {
+        // Cancel the auto-hide timer
+        autoHideWorkItem?.cancel()
+        autoHideWorkItem = nil
+
         activeToast = nil
     }
 }
@@ -170,7 +178,10 @@ struct HabitCompletionToastContainer<Content: View>: View {
 
                     HabitCompletionUndoToast(
                         habit: toast.habit,
-                        onUndo: toast.onUndo,
+                        onUndo: {
+                            toast.onUndo()
+                            toastManager.hideToast()
+                        },
                         isVisible: .constant(true)
                     )
                     .padding(.horizontal, 20)

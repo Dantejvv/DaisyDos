@@ -105,10 +105,10 @@ struct StreakVisualizationView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color(streakQuality.color).opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+        .background(streakQuality.color.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(streakQuality.color), lineWidth: 1)
+                .stroke(streakQuality.color, lineWidth: 1)
         )
     }
 

@@ -14,9 +14,11 @@ struct SettingsView: View {
     @Environment(TaskManager.self) private var taskManager
     @Environment(HabitManager.self) private var habitManager
     @Environment(TagManager.self) private var tagManager
+    @Environment(HabitNotificationManager.self) private var notificationManager: HabitNotificationManager?
     @State private var showingAbout = false
     @State private var showingTestViews = false
     @State private var showingPerformance = false
+    @State private var showingNotificationSettings = false
 
     var body: some View {
         NavigationStack {
@@ -31,6 +33,24 @@ struct SettingsView: View {
                     Text("DaisyDos keeps your data private by default.")
                         .font(.caption)
                         .foregroundColor(.daisyTextSecondary)
+                }
+
+                Section("Notifications") {
+                    Button(action: { showingNotificationSettings = true }) {
+                        HStack {
+                            Label("Habit Reminders", systemImage: "bell")
+                            Spacer()
+                            if let notificationManager = notificationManager {
+                                Text(notificationManager.isPermissionGranted ? "Enabled" : "Disabled")
+                                    .foregroundColor(.daisyTextSecondary)
+                                    .font(.caption)
+                            }
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.daisyTextSecondary)
+                        }
+                    }
+                    .foregroundColor(.daisyText)
                 }
 
                 Section("Performance") {
@@ -92,6 +112,11 @@ struct SettingsView: View {
             #endif
             .sheet(isPresented: $showingPerformance) {
                 PerformanceDashboardView()
+            }
+            .sheet(isPresented: $showingNotificationSettings) {
+                if notificationManager != nil {
+                    HabitNotificationSettingsView()
+                }
             }
         }
     }

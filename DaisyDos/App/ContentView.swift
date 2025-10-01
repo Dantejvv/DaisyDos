@@ -11,12 +11,14 @@ import SwiftData
 struct ContentView: View {
     @Environment(NavigationManager.self) private var navigationManager
     @Environment(PerformanceMonitor.self) private var performanceMonitor
+    @State private var toastManager = HabitCompletionToastManager()
 
     var body: some View {
-        TabView(selection: Binding(
-            get: { navigationManager.selectedTab },
-            set: { navigationManager.selectedTab = $0 }
-        )) {
+        HabitCompletionToastContainer {
+            TabView(selection: Binding(
+                get: { navigationManager.selectedTab },
+                set: { navigationManager.selectedTab = $0 }
+            )) {
 
             // MARK: - Today Tab
 
@@ -87,12 +89,14 @@ struct ContentView: View {
                 TabType.settings.tabLabel
             }
             .tag(TabType.settings)
+            }
+            .accessibilityLabel("Main navigation")
+            .accessibilityHint("Navigate between different sections of the app")
+            .onAppear {
+                performanceMonitor.markFirstViewRenderComplete()
+            }
         }
-        .accessibilityLabel("Main navigation")
-        .accessibilityHint("Navigate between different sections of the app")
-        .onAppear {
-            performanceMonitor.markFirstViewRenderComplete()
-        }
+        .environment(toastManager)
     }
 }
 

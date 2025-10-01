@@ -18,6 +18,7 @@ import UserNotifications
 struct DaisyDosApp: App {
     let localOnlyModeManager = LocalOnlyModeManager()
     let navigationManager = NavigationManager()
+    @State private var habitNotificationManager: HabitNotificationManager?
 
     // Performance monitoring
     init() {
@@ -57,6 +58,12 @@ struct DaisyDosApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    // Initialize notification manager after model container is ready
+                    if habitNotificationManager == nil {
+                        habitNotificationManager = HabitNotificationManager(modelContext: sharedModelContainer.mainContext)
+                    }
+                }
         }
         .modelContainer(sharedModelContainer)
         .environment(navigationManager)
@@ -65,5 +72,6 @@ struct DaisyDosApp: App {
         .environment(TaskManager(modelContext: sharedModelContainer.mainContext))
         .environment(HabitManager(modelContext: sharedModelContainer.mainContext))
         .environment(TagManager(modelContext: sharedModelContainer.mainContext))
+        .environment(habitNotificationManager)
     }
 }

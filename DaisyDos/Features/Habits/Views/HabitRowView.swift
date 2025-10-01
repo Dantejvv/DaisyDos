@@ -82,7 +82,11 @@ struct HabitRowView: View {
                 Text(habit.title)
                     .font(.body)
                     .strikethrough(habit.isCompletedToday)
-                    .foregroundColor(habit.isCompletedToday ? .daisyTextSecondary : .daisyText)
+                    .foregroundColor(
+                        habit.isCompletedToday ? .daisyTextSecondary :
+                        habit.isSkippedToday ? .orange.opacity(0.8) :
+                        .daisyText
+                    )
                     .lineLimit(1)
 
                 if showsStreak {
@@ -96,7 +100,7 @@ struct HabitRowView: View {
             // Indicators
             HStack(spacing: 4) {
                 // Due indicator based on recurrence
-                if let recurrenceRule = habit.recurrenceRule,
+                if let _ = habit.recurrenceRule,
                    habit.isDueOn(date: Date()) {
                     Image(systemName: "repeat.circle.fill")
                         .foregroundColor(.daisyHabit)
@@ -126,7 +130,11 @@ struct HabitRowView: View {
                     Text(habit.title)
                         .font(.headline)
                         .strikethrough(habit.isCompletedToday)
-                        .foregroundColor(habit.isCompletedToday ? .daisyTextSecondary : .daisyText)
+                        .foregroundColor(
+                            habit.isCompletedToday ? .daisyTextSecondary :
+                            habit.isSkippedToday ? .orange.opacity(0.8) :
+                            .daisyText
+                        )
 
                     if !habit.habitDescription.isEmpty {
                         Text(habit.habitDescription)
@@ -178,7 +186,11 @@ struct HabitRowView: View {
                     Text(habit.title)
                         .font(.body.weight(.medium))
                         .strikethrough(habit.isCompletedToday)
-                        .foregroundColor(habit.isCompletedToday ? .daisyTextSecondary : .daisyText)
+                        .foregroundColor(
+                            habit.isCompletedToday ? .daisyTextSecondary :
+                            habit.isSkippedToday ? .orange.opacity(0.8) :
+                            .daisyText
+                        )
                         .lineLimit(1)
 
                     Spacer()
@@ -237,17 +249,35 @@ struct HabitRowView: View {
 
     // MARK: - Reusable Components
 
-    @ViewBuilder
     private var completionToggle: some View {
-        Button(action: onMarkComplete) {
-            Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
+        let systemName: String
+        let color: Color
+
+        if habit.isCompletedToday {
+            systemName = "checkmark.circle.fill"
+            color = .daisySuccess
+        } else if habit.isSkippedToday {
+            systemName = "forward.circle.fill"
+            color = .orange
+        } else {
+            systemName = "circle"
+            color = Colors.Primary.textTertiary
+        }
+
+        return Button(action: onMarkComplete) {
+            Image(systemName: systemName)
                 .font(.title2)
-                .foregroundColor(habit.isCompletedToday ? .daisySuccess : Colors.Primary.textTertiary)
+                .foregroundColor(color)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(habit.isCompletedToday ? "Mark as incomplete" : "Mark as complete")
+        .accessibilityLabel(
+            habit.isCompletedToday ? "Mark as incomplete" :
+            habit.isSkippedToday ? "Habit skipped today" :
+            "Mark as complete"
+        )
         .accessibilityAddTraits(.isButton)
         .frame(minWidth: 44, minHeight: 44) // Ensure 44pt touch target
+        .disabled(habit.isSkippedToday) // Disable interaction if skipped
     }
 
     @ViewBuilder
@@ -368,6 +398,8 @@ struct HabitRowView: View {
         var label = habit.title
         if habit.isCompletedToday {
             label += ", completed today"
+        } else if habit.isSkippedToday {
+            label += ", skipped today"
         }
         if showsStreak {
             label += ", \(habit.currentStreak) day streak"
@@ -384,6 +416,8 @@ struct HabitRowView: View {
     private var accessibilityHint: String {
         if habit.isCompletedToday {
             return "Double tap to mark as incomplete"
+        } else if habit.isSkippedToday {
+            return "Habit skipped for today"
         } else {
             return "Double tap to mark as complete"
         }
