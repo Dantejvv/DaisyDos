@@ -326,12 +326,13 @@ struct TasksView: View {
                     taskToDetail = task
                 }
             }
-            .contextMenu {
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 if !isMultiSelectMode {
-                    Button(action: {
-                        taskToDetail = task
+                    Button(role: .destructive, action: {
+                        taskToDelete = task
+                        showingDeleteConfirmation = true
                     }) {
-                        Label("View Details", systemImage: "info.circle")
+                        Label("Delete", systemImage: "trash")
                     }
 
                     Button(action: {
@@ -339,22 +340,17 @@ struct TasksView: View {
                     }) {
                         Label("Edit", systemImage: "pencil")
                     }
-
+                    .tint(.daisyTask)
+                }
+            }
+            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                if !isMultiSelectMode {
                     Button(action: {
                         _ = taskManager.duplicateTaskSafely(task)
                     }) {
                         Label("Duplicate", systemImage: "plus.square.on.square")
                     }
-
-                    Divider()
-
-                    Button(action: {
-                        taskToDelete = task
-                        showingDeleteConfirmation = true
-                    }) {
-                        Label("Delete", systemImage: "trash")
-                    }
-                    .foregroundColor(.daisyError)
+                    .tint(.blue)
                 }
             }
         }

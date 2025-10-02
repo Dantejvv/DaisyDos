@@ -559,44 +559,31 @@ struct HabitsView: View {
                     habitToDetail = habit
                 }
             }
-            .contextMenu {
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 if !isMultiSelectMode {
-                    Button(action: {
-                        habitToDetail = habit
+                    Button(role: .destructive, action: {
+                        habitToDelete = habit
+                        showingDeleteConfirmation = true
                     }) {
-                        Label("View Details", systemImage: "info.circle")
+                        Label("Delete", systemImage: "trash")
                     }
-
-                    Button(action: {
-                        handleHabitCompletion(habit)
-                    }) {
-                        Label(habit.isCompletedToday ? "Undo Complete" : "Mark Complete",
-                              systemImage: habit.isCompletedToday ? "arrow.uturn.backward" : "checkmark.circle")
-                    }
-                    .foregroundColor(.daisySuccess)
-
-                    Button(action: {
-                        habitToSkip = habit
-                    }) {
-                        Label("Skip Today", systemImage: "forward")
-                    }
-                    .foregroundColor(.daisyWarning)
 
                     Button(action: {
                         habitToEdit = habit
                     }) {
                         Label("Edit", systemImage: "pencil")
                     }
-
-                    Divider()
-
+                    .tint(.daisyHabit)
+                }
+            }
+            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                if !isMultiSelectMode {
                     Button(action: {
-                        habitToDelete = habit
-                        showingDeleteConfirmation = true
+                        habitToSkip = habit
                     }) {
-                        Label("Delete", systemImage: "trash")
+                        Label("Skip", systemImage: "forward")
                     }
-                    .foregroundColor(.daisyError)
+                    .tint(.orange)
                 }
             }
         }
