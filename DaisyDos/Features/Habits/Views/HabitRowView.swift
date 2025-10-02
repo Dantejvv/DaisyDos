@@ -122,10 +122,8 @@ struct HabitRowView: View {
             // Indicators
             HStack(spacing: 4) {
                 // Priority indicator (only when not medium)
-                if habit.priority != .medium {
-                    habit.priority.indicatorView()
-                        .font(.caption2)
-                }
+                habit.priority.indicatorView()
+                    .font(.caption2)
 
                 // Due indicator based on recurrence
                 if let _ = habit.recurrenceRule,

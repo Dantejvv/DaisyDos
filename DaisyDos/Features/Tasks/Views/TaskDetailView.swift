@@ -256,14 +256,12 @@ struct TaskDetailView: View {
                 Text("Task Information")
                     .font(.headline)
                 Spacer()
-                if task.priority != .medium {
-                    HStack(spacing: 6) {
-                        task.priority.indicatorView()
-                            .font(.caption)
-                        Text(task.priority.displayName)
-                            .font(.caption.weight(.medium))
-                            .foregroundColor(.daisyTextSecondary)
-                    }
+                HStack(spacing: 6) {
+                    task.priority.indicatorView()
+                        .font(.caption)
+                    Text(task.priority.displayName)
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(.daisyTextSecondary)
                 }
             }
 

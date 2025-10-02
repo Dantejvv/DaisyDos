@@ -235,6 +235,13 @@ struct TasksView: View {
             } message: { task in
                 Text("Are you sure you want to delete '\(task.title)'?")
             }
+            .onDisappear {
+                // Deactivate multi-select mode when navigating away
+                if isMultiSelectMode {
+                    isMultiSelectMode = false
+                    selectedTasks.removeAll()
+                }
+            }
         }
     }
 
@@ -268,7 +275,7 @@ struct TasksView: View {
                 if task1.priority == task2.priority {
                     return task1.createdDate > task2.createdDate
                 }
-                return task1.priority.sortOrder < task2.priority.sortOrder
+                return task1.priority.sortOrder > task2.priority.sortOrder
             }
         case .title:
             return tasks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
@@ -283,75 +290,79 @@ struct TasksView: View {
 
     @ViewBuilder
     private func taskRow(for task: Task) -> some View {
-        HStack {
-            // Multi-select checkbox
-            if isMultiSelectMode {
-                Button(action: {
-                    toggleTaskSelection(task)
-                }) {
-                    Image(systemName: selectedTasks.contains(task.id) ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(selectedTasks.contains(task.id) ? .daisyTask : .daisyTextSecondary)
+        TaskRowView(
+            task: task,
+            onToggleCompletion: {
+                if !isMultiSelectMode {
+                    _ = taskManager.toggleTaskCompletionSafely(task)
                 }
-                .buttonStyle(.plain)
-                .frame(minWidth: 44, minHeight: 44)
-            }
+            },
+            onEdit: {
+                if !isMultiSelectMode {
+                    taskToEdit = task
+                }
+            },
+            onDelete: {
+                if !isMultiSelectMode {
+                    taskToDelete = task
+                    showingDeleteConfirmation = true
+                }
+            },
+            onTagAssignment: nil, // Removed tag button from TasksView
+            displayMode: .compact,
+            showsTagButton: false // Disable tag button
+        )
+        .listRowBackground(
+            // Selected row background and border accent
+            Group {
+                if isMultiSelectMode && selectedTasks.contains(task.id) {
+                    HStack(spacing: 0) {
+                        // Left border accent
+                        Rectangle()
+                            .fill(Color.daisyTask)
+                            .frame(width: 6)
 
-            TaskRowView(
-                task: task,
-                onToggleCompletion: {
-                    if !isMultiSelectMode {
-                        _ = taskManager.toggleTaskCompletionSafely(task)
+                        // Background tint
+                        Color.daisyTask.opacity(0.15)
                     }
-                },
-                onEdit: {
-                    if !isMultiSelectMode {
-                        taskToEdit = task
-                    }
-                },
-                onDelete: {
-                    if !isMultiSelectMode {
-                        taskToDelete = task
-                        showingDeleteConfirmation = true
-                    }
-                },
-                onTagAssignment: nil, // Removed tag button from TasksView
-                displayMode: .compact,
-                showsTagButton: false // Disable tag button
-            )
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if isMultiSelectMode {
-                    toggleTaskSelection(task)
                 } else {
-                    taskToDetail = task
+                    Color.clear
                 }
             }
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                if !isMultiSelectMode {
-                    Button(role: .destructive, action: {
-                        taskToDelete = task
-                        showingDeleteConfirmation = true
-                    }) {
-                        Label("Delete", systemImage: "trash")
-                    }
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isMultiSelectMode {
+                toggleTaskSelection(task)
+            } else {
+                taskToDetail = task
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            if !isMultiSelectMode {
+                Button(role: .destructive, action: {
+                    taskToDelete = task
+                    showingDeleteConfirmation = true
+                }) {
+                    Label("Delete", systemImage: "trash")
+                }
 
-                    Button(action: {
-                        taskToEdit = task
-                    }) {
-                        Label("Edit", systemImage: "pencil")
-                    }
-                    .tint(.daisyTask)
+                Button(action: {
+                    taskToEdit = task
+                }) {
+                    Label("Edit", systemImage: "pencil")
                 }
+                .tint(.daisyTask)
             }
-            .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                if !isMultiSelectMode {
-                    Button(action: {
-                        _ = taskManager.duplicateTaskSafely(task)
-                    }) {
-                        Label("Duplicate", systemImage: "plus.square.on.square")
-                    }
-                    .tint(.blue)
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            if !isMultiSelectMode {
+                Button(action: {
+                    _ = taskManager.duplicateTaskSafely(task)
+                }) {
+                    Label("Duplicate", systemImage: "plus.square.on.square")
                 }
+                .tint(.blue)
             }
         }
     }
@@ -374,6 +385,8 @@ struct TasksView: View {
                     bulkToggleCompletion()
                 }) {
                     Label("Toggle Complete", systemImage: "checkmark.circle")
+                        .labelStyle(.iconOnly)
+                        .font(.title3)
                 }
                 .foregroundColor(.daisySuccess)
 
@@ -382,6 +395,8 @@ struct TasksView: View {
                     bulkDelete()
                 }) {
                     Label("Delete", systemImage: "trash")
+                        .labelStyle(.iconOnly)
+                        .font(.title3)
                 }
                 .foregroundColor(.daisyError)
             }

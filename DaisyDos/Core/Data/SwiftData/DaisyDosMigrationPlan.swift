@@ -9,14 +9,14 @@ import Foundation
 import SwiftData
 
 /// Migration plan for DaisyDos database schema versions
-/// Simple approach: Clear existing data when schema changes to avoid migration complexity
+/// Simple approach: Start fresh with current schema version
 struct DaisyDosMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [DaisyDosSchemaV2.self]
+        [DaisyDosSchemaV3.self]
     }
 
     static var stages: [MigrationStage] {
-        // Starting fresh with priority-enabled schema
+        // No migration stages - using V3 as baseline schema
         []
     }
 

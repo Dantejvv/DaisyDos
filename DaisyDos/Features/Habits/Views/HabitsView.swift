@@ -242,6 +242,13 @@ struct HabitsView: View {
             } message: { habit in
                 Text("Are you sure you want to delete '\(habit.title)'?")
             }
+            .onDisappear {
+                // Deactivate multi-select mode when navigating away
+                if isMultiSelectMode {
+                    isMultiSelectMode = false
+                    selectedHabits.removeAll()
+                }
+            }
         }
     }
 
@@ -536,56 +543,60 @@ struct HabitsView: View {
     @ViewBuilder
     private func habitRows(for habits: [Habit]) -> some View {
         ForEach(habits) { habit in
-            HStack {
-                // Multi-select checkbox
-                if isMultiSelectMode {
-                    Button(action: {
+            habitRowView(for: habit)
+                .listRowBackground(
+                    // Selected row background and border accent
+                    Group {
+                        if isMultiSelectMode && selectedHabits.contains(habit.id) {
+                            HStack(spacing: 0) {
+                                // Left border accent
+                                Rectangle()
+                                    .fill(Color.daisyHabit)
+                                    .frame(width: 6)
+
+                                // Background tint
+                                Color.daisyHabit.opacity(0.15)
+                            }
+                        } else {
+                            Color.clear
+                        }
+                    }
+                )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if isMultiSelectMode {
                         toggleHabitSelection(habit)
-                    }) {
-                        Image(systemName: selectedHabits.contains(habit.id) ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(selectedHabits.contains(habit.id) ? .daisyHabit : .daisyTextSecondary)
+                    } else {
+                        habitToDetail = habit
                     }
-                    .buttonStyle(.plain)
-                    .frame(minWidth: 44, minHeight: 44)
                 }
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    if !isMultiSelectMode {
+                        Button(role: .destructive, action: {
+                            habitToDelete = habit
+                            showingDeleteConfirmation = true
+                        }) {
+                            Label("Delete", systemImage: "trash")
+                        }
 
-                habitRowView(for: habit)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if isMultiSelectMode {
-                    toggleHabitSelection(habit)
-                } else {
-                    habitToDetail = habit
-                }
-            }
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                if !isMultiSelectMode {
-                    Button(role: .destructive, action: {
-                        habitToDelete = habit
-                        showingDeleteConfirmation = true
-                    }) {
-                        Label("Delete", systemImage: "trash")
+                        Button(action: {
+                            habitToEdit = habit
+                        }) {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        .tint(.daisyHabit)
                     }
-
-                    Button(action: {
-                        habitToEdit = habit
-                    }) {
-                        Label("Edit", systemImage: "pencil")
-                    }
-                    .tint(.daisyHabit)
                 }
-            }
-            .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                if !isMultiSelectMode {
-                    Button(action: {
-                        habitToSkip = habit
-                    }) {
-                        Label("Skip", systemImage: "forward")
+                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                    if !isMultiSelectMode {
+                        Button(action: {
+                            habitToSkip = habit
+                        }) {
+                            Label("Skip", systemImage: "forward")
+                        }
+                        .tint(.orange)
                     }
-                    .tint(.orange)
                 }
-            }
         }
     }
 
@@ -630,6 +641,8 @@ struct HabitsView: View {
                     bulkMarkComplete()
                 }) {
                     Label("Mark Complete", systemImage: "checkmark.circle")
+                        .labelStyle(.iconOnly)
+                        .font(.title3)
                 }
                 .foregroundColor(.daisySuccess)
 
@@ -638,6 +651,8 @@ struct HabitsView: View {
                     bulkSkip()
                 }) {
                     Label("Skip", systemImage: "forward")
+                        .labelStyle(.iconOnly)
+                        .font(.title3)
                 }
                 .foregroundColor(.daisyWarning)
 
@@ -646,6 +661,8 @@ struct HabitsView: View {
                     bulkDelete()
                 }) {
                     Label("Delete", systemImage: "trash")
+                        .labelStyle(.iconOnly)
+                        .font(.title3)
                 }
                 .foregroundColor(.daisyError)
             }

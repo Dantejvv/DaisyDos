@@ -185,11 +185,27 @@ struct TagInfoSheet: View {
                 }
                 .padding(.top)
 
+                // Tag Description
+                if !tag.descriptionText.isEmpty {
+                    ScrollView {
+                        Text(tag.descriptionText)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                    .frame(maxHeight: 150)
+                }
+
                 // Tag Statistics
-                VStack(spacing: 16) {
-                    StatRow(title: "Total Items", value: "\(tag.totalItemCount)")
-                    StatRow(title: "Tasks", value: "\(tag.tasks.count)")
-                    StatRow(title: "Habits", value: "\(tag.habits.count)")
+                HStack {
+                    Text("Total Items")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("\(tag.totalItemCount)")
+                        .font(.body.weight(.medium))
+                        .foregroundColor(.primary)
                 }
                 .padding()
                 .background(Color(UIColor.systemBackground), in: RoundedRectangle(cornerRadius: 12))

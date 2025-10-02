@@ -15,6 +15,7 @@ struct TagEditView: View {
     let tag: Tag
 
     @State private var tagName: String = ""
+    @State private var tagDescription: String = ""
     @State private var selectedColor: String = ""
     @State private var selectedSymbol: String = ""
     @State private var showingError = false
@@ -23,11 +24,16 @@ struct TagEditView: View {
 
     var isFormValid: Bool {
         !tagName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        tagName.count <= DesignSystem.inputValidation.CharacterLimits.tagName
+        tagName.count <= DesignSystem.inputValidation.CharacterLimits.tagName &&
+        tagDescription.count <= DesignSystem.inputValidation.CharacterLimits.description
     }
 
     var tagNameCharacterCount: Int {
         tagName.count
+    }
+
+    var tagDescriptionCharacterCount: Int {
+        tagDescription.count
     }
 
     private var tagNameCountColor: Color {
@@ -37,9 +43,18 @@ struct TagEditView: View {
         )
     }
 
+    private var tagDescriptionCountColor: Color {
+        return DesignSystem.inputValidation.characterCountColorExact(
+            currentCount: tagDescriptionCharacterCount,
+            maxLength: DesignSystem.inputValidation.CharacterLimits.description
+        )
+    }
+
     var hasChanges: Bool {
         let trimmedName = tagName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = tagDescription.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedName != tag.name ||
+               trimmedDescription != tag.descriptionText ||
                selectedColor != tag.colorName ||
                selectedSymbol != tag.sfSymbolName
     }
@@ -72,6 +87,29 @@ struct TagEditView: View {
                             Text("\(tagNameCharacterCount)/\(DesignSystem.inputValidation.CharacterLimits.tagName)")
                                 .font(.caption2)
                                 .foregroundColor(tagNameCountColor)
+                        }
+                    }
+                }
+
+                Section("Description (Optional)") {
+                    VStack(alignment: .leading, spacing: 4) {
+                        TextField("Add a description...", text: $tagDescription, axis: .vertical)
+                            .lineLimit(3...5)
+                            .textFieldStyle(.plain)
+                            .onChange(of: tagDescription) { _, newValue in
+                                DesignSystem.inputValidation.enforceCharacterLimit(
+                                    &tagDescription,
+                                    newValue: newValue,
+                                    maxLength: DesignSystem.inputValidation.CharacterLimits.description
+                                )
+                            }
+                            .accessibilityLabel("Tag description field")
+
+                        HStack {
+                            Spacer()
+                            Text("\(tagDescriptionCharacterCount)/\(DesignSystem.inputValidation.CharacterLimits.description)")
+                                .font(.caption2)
+                                .foregroundColor(tagDescriptionCountColor)
                         }
                     }
                 }
@@ -169,6 +207,7 @@ struct TagEditView: View {
             }
             .onAppear {
                 tagName = tag.name
+                tagDescription = tag.descriptionText
                 selectedColor = tag.colorName
                 selectedSymbol = tag.sfSymbolName
             }
@@ -177,6 +216,7 @@ struct TagEditView: View {
 
     private func saveChanges() {
         let trimmedName = tagName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = tagDescription.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedName.isEmpty else {
             showError("Tag name cannot be empty")
@@ -193,7 +233,8 @@ struct TagEditView: View {
             tag,
             name: trimmedName != tag.name ? trimmedName : nil,
             sfSymbolName: selectedSymbol != tag.sfSymbolName ? selectedSymbol : nil,
-            colorName: selectedColor != tag.colorName ? selectedColor : nil
+            colorName: selectedColor != tag.colorName ? selectedColor : nil,
+            tagDescription: trimmedDescription != tag.tagDescription ? trimmedDescription : nil
         )
 
         if success {

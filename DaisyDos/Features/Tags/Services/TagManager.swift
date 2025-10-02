@@ -47,7 +47,7 @@ class TagManager {
 
     // MARK: - CRUD Operations
 
-    func createTag(name: String, sfSymbolName: String = "tag", colorName: String = "blue") -> Tag? {
+    func createTag(name: String, sfSymbolName: String = "tag", colorName: String = "blue", tagDescription: String = "") -> Tag? {
         // Check if we can create a new tag (system limit)
         guard canCreateNewTag else {
             print("Cannot create tag: System limit of 30 tags reached")
@@ -67,7 +67,7 @@ class TagManager {
             return nil
         }
 
-        let tag = Tag(name: name, sfSymbolName: sfSymbolName, colorName: colorName)
+        let tag = Tag(name: name, sfSymbolName: sfSymbolName, colorName: colorName, tagDescription: tagDescription)
         modelContext.insert(tag)
 
         do {
@@ -79,7 +79,7 @@ class TagManager {
         }
     }
 
-    func updateTag(_ tag: Tag, name: String? = nil, sfSymbolName: String? = nil, colorName: String? = nil) -> Bool {
+    func updateTag(_ tag: Tag, name: String? = nil, sfSymbolName: String? = nil, colorName: String? = nil, tagDescription: String? = nil) -> Bool {
         // If updating name, check for duplicates
         if let newName = name, newName != tag.name {
             // Check for duplicates manually for now
@@ -98,6 +98,10 @@ class TagManager {
 
         if let colorName = colorName {
             tag.colorName = colorName
+        }
+
+        if let tagDescription = tagDescription {
+            tag.tagDescription = tagDescription.isEmpty ? nil : tagDescription
         }
 
         do {

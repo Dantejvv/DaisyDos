@@ -13,6 +13,7 @@ struct TagCreationView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var tagName = ""
+    @State private var tagDescription = ""
     @State private var selectedColor: String = "blue"
     @State private var selectedSymbol: String = "tag"
     @State private var showingError = false
@@ -20,17 +21,29 @@ struct TagCreationView: View {
 
     var isFormValid: Bool {
         !tagName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        tagName.count <= DesignSystem.inputValidation.CharacterLimits.tagName
+        tagName.count <= DesignSystem.inputValidation.CharacterLimits.tagName &&
+        tagDescription.count <= DesignSystem.inputValidation.CharacterLimits.description
     }
 
     var tagNameCharacterCount: Int {
         tagName.count
     }
 
+    var tagDescriptionCharacterCount: Int {
+        tagDescription.count
+    }
+
     private var tagNameCountColor: Color {
         return DesignSystem.inputValidation.characterCountColorExact(
             currentCount: tagNameCharacterCount,
             maxLength: DesignSystem.inputValidation.CharacterLimits.tagName
+        )
+    }
+
+    private var tagDescriptionCountColor: Color {
+        return DesignSystem.inputValidation.characterCountColorExact(
+            currentCount: tagDescriptionCharacterCount,
+            maxLength: DesignSystem.inputValidation.CharacterLimits.description
         )
     }
 
@@ -66,6 +79,29 @@ struct TagCreationView: View {
                             Text("\(tagNameCharacterCount)/\(DesignSystem.inputValidation.CharacterLimits.tagName)")
                                 .font(.caption2)
                                 .foregroundColor(tagNameCountColor)
+                        }
+                    }
+                }
+
+                Section("Description (Optional)") {
+                    VStack(alignment: .leading, spacing: 4) {
+                        TextField("Add a description...", text: $tagDescription, axis: .vertical)
+                            .lineLimit(3...5)
+                            .textFieldStyle(.plain)
+                            .onChange(of: tagDescription) { _, newValue in
+                                DesignSystem.inputValidation.enforceCharacterLimit(
+                                    &tagDescription,
+                                    newValue: newValue,
+                                    maxLength: DesignSystem.inputValidation.CharacterLimits.description
+                                )
+                            }
+                            .accessibilityLabel("Tag description field")
+
+                        HStack {
+                            Spacer()
+                            Text("\(tagDescriptionCharacterCount)/\(DesignSystem.inputValidation.CharacterLimits.description)")
+                                .font(.caption2)
+                                .foregroundColor(tagDescriptionCountColor)
                         }
                     }
                 }
@@ -127,6 +163,7 @@ struct TagCreationView: View {
 
     private func createTag() {
         let trimmedName = tagName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = tagDescription.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedName.isEmpty else {
             showError("Tag name cannot be empty")
@@ -146,7 +183,8 @@ struct TagCreationView: View {
         if let _ = tagManager.createTag(
             name: trimmedName,
             sfSymbolName: selectedSymbol,
-            colorName: selectedColor
+            colorName: selectedColor,
+            tagDescription: trimmedDescription
         ) {
             dismiss()
         } else {

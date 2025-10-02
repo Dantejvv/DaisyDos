@@ -26,24 +26,13 @@ struct TagsView: View {
         NavigationStack {
             VStack {
                 // Header stats
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("Total Tags")
-                            .font(.headline)
-                        Text("\(allTags.count) of 30")
-                            .font(.title2.bold())
-                    }
-
-                    Spacer()
-
-                    VStack(alignment: .trailing) {
-                        Text("Usage")
-                            .font(.headline)
-                        Text("Track usage")
-                            .font(.title2.bold())
-                            .foregroundColor(.daisyTag)
-                    }
+                VStack(alignment: .leading) {
+                    Text("Total Tags")
+                        .font(.headline)
+                    Text("\(allTags.count) of 30")
+                        .font(.title2.bold())
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
                 .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
                 .padding(.horizontal)
@@ -193,8 +182,8 @@ struct TagsView: View {
         undoTimer?.invalidate()
         undoTimer = nil
 
-        // Recreate the tag
-        if let _ = tagManager.createTag(name: tag.name, sfSymbolName: tag.sfSymbolName, colorName: tag.colorName) {
+        // Recreate the tag with description
+        if let _ = tagManager.createTag(name: tag.name, sfSymbolName: tag.sfSymbolName, colorName: tag.colorName, tagDescription: tag.descriptionText) {
             withAnimation {
                 showingUndoToast = false
                 deletedTag = nil

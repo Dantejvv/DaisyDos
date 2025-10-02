@@ -124,10 +124,8 @@ struct TaskRowView: View {
                 }
 
                 // Priority indicator
-                if task.priority != .medium {
-                    task.priority.indicatorView()
-                        .font(.caption2)
-                }
+                task.priority.indicatorView()
+                    .font(.caption2)
             }
         }
         .padding(.horizontal, 16)

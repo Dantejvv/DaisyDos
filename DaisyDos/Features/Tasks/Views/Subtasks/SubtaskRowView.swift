@@ -95,10 +95,8 @@ struct SubtaskRowView: View {
                         Spacer()
 
                         // Priority indicator
-                        if subtask.priority != .medium {
-                            subtask.priority.indicatorView()
-                                .font(.caption)
-                        }
+                        subtask.priority.indicatorView()
+                            .font(.caption)
                     }
 
                     // Subtask metadata

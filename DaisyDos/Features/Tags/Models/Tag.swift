@@ -15,6 +15,7 @@ class Tag: Identifiable {
     @Attribute(.unique) var name: String
     var sfSymbolName: String
     var colorName: String
+    var tagDescription: String?
     var createdDate: Date
 
     @Relationship(deleteRule: .nullify)
@@ -23,12 +24,18 @@ class Tag: Identifiable {
     @Relationship(deleteRule: .nullify)
     var habits: [Habit] = []
 
-    init(name: String, sfSymbolName: String = "tag", colorName: String = "blue") {
+    init(name: String, sfSymbolName: String = "tag", colorName: String = "blue", tagDescription: String = "") {
         self.id = UUID()
         self.name = name
         self.sfSymbolName = sfSymbolName
         self.colorName = colorName
+        self.tagDescription = tagDescription.isEmpty ? nil : tagDescription
         self.createdDate = Date()
+    }
+
+    // Convenience property for non-optional access
+    var descriptionText: String {
+        tagDescription ?? ""
     }
 
     var color: Color {
