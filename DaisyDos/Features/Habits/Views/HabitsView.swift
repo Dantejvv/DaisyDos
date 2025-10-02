@@ -621,7 +621,8 @@ struct HabitsView: View {
             },
             onTagAssignment: {
                 habitToAssignTags = habit
-            }
+            },
+            displayMode: .compact
         )
     }
 

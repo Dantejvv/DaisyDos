@@ -78,7 +78,7 @@ struct HabitRowView: View {
             completionToggle
 
             // Content
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(habit.title)
                     .font(.body)
                     .strikethrough(habit.isCompletedToday)
@@ -89,9 +89,31 @@ struct HabitRowView: View {
                     )
                     .lineLimit(1)
 
-                if showsStreak {
-                    streakIndicator
-                        .font(.caption2)
+                HStack(spacing: 4) {
+                    // Tags (icon-only)
+                    if !habit.tags.isEmpty {
+                        HStack(spacing: 4) {
+                            ForEach(habit.tags.prefix(3), id: \.id) { tag in
+                                IconOnlyTagChipView(tag: tag)
+                            }
+                            if habit.tags.count > 3 {
+                                Text("+\(habit.tags.count - 3)")
+                                    .font(.caption2)
+                                    .foregroundColor(.daisyTextSecondary)
+                            }
+                        }
+                    }
+
+                    // Streak indicator
+                    if showsStreak {
+                        if !habit.tags.isEmpty {
+                            Text("•")
+                                .font(.caption2)
+                                .foregroundColor(.daisyTextSecondary)
+                        }
+                        streakIndicator
+                            .font(.caption2)
+                    }
                 }
             }
 

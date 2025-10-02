@@ -315,7 +315,7 @@ struct TasksView: View {
                     }
                 },
                 onTagAssignment: nil, // Removed tag button from TasksView
-                displayMode: .detailed,
+                displayMode: .compact,
                 showsTagButton: false // Disable tag button
             )
             .contentShape(Rectangle())

@@ -75,17 +75,39 @@ struct TaskRowView: View {
             completionToggle
 
             // Content
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(task.title)
                     .font(.body)
                     .strikethrough(task.isCompleted)
                     .foregroundColor(task.isCompleted ? .daisyTextSecondary : .daisyText)
                     .lineLimit(1)
 
-                if let dueDate = task.dueDate {
-                    Text(dueDate.formatted(date: .abbreviated, time: .omitted))
-                        .font(.caption2)
-                        .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyTextSecondary)
+                HStack(spacing: 4) {
+                    // Tags (icon-only)
+                    if !task.tags.isEmpty {
+                        HStack(spacing: 4) {
+                            ForEach(task.tags.prefix(3), id: \.id) { tag in
+                                IconOnlyTagChipView(tag: tag)
+                            }
+                            if task.tags.count > 3 {
+                                Text("+\(task.tags.count - 3)")
+                                    .font(.caption2)
+                                    .foregroundColor(.daisyTextSecondary)
+                            }
+                        }
+                    }
+
+                    // Due date
+                    if let dueDate = task.dueDate {
+                        if !task.tags.isEmpty {
+                            Text("•")
+                                .font(.caption2)
+                                .foregroundColor(.daisyTextSecondary)
+                        }
+                        Text(dueDate.formatted(date: .abbreviated, time: .omitted))
+                            .font(.caption2)
+                            .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyTextSecondary)
+                    }
                 }
             }
 
