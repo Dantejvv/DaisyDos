@@ -320,16 +320,16 @@ struct DaisyDosTests {
     @MainActor
     func testSwiftDataSchemaIntegration() async throws {
         // Test schema definition
-        let schemaModels = DaisyDosSchemaV1.models
-        #expect(schemaModels.count == 3) // Task, Habit, Tag
+        let schemaModels = DaisyDosSchemaV3.models
+        #expect(schemaModels.count == 7) // Task, Habit, Tag, TaskAttachment, HabitCompletion, HabitStreak, HabitSkip
 
         // Test migration plan
         let migrationSchemas = DaisyDosMigrationPlan.schemas
-        #expect(migrationSchemas.count == 1) // V1 only
-        #expect(DaisyDosMigrationPlan.stages.isEmpty) // No migrations for V1
+        #expect(migrationSchemas.count == 1) // V3 only
+        #expect(DaisyDosMigrationPlan.stages.isEmpty) // No migrations - V3 is baseline
 
         // Test container creation with schema
-        let schema = Schema(versionedSchema: DaisyDosSchemaV1.self)
+        let schema = Schema(versionedSchema: DaisyDosSchemaV3.self)
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(
             for: schema,

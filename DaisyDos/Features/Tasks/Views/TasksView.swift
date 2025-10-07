@@ -22,8 +22,9 @@ struct TasksView: View {
     @State private var showingAddTask = false
     @State private var taskToEdit: Task?
     @State private var taskToDelete: Task?
-    @State private var taskToDetail: Task?
     @State private var showingDeleteConfirmation = false
+    @State private var showingBulkDeleteConfirmation = false
+    @State private var taskToDetail: Task?
     @State private var isMultiSelectMode = false
     @State private var selectedTasks: Set<Task.ID> = []
     @State private var sectionType: TaskSectionType = .none
@@ -230,10 +231,37 @@ struct TasksView: View {
             ) { task in
                 Button("Delete", role: .destructive) {
                     _ = taskManager.deleteTaskSafely(task)
+                    taskToDelete = nil
                 }
-                Button("Cancel", role: .cancel) { }
+                Button("Cancel", role: .cancel) {
+                    taskToDelete = nil
+                }
             } message: { task in
                 Text("Are you sure you want to delete '\(task.title)'?")
+            }
+            .onChange(of: showingDeleteConfirmation) { _, isShowing in
+                // Clear taskToDelete when confirmation is dismissed without deletion
+                if !isShowing && taskToDelete != nil {
+                    // Check if the task still exists (wasn't deleted)
+                    if rootTasks.contains(where: { $0.id == taskToDelete?.id }) {
+                        var transaction = Transaction()
+                        transaction.disablesAnimations = true
+                        withTransaction(transaction) {
+                            taskToDelete = nil
+                        }
+                    }
+                }
+            }
+            .alert(
+                "Delete \(selectedTasks.count) Tasks",
+                isPresented: $showingBulkDeleteConfirmation
+            ) {
+                Button("Delete \(selectedTasks.count) Tasks", role: .destructive) {
+                    bulkDelete()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Are you sure you want to delete \(selectedTasks.count) selected tasks? This action cannot be undone.")
             }
             .onDisappear {
                 // Deactivate multi-select mode when navigating away
@@ -304,14 +332,27 @@ struct TasksView: View {
             },
             onDelete: {
                 if !isMultiSelectMode {
-                    taskToDelete = task
-                    showingDeleteConfirmation = true
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        taskToDelete = task
+                    }
+                    // Delay showing confirmation to let overlay render first
+                    DispatchQueue.main.async {
+                        showingDeleteConfirmation = true
+                    }
                 }
             },
             onTagAssignment: nil, // Removed tag button from TasksView
             displayMode: .compact,
             showsTagButton: false // Disable tag button
         )
+        .overlay {
+            if taskToDelete?.id == task.id {
+                Color.daisyBackground
+            }
+        }
+        .animation(.none, value: taskToDelete)
         .listRowBackground(
             // Selected row background and border accent
             Group {
@@ -338,11 +379,18 @@ struct TasksView: View {
                 taskToDetail = task
             }
         }
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             if !isMultiSelectMode {
                 Button(role: .destructive, action: {
-                    taskToDelete = task
-                    showingDeleteConfirmation = true
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        taskToDelete = task
+                    }
+                    // Delay showing confirmation to let overlay render first
+                    DispatchQueue.main.async {
+                        showingDeleteConfirmation = true
+                    }
                 }) {
                     Label("Delete", systemImage: "trash")
                 }
@@ -392,7 +440,7 @@ struct TasksView: View {
 
                 // Bulk delete
                 Button(action: {
-                    bulkDelete()
+                    showingBulkDeleteConfirmation = true
                 }) {
                     Label("Delete", systemImage: "trash")
                         .labelStyle(.iconOnly)

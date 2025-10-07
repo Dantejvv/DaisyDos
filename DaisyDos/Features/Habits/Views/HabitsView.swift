@@ -17,6 +17,7 @@ struct HabitsView: View {
     @State private var showingAddHabit = false
     @State private var habitToDelete: Habit?
     @State private var showingDeleteConfirmation = false
+    @State private var showingBulkDeleteConfirmation = false
     @State private var habitToSkip: Habit?
     @State private var habitToEdit: Habit?
     @State private var habitToAssignTags: Habit?
@@ -237,10 +238,37 @@ struct HabitsView: View {
             ) { habit in
                 Button("Delete", role: .destructive) {
                     habitManager.deleteHabit(habit)
+                    habitToDelete = nil
                 }
-                Button("Cancel", role: .cancel) { }
+                Button("Cancel", role: .cancel) {
+                    habitToDelete = nil
+                }
             } message: { habit in
                 Text("Are you sure you want to delete '\(habit.title)'?")
+            }
+            .onChange(of: showingDeleteConfirmation) { _, isShowing in
+                // Clear habitToDelete when confirmation is dismissed without deletion
+                if !isShowing && habitToDelete != nil {
+                    // Check if the habit still exists (wasn't deleted)
+                    if allHabits.contains(where: { $0.id == habitToDelete?.id }) {
+                        var transaction = Transaction()
+                        transaction.disablesAnimations = true
+                        withTransaction(transaction) {
+                            habitToDelete = nil
+                        }
+                    }
+                }
+            }
+            .alert(
+                "Delete \(selectedHabits.count) Habits",
+                isPresented: $showingBulkDeleteConfirmation
+            ) {
+                Button("Delete \(selectedHabits.count) Habits", role: .destructive) {
+                    bulkDelete()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Are you sure you want to delete \(selectedHabits.count) selected habits? This action cannot be undone.")
             }
             .onDisappear {
                 // Deactivate multi-select mode when navigating away
@@ -544,6 +572,12 @@ struct HabitsView: View {
     private func habitRows(for habits: [Habit]) -> some View {
         ForEach(habits) { habit in
             habitRowView(for: habit)
+                .overlay {
+                    if habitToDelete?.id == habit.id {
+                        Color.daisyBackground
+                    }
+                }
+                .animation(.none, value: habitToDelete)
                 .listRowBackground(
                     // Selected row background and border accent
                     Group {
@@ -570,11 +604,18 @@ struct HabitsView: View {
                         habitToDetail = habit
                     }
                 }
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     if !isMultiSelectMode {
                         Button(role: .destructive, action: {
-                            habitToDelete = habit
-                            showingDeleteConfirmation = true
+                            var transaction = Transaction()
+                            transaction.disablesAnimations = true
+                            withTransaction(transaction) {
+                                habitToDelete = habit
+                            }
+                            // Delay showing confirmation to let overlay render first
+                            DispatchQueue.main.async {
+                                showingDeleteConfirmation = true
+                            }
                         }) {
                             Label("Delete", systemImage: "trash")
                         }
@@ -611,8 +652,15 @@ struct HabitsView: View {
                 habitToEdit = habit
             },
             onDelete: {
-                habitToDelete = habit
-                showingDeleteConfirmation = true
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    habitToDelete = habit
+                }
+                // Delay showing confirmation to let overlay render first
+                DispatchQueue.main.async {
+                    showingDeleteConfirmation = true
+                }
             },
             onSkip: {
                 habitToSkip = habit
@@ -658,7 +706,7 @@ struct HabitsView: View {
 
                 // Bulk delete
                 Button(action: {
-                    bulkDelete()
+                    showingBulkDeleteConfirmation = true
                 }) {
                     Label("Delete", systemImage: "trash")
                         .labelStyle(.iconOnly)
