@@ -428,7 +428,7 @@ struct HabitDetailView: View {
     // MARK: - Helper Methods
 
     private func deleteHabit() {
-        habitManager.deleteHabit(habit)
+        _ = habitManager.deleteHabit(habit)
         dismiss()
     }
 }

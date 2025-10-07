@@ -158,7 +158,7 @@ struct TasksView: View {
                                 }
                             } label: {
                                 Image(systemName: sortOption.systemImage)
-                                    .foregroundColor(.daisyTask)
+                                    .foregroundColor(.daisyToolbar)
                             }
 
                             // Section picker button
@@ -182,7 +182,7 @@ struct TasksView: View {
                                 }
                             } label: {
                                 Image(systemName: sectionType.sfSymbol)
-                                    .foregroundColor(.daisyTask)
+                                    .foregroundColor(.daisyToolbar)
                             }
                         }
 

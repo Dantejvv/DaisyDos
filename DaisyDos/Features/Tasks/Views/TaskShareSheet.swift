@@ -99,9 +99,11 @@ struct TaskShareSheet: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Image(systemName: task.priority.sfSymbol)
-                        .font(.title2)
-                        .foregroundColor(task.priority.color)
+                    if let symbol = task.priority.sfSymbol {
+                        Image(systemName: symbol)
+                            .font(.title2)
+                            .foregroundColor(task.priority.color)
+                    }
 
                     Text(task.priority.displayName)
                         .font(.caption)
@@ -288,7 +290,7 @@ struct TaskShareSheet: View {
                 item: TaskShareData(task: task, includeAttachments: includeAttachments),
                 preview: SharePreview(
                     task.title,
-                    image: Image(systemName: task.priority.sfSymbol)
+                    image: Image(systemName: task.priority.sfSymbol ?? "doc.text")
                 )
             ) {
                 HStack {

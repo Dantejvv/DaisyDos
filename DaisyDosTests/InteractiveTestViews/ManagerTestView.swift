@@ -206,7 +206,7 @@ struct ManagerTestView: View {
                                     }
                                     Spacer()
                                     Button("Delete") {
-                                        habitManager.deleteHabit(habit)
+                                        _ = habitManager.deleteHabit(habit)
                                     }
                                     .foregroundColor(.red)
                                     .font(.caption)
@@ -371,8 +371,10 @@ struct ManagerTestView: View {
         }
 
         // Create habits
-        let habit1 = habitManager.createHabit(title: "Test Manager Pattern")
-        let habit2 = habitManager.createHabit(title: "Validate Computed Properties")
+        guard case .success(let habit1) = habitManager.createHabit(title: "Test Manager Pattern"),
+              case .success(let habit2) = habitManager.createHabit(title: "Validate Computed Properties") else {
+            return
+        }
 
         // Add tags to habits
         if let healthTag = healthTag {
@@ -392,7 +394,7 @@ struct ManagerTestView: View {
         taskManager.deleteTasks(taskManager.allTasks)
 
         // Delete all habits
-        habitManager.deleteHabits(habitManager.allHabits)
+        _ = habitManager.deleteHabits(habitManager.allHabits)
 
         // Force delete all tags
         for tag in tagManager.allTags {

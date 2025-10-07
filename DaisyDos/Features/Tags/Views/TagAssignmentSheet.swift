@@ -92,7 +92,7 @@ extension TagAssignmentSheet {
 
     // Create some sample tags
     let tag1 = tagManager.createTag(name: "Work", sfSymbolName: "briefcase", colorName: "blue")!
-    let tag2 = tagManager.createTag(name: "Personal", sfSymbolName: "house", colorName: "green")!
+    _ = tagManager.createTag(name: "Personal", sfSymbolName: "house", colorName: "green")
 
     selectedTags.append(tag1)
 

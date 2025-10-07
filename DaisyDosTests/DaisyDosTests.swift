@@ -49,7 +49,9 @@ struct DaisyDosTests {
         )
         let habitManager = HabitManager(modelContext: container.mainContext)
 
-        let habit = habitManager.createHabit(title: "Test Habit")
+        guard case .success(let habit) = habitManager.createHabit(title: "Test Habit") else {
+            throw DaisyDosError.persistenceFailed("Failed to create habit")
+        }
         #expect(habit.currentStreak == 0)
         #expect(habit.longestStreak == 0)
         #expect(!habit.isCompletedToday)

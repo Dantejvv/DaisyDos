@@ -11,6 +11,7 @@ import SwiftUI
 /// Priority levels for habits with visual indicators and accessibility support
 /// Adapted from task priorities but with habit-specific semantics and symbols
 enum HabitPriority: String, CaseIterable, Codable, Identifiable {
+    case none = "None"
     case low = "Low"
     case medium = "Medium"
     case high = "High"
@@ -22,6 +23,8 @@ enum HabitPriority: String, CaseIterable, Codable, Identifiable {
     /// Color representation for each priority level
     var color: Color {
         switch self {
+        case .none:
+            return Colors.Primary.text.opacity(0.3)
         case .low:
             return Colors.Secondary.blue
         case .medium:
@@ -31,9 +34,11 @@ enum HabitPriority: String, CaseIterable, Codable, Identifiable {
         }
     }
 
-    /// SF Symbol for each priority level (habit-specific symbols)
-    var sfSymbol: String {
+    /// SF Symbol for each priority level (none has no symbol, habit-specific symbols for others)
+    var sfSymbol: String? {
         switch self {
+        case .none:
+            return nil
         case .low:
             return "moon"
         case .medium:
@@ -43,9 +48,11 @@ enum HabitPriority: String, CaseIterable, Codable, Identifiable {
         }
     }
 
-    /// Filled SF Symbol variant for selected states
-    var sfSymbolFilled: String {
+    /// Filled SF Symbol variant for selected states (none has no symbol)
+    var sfSymbolFilled: String? {
         switch self {
+        case .none:
+            return nil
         case .low:
             return "moon.fill"
         case .medium:
@@ -60,6 +67,8 @@ enum HabitPriority: String, CaseIterable, Codable, Identifiable {
     /// User-friendly display name
     var displayName: String {
         switch self {
+        case .none:
+            return "No Priority"
         case .low:
             return "Aspirational Habit"
         case .medium:
@@ -72,6 +81,8 @@ enum HabitPriority: String, CaseIterable, Codable, Identifiable {
     /// Short description for tooltips and hints
     var description: String {
         switch self {
+        case .none:
+            return "No priority set - general habit"
         case .low:
             return "Aspirational habit - nice to have, bonus activity"
         case .medium:
@@ -84,6 +95,8 @@ enum HabitPriority: String, CaseIterable, Codable, Identifiable {
     /// Short name for compact display
     var shortName: String {
         switch self {
+        case .none:
+            return "None"
         case .low:
             return "Aspirational"
         case .medium:
@@ -96,6 +109,8 @@ enum HabitPriority: String, CaseIterable, Codable, Identifiable {
     /// Symbol as text for segmented control
     var symbolText: String {
         switch self {
+        case .none:
+            return "—"  // Em dash
         case .low:
             return "🌙"  // Moon emoji
         case .medium:
@@ -110,6 +125,8 @@ enum HabitPriority: String, CaseIterable, Codable, Identifiable {
     /// Numeric value for sorting (higher number = higher priority)
     var sortOrder: Int {
         switch self {
+        case .none:
+            return 0
         case .low:
             return 1
         case .medium:
@@ -121,12 +138,12 @@ enum HabitPriority: String, CaseIterable, Codable, Identifiable {
 
     /// All priorities sorted from highest to lowest
     static var sortedByPriority: [HabitPriority] {
-        return [.high, .medium, .low]
+        return [.high, .medium, .low, .none]
     }
 
     /// All priorities sorted from lowest to highest
     static var sortedByPriorityAscending: [HabitPriority] {
-        return [.low, .medium, .high]
+        return [.none, .low, .medium, .high]
     }
 
     // MARK: - Accessibility
@@ -134,6 +151,8 @@ enum HabitPriority: String, CaseIterable, Codable, Identifiable {
     /// VoiceOver label for accessibility
     var accessibilityLabel: String {
         switch self {
+        case .none:
+            return "No priority habit"
         case .low:
             return "Aspirational habit"
         case .medium:
@@ -146,6 +165,8 @@ enum HabitPriority: String, CaseIterable, Codable, Identifiable {
     /// VoiceOver hint for accessibility
     var accessibilityHint: String {
         switch self {
+        case .none:
+            return "This habit has no priority set"
         case .low:
             return "This is an aspirational habit - nice to have when you have extra time"
         case .medium:
@@ -158,7 +179,7 @@ enum HabitPriority: String, CaseIterable, Codable, Identifiable {
     // MARK: - Default Values
 
     /// Default priority for new habits
-    static let `default`: HabitPriority = .medium
+    static let `default`: HabitPriority = .none
 }
 
 // MARK: - Comparable Conformance
@@ -173,21 +194,25 @@ extension HabitPriority: Comparable {
 
 extension HabitPriority {
 
-    /// Creates a priority indicator view with icon and color
+    /// Creates a priority indicator view with icon and color (none priority shows nothing)
     @ViewBuilder
     func indicatorView(filled: Bool = false) -> some View {
-        Image(systemName: filled ? sfSymbolFilled : sfSymbol)
-            .foregroundColor(color)
-            .accessibilityLabel(accessibilityLabel)
-            .accessibilityHint(accessibilityHint)
+        if let symbol = filled ? sfSymbolFilled : sfSymbol {
+            Image(systemName: symbol)
+                .foregroundColor(color)
+                .accessibilityLabel(accessibilityLabel)
+                .accessibilityHint(accessibilityHint)
+        }
     }
 
     /// Creates a priority badge with background color
     @ViewBuilder
     func badgeView() -> some View {
         HStack(spacing: Spacing.extraSmall) {
-            indicatorView(filled: true)
-                .font(.caption2)
+            if sfSymbolFilled != nil {
+                indicatorView(filled: true)
+                    .font(.caption2)
+            }
 
             Text(rawValue)
                 .font(.daisyCaption)

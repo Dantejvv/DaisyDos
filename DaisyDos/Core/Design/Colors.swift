@@ -227,6 +227,12 @@ struct Colors {
 
         /// Today view accent color
         static let todayAccent = Accent.warning
+
+        // MARK: - UI Chrome Colors
+
+        /// Toolbar and navigation chrome accent color
+        /// Used for sort, filter, and other toolbar controls
+        static let toolbarAccent = Secondary.blue
     }
 
     // MARK: - Adaptive Colors
@@ -372,6 +378,9 @@ extension Color {
 
     /// Tag accent color
     static let daisyTag = Colors.Semantic.tagAccent
+
+    /// Toolbar and chrome accent color
+    static let daisyToolbar = Colors.Semantic.toolbarAccent
 }
 
 // MARK: - Contrast Validation

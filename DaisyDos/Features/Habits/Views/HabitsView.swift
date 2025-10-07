@@ -132,7 +132,7 @@ struct HabitsView: View {
                                 }
                             } label: {
                                 Image(systemName: sortOption.systemImage)
-                                    .foregroundColor(.daisyHabit)
+                                    .foregroundColor(.daisyToolbar)
                             }
 
                             // Section picker button
@@ -154,7 +154,7 @@ struct HabitsView: View {
                                 }
                             } label: {
                                 Image(systemName: sectionOption.systemImage)
-                                    .foregroundColor(.daisyHabit)
+                                    .foregroundColor(.daisyToolbar)
                             }
                         }
 
@@ -237,7 +237,7 @@ struct HabitsView: View {
                 presenting: habitToDelete
             ) { habit in
                 Button("Delete", role: .destructive) {
-                    habitManager.deleteHabit(habit)
+                    _ = habitManager.deleteHabit(habit)
                     habitToDelete = nil
                 }
                 Button("Cancel", role: .cancel) {
@@ -752,9 +752,7 @@ struct HabitsView: View {
 
     private func bulkDelete() {
         let habitsToDelete = allHabits.filter { selectedHabits.contains($0.id) }
-        for habit in habitsToDelete {
-            habitManager.deleteHabit(habit)
-        }
+        _ = habitManager.deleteHabits(habitsToDelete)
         selectedHabits.removeAll()
         isMultiSelectMode = false
     }

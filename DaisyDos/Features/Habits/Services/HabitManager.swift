@@ -65,31 +65,49 @@ class HabitManager {
 
     // MARK: - CRUD Operations
 
-    func createHabit(title: String, habitDescription: String = "") -> Habit {
-        let habit = Habit(title: title, habitDescription: habitDescription)
-        modelContext.insert(habit)
+    func createHabit(title: String, habitDescription: String = "") -> Result<Habit, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "create habit",
+            entityType: "habit"
+        ) {
+            guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw DaisyDosError.validationFailed("title")
+            }
 
-        do {
+            let habit = Habit(
+                title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                habitDescription: habitDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+            modelContext.insert(habit)
             try modelContext.save()
-        } catch {
-            lastError = ErrorTransformer.transformHabitError(error, operation: "create habit")
+            return habit
         }
-
-        return habit
     }
 
-    func updateHabit(_ habit: Habit, title: String? = nil, habitDescription: String? = nil) {
-        if let title = title {
-            habit.title = title
-        }
-        if let habitDescription = habitDescription {
-            habit.habitDescription = habitDescription
-        }
+    func updateHabit(_ habit: Habit, title: String? = nil, habitDescription: String? = nil) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "update habit",
+            entityType: "habit"
+        ) {
+            var hasChanges = false
 
-        do {
-            try modelContext.save()
-        } catch {
-            lastError = ErrorTransformer.transformHabitError(error, operation: "update habit")
+            if let title = title {
+                let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmedTitle.isEmpty else {
+                    throw DaisyDosError.validationFailed("title")
+                }
+                habit.title = trimmedTitle
+                hasChanges = true
+            }
+
+            if let habitDescription = habitDescription {
+                habit.habitDescription = habitDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                hasChanges = true
+            }
+
+            if hasChanges {
+                try modelContext.save()
+            }
         }
     }
 
@@ -162,60 +180,59 @@ class HabitManager {
         }
     }
 
-    func resetHabitStreak(_ habit: Habit) {
-        habit.resetStreak()
-
-        do {
+    func resetHabitStreak(_ habit: Habit) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "reset habit streak",
+            entityType: "habit"
+        ) {
+            habit.resetStreak()
             try modelContext.save()
-        } catch {
-            print("Failed to reset habit streak: \(error)")
         }
     }
 
-    func deleteHabit(_ habit: Habit) {
-        modelContext.delete(habit)
-
-        do {
-            try modelContext.save()
-        } catch {
-            print("Failed to delete habit: \(error)")
-        }
-    }
-
-    func deleteHabits(_ habits: [Habit]) {
-        for habit in habits {
+    func deleteHabit(_ habit: Habit) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "delete habit",
+            entityType: "habit"
+        ) {
             modelContext.delete(habit)
-        }
-
-        do {
             try modelContext.save()
-        } catch {
-            print("Failed to delete habits: \(error)")
+        }
+    }
+
+    func deleteHabits(_ habits: [Habit]) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "delete habits",
+            entityType: "habits"
+        ) {
+            for habit in habits {
+                modelContext.delete(habit)
+            }
+            try modelContext.save()
         }
     }
 
     // MARK: - Tag Management
 
-    func addTag(_ tag: Tag, to habit: Habit) -> Bool {
-        let success = habit.addTag(tag)
-        if success {
-            do {
-                try modelContext.save()
-            } catch {
-                print("Failed to add tag to habit: \(error)")
-                return false
+    func addTag(_ tag: Tag, to habit: Habit) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "add tag to habit",
+            entityType: "habit"
+        ) {
+            guard habit.addTag(tag) else {
+                throw DaisyDosError.tagLimitExceeded
             }
+            try modelContext.save()
         }
-        return success
     }
 
-    func removeTag(_ tag: Tag, from habit: Habit) {
-        habit.removeTag(tag)
-
-        do {
+    func removeTag(_ tag: Tag, from habit: Habit) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "remove tag from habit",
+            entityType: "habit"
+        ) {
+            habit.removeTag(tag)
             try modelContext.save()
-        } catch {
-            print("Failed to remove tag from habit: \(error)")
         }
     }
 

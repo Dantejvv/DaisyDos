@@ -129,8 +129,18 @@ struct AddTaskView: View {
                                 priority = priorityOption
                             }) {
                                 VStack(spacing: 4) {
-                                    priorityOption.indicatorView()
-                                        .font(.caption)
+                                    // Use fixed height for icon area to ensure consistent button sizes
+                                    Group {
+                                        if priorityOption.sfSymbol != nil {
+                                            priorityOption.indicatorView()
+                                                .font(.caption)
+                                        } else {
+                                            Color.clear
+                                                .frame(width: 1, height: 1)
+                                        }
+                                    }
+                                    .frame(height: 16) // Fixed height for icon area
+
                                     Text(priorityOption.rawValue)
                                         .font(.caption2)
                                 }
