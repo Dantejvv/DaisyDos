@@ -18,6 +18,7 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
     let dayOfMonth: Int?
     let endDate: Date?
     let maxOccurrences: Int?
+    let repeatMode: RepeatMode
     let timeZoneIdentifier: String
 
     // MARK: - Computed Properties
@@ -25,6 +26,40 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
     /// The actual TimeZone object from the stored identifier
     var timeZone: TimeZone {
         TimeZone(identifier: timeZoneIdentifier) ?? TimeZone.current
+    }
+
+    // MARK: - Repeat Mode
+
+    enum RepeatMode: String, Codable, CaseIterable {
+        case fromOriginalDate = "from_original"
+        case fromCompletionDate = "from_completion"
+
+        var displayName: String {
+            switch self {
+            case .fromOriginalDate:
+                return "From original date"
+            case .fromCompletionDate:
+                return "From completion"
+            }
+        }
+
+        var description: String {
+            switch self {
+            case .fromOriginalDate:
+                return "Repeat based on the original scheduled date"
+            case .fromCompletionDate:
+                return "Repeat based on when you complete it"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .fromOriginalDate:
+                return "calendar"
+            case .fromCompletionDate:
+                return "checkmark.circle"
+            }
+        }
     }
 
     // MARK: - Frequency Types
@@ -78,6 +113,7 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         dayOfMonth: Int? = nil,
         endDate: Date? = nil,
         maxOccurrences: Int? = nil,
+        repeatMode: RepeatMode = .fromOriginalDate,
         timeZone: TimeZone = TimeZone.current
     ) {
         self.id = id
@@ -87,6 +123,7 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         self.dayOfMonth = dayOfMonth
         self.endDate = endDate
         self.maxOccurrences = maxOccurrences
+        self.repeatMode = repeatMode
         self.timeZoneIdentifier = timeZone.identifier
     }
 
@@ -298,27 +335,41 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
     // MARK: - Display Properties
 
     var displayDescription: String {
+        let baseDescription: String
         switch frequency {
         case .daily:
-            return interval == 1 ? "Daily" : "Every \(interval) days"
+            baseDescription = interval == 1 ? "Daily" : "Every \(interval) days"
         case .weekly:
             if let daysOfWeek = daysOfWeek, !daysOfWeek.isEmpty {
                 let dayNames = daysOfWeek.sorted().map { Calendar.current.shortWeekdaySymbols[$0 - 1] }
                 let prefix = interval == 1 ? "Weekly on" : "Every \(interval) weeks on"
-                return "\(prefix) \(dayNames.joined(separator: ", "))"
+                baseDescription = "\(prefix) \(dayNames.joined(separator: ", "))"
+            } else {
+                baseDescription = interval == 1 ? "Weekly" : "Every \(interval) weeks"
             }
-            return interval == 1 ? "Weekly" : "Every \(interval) weeks"
         case .monthly:
             if let dayOfMonth = dayOfMonth {
                 let prefix = interval == 1 ? "Monthly on day" : "Every \(interval) months on day"
-                return "\(prefix) \(dayOfMonth)"
+                baseDescription = "\(prefix) \(dayOfMonth)"
+            } else {
+                baseDescription = interval == 1 ? "Monthly" : "Every \(interval) months"
             }
-            return interval == 1 ? "Monthly" : "Every \(interval) months"
         case .yearly:
-            return interval == 1 ? "Yearly" : "Every \(interval) years"
+            baseDescription = interval == 1 ? "Yearly" : "Every \(interval) years"
         case .custom:
-            return "Custom pattern"
+            baseDescription = "Custom pattern"
         }
+
+        // Add repeat mode suffix if fromCompletion
+        if repeatMode == .fromCompletionDate {
+            return "\(baseDescription) after completion"
+        }
+        return baseDescription
+    }
+
+    /// Natural language description for display at top of picker
+    var naturalLanguageDescription: String {
+        return displayDescription
     }
 }
 

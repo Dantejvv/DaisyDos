@@ -22,7 +22,7 @@ struct AddHabitView: View {
     @State private var habitDescription = ""
     @State private var recurrenceRule: RecurrenceRule?
     @State private var selectedTags: [Tag] = []
-    @State private var selectedPriority: HabitPriority = .medium
+    @State private var selectedPriority: HabitPriority = .none
 
     // UI State
     @State private var showingRecurrencePicker = false
@@ -122,6 +122,7 @@ struct AddHabitView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(.daisyHabit)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -129,6 +130,7 @@ struct AddHabitView: View {
                         saveHabit()
                     }
                     .disabled(!isFormValid)
+                    .foregroundColor(.daisyHabit)
                 }
             }
         }
@@ -285,47 +287,51 @@ struct AddHabitView: View {
     @ViewBuilder
     private var tagsSection: some View {
         Section(content: {
-            // Tag Assignment
-            Button(action: {
-                showingTagAssignment = true
-            }) {
-                HStack {
-                    Image(systemName: "tag.fill")
-                        .foregroundColor(.daisyTag)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Tags")
-                            .foregroundColor(.daisyText)
-
-                        if selectedTags.isEmpty {
-                            Text("No tags selected")
-                                .font(.caption)
-                                .foregroundColor(.daisyTextSecondary)
-                        } else {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 6) {
-                                    ForEach(selectedTags, id: \.id) { tag in
-                                        TagChipView(tag: tag)
-                                            .scaleEffect(0.9)
-                                    }
+            if selectedTags.isEmpty {
+                Button("Add Tags") {
+                    showingTagAssignment = true
+                }
+                .foregroundColor(.daisyHabit)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(selectedTags, id: \.id) { tag in
+                            TagChipView(
+                                tag: tag,
+                                isSelected: true,
+                                isRemovable: true,
+                                onRemove: {
+                                    selectedTags.removeAll { $0.id == tag.id }
+                                    validateForm()
                                 }
-                                .padding(.horizontal, 4)
+                            )
+                        }
+
+                        if selectedTags.count < 3 {
+                            Button(action: {
+                                showingTagAssignment = true
+                            }) {
+                                Image(systemName: "plus.circle")
+                                    .font(.title2)
+                                    .foregroundColor(.daisyHabit)
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Add more tags")
                         }
                     }
+                    .padding(.horizontal, 4)
+                }
 
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
+                if selectedTags.count == 3 {
+                    Text("Maximum tags reached (3/3)")
                         .font(.caption)
                         .foregroundColor(.daisyTextSecondary)
                 }
             }
-            .buttonStyle(.plain)
         }, header: {
-            Text("Organization")
+            Text("Tags")
         }, footer: {
-            Text("Organize habits with up to 3 tags for easy filtering and grouping.")
+            Text("Organize with up to 3 tags for easy filtering and grouping.")
         })
     }
 

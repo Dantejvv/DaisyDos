@@ -3,6 +3,7 @@
 //  DaisyDos
 //
 //  Created by Claude Code on 9/29/25.
+//  Redesigned based on iOS patterns from Things 3, Todoist, Apple Calendar
 //
 
 import SwiftUI
@@ -17,6 +18,7 @@ struct RecurrenceRulePickerView: View {
     @State private var interval: Int = 1
     @State private var selectedDaysOfWeek: Set<Int> = []
     @State private var dayOfMonth: Int = 1
+    @State private var repeatMode: RecurrenceRule.RepeatMode = .fromOriginalDate
     @State private var hasEndDate: Bool = false
     @State private var endDate: Date = Calendar.current.date(byAdding: .year, value: 1, to: Date()) ?? Date()
     @State private var hasMaxOccurrences: Bool = false
@@ -37,7 +39,7 @@ struct RecurrenceRulePickerView: View {
             case .daily:
                 return "Every day"
             case .weekdays:
-                return "Monday through Friday"
+                return "Monday to Friday"
             case .weekends:
                 return "Saturday and Sunday"
             case .weekly:
@@ -86,32 +88,35 @@ struct RecurrenceRulePickerView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // MARK: - Header
-                    headerSection
-
-                    // MARK: - Quick Presets
-                    if !isCustomMode {
-                        presetsSection
-
-                        // Custom option
-                        customOptionCard
-                    }
-
-                    // MARK: - Custom Configuration
-                    if isCustomMode {
-                        customConfigurationSection
-                    }
-
-                    // MARK: - Preview
-                    if currentRecurrenceRule != nil {
-                        previewSection
-                    }
+            VStack(spacing: 0) {
+                // MARK: - Natural Language Summary (Always Visible)
+                if let rule = currentRecurrenceRule {
+                    naturalLanguageSummary(for: rule)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
-                .padding()
+
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // MARK: - Quick Presets
+                        if !isCustomMode {
+                            presetsSection
+                            customOptionCard
+                        }
+
+                        // MARK: - Custom Configuration
+                        if isCustomMode {
+                            customConfigurationSection
+                        }
+
+                        // MARK: - Preview
+                        if let rule = currentRecurrenceRule {
+                            previewSection(for: rule)
+                        }
+                    }
+                    .padding()
+                }
             }
-            .navigationTitle("Recurrence")
+            .navigationTitle("Repeat")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -126,6 +131,7 @@ struct RecurrenceRulePickerView: View {
                         dismiss()
                     }
                     .disabled(currentRecurrenceRule == nil)
+                    .fontWeight(.semibold)
                 }
             }
             .onAppear {
@@ -134,27 +140,31 @@ struct RecurrenceRulePickerView: View {
         }
     }
 
-    // MARK: - Header Section
+    // MARK: - Natural Language Summary
 
     @ViewBuilder
-    private var headerSection: some View {
+    private func naturalLanguageSummary(for rule: RecurrenceRule) -> some View {
         VStack(spacing: 8) {
-            Text("Set up a recurrence pattern")
+            Image(systemName: "repeat.circle.fill")
+                .font(.title2)
+                .foregroundColor(.daisyTask)
+
+            Text(rule.naturalLanguageDescription)
                 .font(.headline)
                 .foregroundColor(.daisyText)
-
-            Text("Choose how often this task should repeat")
-                .font(.subheadline)
-                .foregroundColor(.daisyTextSecondary)
                 .multilineTextAlignment(.center)
+                .lineLimit(2)
         }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(.thinMaterial)
     }
 
     // MARK: - Presets Section
 
     @ViewBuilder
     private var presetsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Quick Options")
                 .font(.headline)
                 .foregroundColor(.daisyText)
@@ -168,7 +178,9 @@ struct RecurrenceRulePickerView: View {
                         preset: preset,
                         isSelected: selectedPreset == preset,
                         onTap: {
-                            selectedPreset = preset
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedPreset = preset
+                            }
                         }
                     )
                 }
@@ -180,7 +192,7 @@ struct RecurrenceRulePickerView: View {
 
     @ViewBuilder
     private var customOptionCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Advanced")
                 .font(.headline)
                 .foregroundColor(.daisyText)
@@ -191,18 +203,12 @@ struct RecurrenceRulePickerView: View {
                     selectedPreset = nil
                 }
             }) {
-                HStack(spacing: 16) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Colors.Secondary.purple.opacity(0.15))
-                            .frame(width: 56, height: 56)
+                HStack(spacing: 12) {
+                    Image(systemName: "gearshape.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(Colors.Secondary.purple)
 
-                        Image(systemName: "gearshape.circle")
-                            .font(.title2)
-                            .foregroundColor(Colors.Secondary.purple)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Custom Pattern")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(.daisyText)
@@ -219,7 +225,7 @@ struct RecurrenceRulePickerView: View {
                         .foregroundColor(.daisyTextSecondary)
                 }
                 .padding()
-                .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+                .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
         }
@@ -230,32 +236,32 @@ struct RecurrenceRulePickerView: View {
     @ViewBuilder
     private var customConfigurationSection: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        isCustomMode = false
-                    }
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "chevron.left")
-                            .font(.caption)
-                        Text("Back to presets")
-                            .font(.subheadline)
-                    }
-                    .foregroundColor(.daisyTask)
+            // Back button
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isCustomMode = false
                 }
-
-                Spacer()
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.left")
+                        .font(.caption)
+                    Text("Quick Options")
+                        .font(.subheadline)
+                }
+                .foregroundColor(.daisyTask)
             }
 
-            // Frequency Picker
+            // Frequency Picker (Segmented)
             frequencySection
 
-            // Interval Input
+            // Interval Stepper (New!)
             intervalSection
 
             // Frequency-specific options
             frequencySpecificOptions
+
+            // Repeat Mode (New!)
+            repeatModeSection
 
             // End conditions
             endConditionsSection
@@ -268,7 +274,7 @@ struct RecurrenceRulePickerView: View {
     private var frequencySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Frequency")
-                .font(.headline)
+                .font(.subheadline.weight(.medium))
                 .foregroundColor(.daisyText)
 
             Picker("Frequency", selection: $frequency) {
@@ -283,35 +289,31 @@ struct RecurrenceRulePickerView: View {
         }
     }
 
-    // MARK: - Interval Section
+    // MARK: - Interval Section (New: Using Stepper!)
 
     @ViewBuilder
     private var intervalSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Interval")
-                .font(.headline)
+                .font(.subheadline.weight(.medium))
                 .foregroundColor(.daisyText)
 
-            VStack(spacing: 8) {
-                HStack {
-                    Text("Every")
-                        .foregroundColor(.daisyText)
+            HStack {
+                Text("Every")
+                    .foregroundColor(.daisyText)
 
-                    Spacer()
+                Spacer()
 
-                    Text(intervalUnit)
-                        .foregroundColor(.daisyText)
-                }
-
-                Picker("Interval", selection: $interval) {
-                    ForEach(intervalRange, id: \.self) { num in
-                        Text("\(num)").tag(num)
+                Stepper(value: $interval, in: intervalRange) {
+                    HStack(spacing: 4) {
+                        Text("\(interval)")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.daisyTask)
+                        Text(intervalUnit)
+                            .foregroundColor(.daisyText)
                     }
                 }
-                .pickerStyle(.wheel)
-                .frame(height: 120)
-                .accessibilityLabel("Interval picker")
-                .accessibilityHint("Select how often the task should repeat. Range: \(intervalRange.lowerBound) to \(intervalRange.upperBound) \(intervalUnit)")
+                .labelsHidden()
             }
             .padding()
             .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
@@ -332,47 +334,126 @@ struct RecurrenceRulePickerView: View {
         }
     }
 
+    // MARK: - Weekly Options (New: Pill Buttons!)
+
     @ViewBuilder
     private var weeklyOptionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Days of Week")
-                .font(.headline)
+                .font(.subheadline.weight(.medium))
                 .foregroundColor(.daisyText)
 
-            DayOfWeekSelector(selectedDays: $selectedDaysOfWeek)
+            HStack(spacing: 8) {
+                ForEach(1...7, id: \.self) { weekday in
+                    let isSelected = selectedDaysOfWeek.contains(weekday)
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if isSelected {
+                                selectedDaysOfWeek.remove(weekday)
+                            } else {
+                                selectedDaysOfWeek.insert(weekday)
+                            }
+                        }
+                    }) {
+                        Text(Calendar.current.veryShortWeekdaySymbols[weekday - 1])
+                            .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                            .foregroundColor(isSelected ? .white : .daisyText)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(isSelected ? Color.daisyTask : Color.daisySurface)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
     }
+
+    // MARK: - Monthly Options (New: Using Stepper!)
 
     @ViewBuilder
     private var monthlyOptionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Day of Month")
-                .font(.headline)
+                .font(.subheadline.weight(.medium))
                 .foregroundColor(.daisyText)
 
-            VStack(spacing: 8) {
-                HStack {
-                    Text("Day")
-                        .foregroundColor(.daisyText)
+            HStack {
+                Text("Day")
+                    .foregroundColor(.daisyText)
 
-                    Spacer()
+                Spacer()
 
-                    Text("of the month")
-                        .foregroundColor(.daisyText)
-                }
-
-                Picker("Day of Month", selection: $dayOfMonth) {
-                    ForEach(1...31, id: \.self) { day in
-                        Text("\(day)").tag(day)
+                Stepper(value: $dayOfMonth, in: 1...31) {
+                    HStack(spacing: 4) {
+                        Text("\(dayOfMonth)")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.daisyTask)
+                        Text("of the month")
+                            .foregroundColor(.daisyText)
                     }
                 }
-                .pickerStyle(.wheel)
-                .frame(height: 120)
-                .accessibilityLabel("Day of month picker")
-                .accessibilityHint("Select which day of the month the task should repeat")
+                .labelsHidden()
             }
             .padding()
             .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    // MARK: - Repeat Mode Section (New!)
+
+    @ViewBuilder
+    private var repeatModeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Repeat Mode")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.daisyText)
+
+            VStack(spacing: 8) {
+                ForEach(RecurrenceRule.RepeatMode.allCases, id: \.self) { mode in
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            repeatMode = mode
+                        }
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: mode.icon)
+                                .font(.title3)
+                                .foregroundColor(repeatMode == mode ? .daisyTask : .daisyTextSecondary)
+                                .frame(width: 24)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(mode.displayName)
+                                    .font(.subheadline.weight(repeatMode == mode ? .semibold : .regular))
+                                    .foregroundColor(.daisyText)
+
+                                Text(mode.description)
+                                    .font(.caption)
+                                    .foregroundColor(.daisyTextSecondary)
+                            }
+
+                            Spacer()
+
+                            if repeatMode == mode {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.daisyTask)
+                            }
+                        }
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(repeatMode == mode ? Color.daisyTask.opacity(0.1) : Color.daisySurface)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(repeatMode == mode ? Color.daisyTask : Color.clear, lineWidth: 2)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
     }
 
@@ -380,66 +461,57 @@ struct RecurrenceRulePickerView: View {
 
     @ViewBuilder
     private var endConditionsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("End Conditions")
-                .font(.headline)
+                .font(.subheadline.weight(.medium))
                 .foregroundColor(.daisyText)
 
             VStack(spacing: 12) {
                 // End Date Option
-                HStack {
-                    Toggle("End on date", isOn: $hasEndDate)
-                        .toggleStyle(.switch)
-                        .onChange(of: hasEndDate) { _, newValue in
-                            if newValue {
-                                hasMaxOccurrences = false
-                            }
+                Toggle("End on date", isOn: $hasEndDate)
+                    .toggleStyle(.switch)
+                    .tint(.daisyTask)
+                    .onChange(of: hasEndDate) { _, newValue in
+                        if newValue {
+                            hasMaxOccurrences = false
                         }
-
-                    Spacer()
-                }
+                    }
 
                 if hasEndDate {
                     DatePicker("End Date", selection: $endDate, displayedComponents: .date)
                         .datePickerStyle(.compact)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        .tint(.daisyTask)
+                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
                 }
 
                 Divider()
 
                 // Max Occurrences Option
-                HStack {
-                    Toggle("Stop after", isOn: $hasMaxOccurrences)
-                        .toggleStyle(.switch)
-                        .onChange(of: hasMaxOccurrences) { _, newValue in
-                            if newValue {
-                                hasEndDate = false
-                            }
+                Toggle("Stop after occurrences", isOn: $hasMaxOccurrences)
+                    .toggleStyle(.switch)
+                    .tint(.daisyTask)
+                    .onChange(of: hasMaxOccurrences) { _, newValue in
+                        if newValue {
+                            hasEndDate = false
                         }
-
-                    Spacer()
-                }
+                    }
 
                 if hasMaxOccurrences {
-                    VStack(spacing: 8) {
-                        HStack {
-                            Text("Number of occurrences")
-                                .foregroundColor(.daisyText)
+                    HStack {
+                        Text("Number of times")
+                            .foregroundColor(.daisyText)
 
-                            Spacer()
-                        }
+                        Spacer()
 
-                        Picker("Max Occurrences", selection: $maxOccurrences) {
-                            ForEach(1...100, id: \.self) { num in
-                                Text("\(num)").tag(num)
-                            }
+                        Stepper(value: $maxOccurrences, in: 1...100) {
+                            Text("\(maxOccurrences)")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.daisyTask)
                         }
-                        .pickerStyle(.wheel)
-                        .frame(height: 120)
-                        .accessibilityLabel("Maximum occurrences picker")
-                        .accessibilityHint("Select how many times the task should repeat")
+                        .labelsHidden()
                     }
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .padding(.vertical, 8)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
                 }
             }
             .padding()
@@ -450,60 +522,47 @@ struct RecurrenceRulePickerView: View {
     // MARK: - Preview Section
 
     @ViewBuilder
-    private var previewSection: some View {
+    private func previewSection(for rule: RecurrenceRule) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Preview")
-                .font(.headline)
-                .foregroundColor(.daisyText)
+            HStack {
+                Image(systemName: "calendar")
+                    .foregroundColor(.daisyTask)
+                Text("Next Occurrences")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.daisyText)
+            }
 
-            if let rule = currentRecurrenceRule {
-                VStack(spacing: 12) {
-                    // Pattern description
-                    HStack {
-                        Image(systemName: "repeat.circle")
-                            .foregroundColor(.daisyTask)
+            let occurrences = rule.occurrences(from: Date(), limit: 3)
+            if !occurrences.isEmpty {
+                VStack(spacing: 8) {
+                    ForEach(Array(occurrences.enumerated()), id: \.offset) { index, date in
+                        HStack(spacing: 12) {
+                            Text("\(index + 1)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundColor(.daisyTextSecondary)
+                                .frame(width: 16, alignment: .leading)
 
-                        Text(rule.displayDescription)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(.daisyText)
+                            Text(date, style: .date)
+                                .font(.subheadline)
+                                .foregroundColor(.daisyText)
 
-                        Spacer()
-                    }
+                            Spacer()
 
-                    Divider()
-
-                    // Next occurrences
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Next occurrences:")
-                            .font(.caption)
-                            .foregroundColor(.daisyTextSecondary)
-
-                        let occurrences = rule.occurrences(from: Date(), limit: 5)
-                        ForEach(Array(occurrences.enumerated()), id: \.offset) { index, date in
-                            HStack {
-                                Text("\(index + 1).")
-                                    .font(.caption)
-                                    .foregroundColor(.daisyTextSecondary)
-                                    .frame(width: 20, alignment: .leading)
-
-                                Text(date, style: .date)
-                                    .font(.caption)
-                                    .foregroundColor(.daisyText)
-
-                                Spacer()
-                            }
-                        }
-
-                        if occurrences.isEmpty {
-                            Text("No future occurrences")
+                            Text(date, style: .relative)
                                 .font(.caption)
                                 .foregroundColor(.daisyTextSecondary)
-                                .italic()
                         }
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(Color.daisySurface.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
                     }
                 }
-                .padding()
-                .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+            } else {
+                Text("No future occurrences")
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+                    .italic()
+                    .padding()
             }
         }
     }
@@ -524,15 +583,15 @@ struct RecurrenceRulePickerView: View {
     private var intervalRange: ClosedRange<Int> {
         switch frequency {
         case .daily:
-            return 1...365  // Up to daily for a year
+            return 1...365
         case .weekly:
-            return 1...42   // Up to 42 weeks (~10 months)
+            return 1...52
         case .monthly:
-            return 1...12   // Up to 12 months
+            return 1...12
         case .yearly:
-            return 1...10   // Up to 10 years
+            return 1...10
         case .custom:
-            return 1...30   // Default range
+            return 1...30
         }
     }
 
@@ -565,6 +624,7 @@ struct RecurrenceRulePickerView: View {
         interval = existingRule.interval
         selectedDaysOfWeek = existingRule.daysOfWeek ?? []
         dayOfMonth = existingRule.dayOfMonth ?? Calendar.current.component(.day, from: Date())
+        repeatMode = existingRule.repeatMode
 
         if let endDate = existingRule.endDate {
             hasEndDate = true
@@ -615,7 +675,8 @@ struct RecurrenceRulePickerView: View {
             daysOfWeek: daysOfWeek,
             dayOfMonth: dayOfMonth,
             endDate: hasEndDate ? endDate : nil,
-            maxOccurrences: hasMaxOccurrences ? maxOccurrences : nil
+            maxOccurrences: hasMaxOccurrences ? maxOccurrences : nil,
+            repeatMode: repeatMode
         )
     }
 

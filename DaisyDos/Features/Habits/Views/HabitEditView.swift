@@ -26,6 +26,7 @@ struct HabitEditView: View {
     // UI State
     @State private var showingRecurrencePicker = false
     @State private var showingTagAssignment = false
+    @State private var showingUnsavedChangesAlert = false
     @State private var validationErrors: Set<ValidationError> = []
 
     // MARK: - Validation
@@ -91,6 +92,19 @@ struct HabitEditView: View {
         self._selectedPriority = State(initialValue: habit.priority)
     }
 
+    // MARK: - Computed Properties
+
+    private var hasChanges: Bool {
+        let trimmedTitle = habitTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = habitDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return trimmedTitle != habit.title ||
+               trimmedDescription != habit.habitDescription ||
+               selectedPriority != habit.priority ||
+               recurrenceRule != habit.recurrenceRule ||
+               Set(selectedTags.map(\.id)) != Set(habit.tags.map(\.id))
+    }
+
     // MARK: - Character Count Colors
 
     private var titleCountColor: Color {
@@ -131,15 +145,21 @@ struct HabitEditView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
-                        dismiss()
+                        if hasChanges {
+                            showingUnsavedChangesAlert = true
+                        } else {
+                            dismiss()
+                        }
                     }
+                    .foregroundColor(.daisyHabit)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         saveHabit()
                     }
-                    .disabled(!isFormValid)
+                    .disabled(!isFormValid || !hasChanges)
+                    .foregroundColor(.daisyHabit)
                 }
             }
         }
@@ -157,6 +177,14 @@ struct HabitEditView: View {
                     validateForm()
                 }
             )
+        }
+        .alert("Unsaved Changes", isPresented: $showingUnsavedChangesAlert) {
+            Button("Discard Changes", role: .destructive) {
+                dismiss()
+            }
+            Button("Continue Editing", role: .cancel) { }
+        } message: {
+            Text("You have unsaved changes. Are you sure you want to discard them?")
         }
         .onAppear {
             validateForm()
@@ -296,47 +324,51 @@ struct HabitEditView: View {
     @ViewBuilder
     private var tagsSection: some View {
         Section(content: {
-            // Tag Assignment
-            Button(action: {
-                showingTagAssignment = true
-            }) {
-                HStack {
-                    Image(systemName: "tag.fill")
-                        .foregroundColor(.daisyTag)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Tags")
-                            .foregroundColor(.daisyText)
-
-                        if selectedTags.isEmpty {
-                            Text("No tags selected")
-                                .font(.caption)
-                                .foregroundColor(.daisyTextSecondary)
-                        } else {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 6) {
-                                    ForEach(selectedTags, id: \.id) { tag in
-                                        TagChipView(tag: tag)
-                                            .scaleEffect(0.9)
-                                    }
+            if selectedTags.isEmpty {
+                Button("Add Tags") {
+                    showingTagAssignment = true
+                }
+                .foregroundColor(.daisyHabit)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(selectedTags, id: \.id) { tag in
+                            TagChipView(
+                                tag: tag,
+                                isSelected: true,
+                                isRemovable: true,
+                                onRemove: {
+                                    selectedTags.removeAll { $0.id == tag.id }
+                                    validateForm()
                                 }
-                                .padding(.horizontal, 4)
+                            )
+                        }
+
+                        if selectedTags.count < 3 {
+                            Button(action: {
+                                showingTagAssignment = true
+                            }) {
+                                Image(systemName: "plus.circle")
+                                    .font(.title2)
+                                    .foregroundColor(.daisyHabit)
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Add more tags")
                         }
                     }
+                    .padding(.horizontal, 4)
+                }
 
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
+                if selectedTags.count == 3 {
+                    Text("Maximum tags reached (3/3)")
                         .font(.caption)
                         .foregroundColor(.daisyTextSecondary)
                 }
             }
-            .buttonStyle(.plain)
         }, header: {
-            Text("Organization")
+            Text("Tags")
         }, footer: {
-            Text("Organize habits with up to 3 tags for easy filtering and grouping.")
+            Text("Organize with up to 3 tags for easy filtering and grouping.")
         })
     }
 

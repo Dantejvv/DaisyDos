@@ -14,9 +14,11 @@ struct AddTaskView: View {
 
     @State private var title = ""
     @State private var taskDescription = ""
-    @State private var priority: Priority = .medium
+    @State private var priority: Priority = .none
     @State private var dueDate: Date?
     @State private var hasDueDate = false
+    @State private var startDate: Date?
+    @State private var hasStartDate = false
     @State private var selectedTags: [Tag] = []
     @State private var showingTagSelection = false
     @State private var recurrenceRule: RecurrenceRule?
@@ -29,11 +31,12 @@ struct AddTaskView: View {
     }
 
     var hasValidDates: Bool {
-        guard hasDueDate, let dueDate = dueDate else {
+        guard hasStartDate && hasDueDate,
+              let start = startDate,
+              let due = dueDate else {
             return true
         }
-        // Due date should not be in the past
-        return dueDate >= Calendar.current.startOfDay(for: Date())
+        return start <= due
     }
 
     var titleCharacterCount: Int {
@@ -162,30 +165,40 @@ struct AddTaskView: View {
                     .padding(.horizontal, 4)
                 }
 
-                Section("Due Date") {
+                Section("Dates") {
+                    // Start Date
+                    Toggle("Set start date", isOn: $hasStartDate)
+
+                    if hasStartDate {
+                        DatePicker("Start date", selection: Binding(
+                            get: { startDate ?? Date() },
+                            set: { startDate = $0 }
+                        ), displayedComponents: [.date])
+                    }
+
+                    // Due Date
                     Toggle("Set due date", isOn: $hasDueDate)
 
                     if hasDueDate {
-                        VStack(alignment: .leading, spacing: 8) {
-                            DatePicker("Due date", selection: Binding(
-                                get: { dueDate ?? Date() },
-                                set: { dueDate = $0 }
-                            ), in: Date()..., displayedComponents: [.date])
+                        DatePicker("Due date", selection: Binding(
+                            get: { dueDate ?? Date() },
+                            set: { dueDate = $0 }
+                        ), displayedComponents: [.date])
+                    }
 
-                            if !hasValidDates {
-                                HStack {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundColor(.daisyError)
-                                    Text("Due date cannot be in the past")
-                                        .font(.caption)
-                                        .foregroundColor(.daisyError)
-                                }
-                            }
+                    // Date validation warning
+                    if !hasValidDates {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.daisyError)
+                            Text("Start date must be before due date")
+                                .font(.caption)
+                                .foregroundColor(.daisyError)
                         }
                     }
                 }
 
-                Section("Tags") {
+                Section(content: {
                     if selectedTags.isEmpty {
                         Button("Add Tags") {
                             showingTagSelection = true
@@ -226,7 +239,11 @@ struct AddTaskView: View {
                                 .foregroundColor(.daisyTextSecondary)
                         }
                     }
-                }
+                }, header: {
+                    Text("Tags")
+                }, footer: {
+                    Text("Organize with up to 3 tags for easy filtering and grouping.")
+                })
 
                 Section("Recurrence") {
                     RecurrenceToggleRow(
@@ -289,6 +306,7 @@ struct AddTaskView: View {
             taskDescription: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),
             priority: priority,
             dueDate: hasDueDate ? dueDate : nil,
+            startDate: hasStartDate ? startDate : nil,
             recurrenceRule: recurrenceRule
         )
 

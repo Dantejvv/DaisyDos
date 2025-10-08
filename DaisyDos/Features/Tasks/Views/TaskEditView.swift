@@ -225,7 +225,7 @@ struct TaskEditView: View {
                     }
                 }
 
-                Section("Tags") {
+                Section(content: {
                     if selectedTags.isEmpty {
                         Button("Add Tags") {
                             showingTagSelection = true
@@ -266,7 +266,11 @@ struct TaskEditView: View {
                                 .foregroundColor(.daisyTextSecondary)
                         }
                     }
-                }
+                }, header: {
+                    Text("Tags")
+                }, footer: {
+                    Text("Organize with up to 3 tags for easy filtering and grouping.")
+                })
 
                 Section("Recurrence") {
                     RecurrenceToggleRow(

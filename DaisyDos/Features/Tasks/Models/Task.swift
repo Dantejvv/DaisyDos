@@ -52,7 +52,7 @@ class Task {
     init(
         title: String,
         taskDescription: String = "",
-        priority: Priority = .medium,
+        priority: Priority = .none,
         dueDate: Date? = nil,
         startDate: Date? = nil,
         recurrenceRule: RecurrenceRule? = nil

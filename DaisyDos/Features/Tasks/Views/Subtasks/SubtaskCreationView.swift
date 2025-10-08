@@ -16,7 +16,7 @@ struct SubtaskCreationView: View {
 
     @State private var title = ""
     @State private var taskDescription = ""
-    @State private var priority: Priority = .medium
+    @State private var priority: Priority = .none
     @State private var inheritFromParent = true
     @State private var inheritDueDate = true
     @State private var dueDate: Date?
