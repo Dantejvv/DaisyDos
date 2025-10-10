@@ -31,14 +31,12 @@ struct TaskDetailView: View {
         case overview = "Overview"
         case subtasks = "Subtasks"
         case attachments = "Attachments"
-        case details = "Details"
 
         var icon: String {
             switch self {
             case .overview: return "info.circle"
             case .subtasks: return "checklist"
             case .attachments: return "paperclip"
-            case .details: return "calendar.badge.clock"
             }
         }
     }
@@ -61,9 +59,6 @@ struct TaskDetailView: View {
 
                     attachmentsTab
                         .tag(DetailTab.attachments)
-
-                    detailsTab
-                        .tag(DetailTab.details)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
@@ -244,6 +239,14 @@ struct TaskDetailView: View {
                 if task.dueDate != nil || task.startDate != nil {
                     datesCard
                 }
+
+                // Recurrence Card
+                if task.hasRecurrence {
+                    recurrenceCard
+                }
+
+                // Metadata Card
+                metadataCard
             }
             .padding()
         }
@@ -505,6 +508,77 @@ struct TaskDetailView: View {
         .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
     }
 
+    @ViewBuilder
+    private var recurrenceCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Recurrence")
+                    .font(.headline)
+                Spacer()
+                Button("Edit") {
+                    showingRecurrencePicker = true
+                }
+                .font(.caption)
+                .foregroundColor(.daisyTask)
+            }
+
+            RecurrenceVisualizationView(
+                recurrenceRule: task.recurrenceRule,
+                onEdit: {
+                    showingRecurrencePicker = true
+                }
+            )
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    @ViewBuilder
+    private var metadataCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Metadata")
+                .font(.headline)
+
+            VStack(spacing: 12) {
+                HStack {
+                    Text("Created")
+                        .font(.subheadline)
+                        .foregroundColor(.daisyTextSecondary)
+                    Spacer()
+                    Text(task.createdDate.formatted(date: .abbreviated, time: .shortened))
+                        .font(.subheadline)
+                }
+
+                Divider()
+
+                HStack {
+                    Text("Modified")
+                        .font(.subheadline)
+                        .foregroundColor(.daisyTextSecondary)
+                    Spacer()
+                    Text(task.modifiedDate.formatted(date: .abbreviated, time: .shortened))
+                        .font(.subheadline)
+                }
+
+                if task.isCompleted, let completedDate = task.completedDate {
+                    Divider()
+
+                    HStack {
+                        Text("Completed")
+                            .font(.subheadline)
+                            .foregroundColor(.daisySuccess)
+                        Spacer()
+                        Text(completedDate.formatted(date: .abbreviated, time: .shortened))
+                            .font(.subheadline)
+                            .foregroundColor(.daisySuccess)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
     // MARK: - Subtasks Tab
 
     @ViewBuilder
@@ -643,130 +717,6 @@ struct TaskDetailView: View {
                         shareAttachment(attachment)
                     }
                 )
-            }
-            .padding()
-        }
-    }
-
-    // MARK: - Details Tab
-
-    @ViewBuilder
-    private var detailsTab: some View {
-        ScrollView {
-            LazyVStack(spacing: 20) {
-                // Recurrence Card
-                if task.hasRecurrence {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("Recurrence")
-                                .font(.headline)
-                            Spacer()
-                            Button("Edit") {
-                                showingRecurrencePicker = true
-                            }
-                            .font(.caption)
-                            .foregroundColor(.daisyTask)
-                        }
-
-                        RecurrenceVisualizationView(
-                            recurrenceRule: task.recurrenceRule,
-                            onEdit: {
-                                showingRecurrencePicker = true
-                            }
-                        )
-                    }
-                    .padding()
-                    .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
-                }
-
-                // Metadata Card
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Metadata")
-                        .font(.headline)
-
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("Created")
-                                .font(.subheadline)
-                                .foregroundColor(.daisyTextSecondary)
-                            Spacer()
-                            Text(task.createdDate.formatted(date: .abbreviated, time: .shortened))
-                                .font(.subheadline)
-                        }
-
-                        Divider()
-
-                        HStack {
-                            Text("Modified")
-                                .font(.subheadline)
-                                .foregroundColor(.daisyTextSecondary)
-                            Spacer()
-                            Text(task.modifiedDate.formatted(date: .abbreviated, time: .shortened))
-                                .font(.subheadline)
-                        }
-
-                        if task.isCompleted, let completedDate = task.completedDate {
-                            Divider()
-
-                            HStack {
-                                Text("Completed")
-                                    .font(.subheadline)
-                                    .foregroundColor(.daisySuccess)
-                                Spacer()
-                                Text(completedDate.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.subheadline)
-                                    .foregroundColor(.daisySuccess)
-                            }
-                        }
-                    }
-                }
-                .padding()
-                .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
-
-                // Advanced Settings Card
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Advanced")
-                        .font(.headline)
-
-                    VStack(spacing: 12) {
-                        if task.hasRecurrence {
-                            HStack {
-                                Label("Recurring Task", systemImage: "repeat")
-                                    .font(.subheadline)
-                                    .foregroundColor(.daisyTextSecondary)
-                                Spacer()
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.daisySuccess)
-                            }
-                        }
-
-                        if task.hasSubtasks {
-                            Divider()
-                            HStack {
-                                Label("Has Subtasks", systemImage: "checklist")
-                                    .font(.subheadline)
-                                    .foregroundColor(.daisyTextSecondary)
-                                Spacer()
-                                Text("\(task.subtaskCount)")
-                                    .font(.subheadline.weight(.medium))
-                            }
-                        }
-
-                        if !task.attachments.isEmpty {
-                            Divider()
-                            HStack {
-                                Label("Has Attachments", systemImage: "paperclip")
-                                    .font(.subheadline)
-                                    .foregroundColor(.daisyTextSecondary)
-                                Spacer()
-                                Text("\(task.attachments.count)")
-                                    .font(.subheadline.weight(.medium))
-                            }
-                        }
-                    }
-                }
-                .padding()
-                .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
             }
             .padding()
         }
