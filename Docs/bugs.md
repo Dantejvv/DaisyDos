@@ -21,5 +21,8 @@ The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in
 
 Habit completion -> undo button for undoing habits -> cannot press the complete button again to uncomplete(?) the habit
 
+Remove old migration plans because I will not be migrating data I will start fresh until the MVP is delivered
+
+
 
 
