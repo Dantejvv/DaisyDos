@@ -23,6 +23,8 @@ Habit completion -> undo button for undoing habits -> cannot press the complete 
 
 Remove old migration plans because I will not be migrating data I will start fresh until the MVP is delivered
 
+Phase 4 reconsidered
 
+look into removing plist.
 
 

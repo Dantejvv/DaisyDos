@@ -607,7 +607,7 @@ class TodayManager {
 }
 ```
 - [ ] Create `TodayItem` protocol for unified handling
-- [ ] Implement intelligent prioritization algorithms
+- [ ] Implement intelligent prioritization algorithms (?? explain more)
 - [ ] Add date-based filtering logic for "today"
 - [ ] Test data filtering performance with large datasets
 - [ ] **Acceptance:** Filtering accurate, performance good, prioritization sensible
@@ -625,8 +625,8 @@ struct TodayView: View {
 }
 ```
 - [ ] Implement mixed content display without modifying existing components
-- [ ] Add sectioning (Morning, Afternoon, Evening) using existing patterns
-- [ ] Test component reuse in unified context
+- [ ] Add sectioning (Morning, Afternoon, Evening) using existing patterns (consider other options)
+- [ ] Test component reuse in unified context (can create new componenets if needed)
 - [ ] Validate accessibility in mixed content view
 - [ ] **Acceptance:** Today View works using ONLY existing components without modification
 
