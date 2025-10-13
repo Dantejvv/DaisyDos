@@ -569,16 +569,90 @@ struct HabitProgressChart: View {
 - [X] Implement form validation specific to habits
 - [x] **Acceptance:** Scheduling flexible, goals motivating, validation appropriate
 
+### 3.6 Logbook - Task History & Auto-Archive System (Effort: Small-Medium)
+
+#### ✅ Logbook Data Models
+- [X] Create `TaskLogEntry` model for archived completion snapshots:
+```swift
+@Model
+class TaskLogEntry {
+    var id: UUID
+    var originalTaskId: UUID
+    var title: String
+    var taskDescription: String
+    var completedDate: Date
+    var createdDate: Date
+    var priority: Priority
+    var wasOverdue: Bool
+    var tagNames: [String]  // Snapshot of tag names at completion
+    var completionDuration: TimeInterval
+}
+```
+- [X] Add TaskLogEntry to SwiftData SchemaV4
+- [X] Remove CompletionAggregate model (no analytics needed)
+- [X] **Acceptance:** TaskLogEntry persists correctly, lightweight snapshots work
+
+#### ✅ Logbook Manager & Auto-Archive System
+- [X] Create `LogbookManager` @Observable class:
+```swift
+@Observable
+class LogbookManager {
+    func performHousekeeping() -> Result<HousekeepingStats, AnyRecoverableError> {
+        // Archive tasks 90+ days old
+        // Delete log entries 365+ days old
+    }
+
+    func recentCompletions(days: Int) -> [Task] {
+        // Manual Swift filtering (SwiftData #Predicate issue with optional Dates)
+    }
+}
+```
+- [X] Implement tiered retention: 90 days (Task) → 365 days (LogEntry) → deleted
+- [X] Add automatic housekeeping (runs every 24 hours on app launch)
+- [X] Create manual Swift filtering to workaround SwiftData #Predicate limitations
+- [X] **Acceptance:** Auto-archive works reliably, housekeeping scheduled correctly
+
+#### ✅ Logbook UI Implementation
+- [X] Create `LogbookView` with @Query for real-time updates:
+```swift
+@Query(filter: #Predicate<Task> { $0.isCompleted })
+private var completedTasks: [Task]
+
+@Query(sort: \TaskLogEntry.completedDate, order: .reverse)
+private var archivedEntries: [TaskLogEntry]
+```
+- [X] Implement period filtering (7/30/90 days, This Year)
+- [X] Add search functionality across title/description
+- [X] Create `LogEntryRow` component for lightweight archived task display
+- [X] Use existing TaskRowView for recent completions (0-90 days)
+- [X] Add Logbook tab to main navigation (6 tabs total)
+- [X] **Acceptance:** Logbook updates in real-time, search works, period filtering accurate
+
+#### ✅ Integration & Real-Time Updates
+- [X] Filter completed tasks from TasksView (@Query with `!task.isCompleted`)
+- [X] Configure environment injection for LogbookManager in DaisyDosApp
+- [X] Implement @Query-based real-time UI updates (no manual refresh needed)
+- [X] Test cross-tab behavior (complete in Tasks → appears in Logbook instantly)
+- [X] **Acceptance:** Completed tasks move to Logbook automatically, real-time sync works
+
+**Key Learnings:**
+- SwiftData #Predicate has issues with optional Date comparisons - use manual Swift filtering
+- @Query provides automatic real-time updates - essential for cross-tab reactivity
+- Lightweight snapshots (TaskLogEntry) more efficient than keeping full Task models
+- Simple tiered retention (90/365 days) provides good balance of history vs performance
+
 ### Phase 3.0 Success Criteria
-- [ ] Complete habit tracking workflow functional
-- [ ] HabitRowView proven reusable across multiple contexts using identical patterns as TaskRowView
-- [ ] Shared UI patterns consistent between Task and Habit components
-- [ ] Accurate streak calculations with simple consecutive day tracking
-- [ ] Visual progress feedback compelling and motivating
-- [ ] Tag system validated for both content types simultaneously
-- [ ] Recurrence system working for both tasks and habits
-- [ ] Performance benchmarks met for habit-specific calculations
-- [ ] Component reusability patterns proven scalable
+- [X] Complete habit tracking workflow functional
+- [X] HabitRowView proven reusable across multiple contexts using identical patterns as TaskRowView
+- [X] Shared UI patterns consistent between Task and Habit components
+- [X] Accurate streak calculations with simple consecutive day tracking
+- [X] Visual progress feedback compelling and motivating
+- [X] Tag system validated for both content types simultaneously
+- [X] Recurrence system working for both tasks and habits
+- [X] Performance benchmarks met for habit-specific calculations
+- [X] Component reusability patterns proven scalable
+- [X] Logbook feature complete with auto-archive and real-time updates
+- [X] Tiered data retention working automatically (90/365 days)
 
 ---
 

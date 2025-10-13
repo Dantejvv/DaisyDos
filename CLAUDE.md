@@ -45,7 +45,7 @@ This is a standard Xcode project. Use Xcode to build and run:
 **Navigation Structure:**
 - Tab-based navigation with independent NavigationStack per tab
 - NavigationManager @Observable class with separate NavigationPath per tab
-- Production TabView with 5 main sections (Today, Tasks, Habits, Tags, Settings)
+- Production TabView with 6 main sections (Today, Tasks, Habits, Logbook, Tags, Settings)
 
 ### Core Systems
 
@@ -170,6 +170,34 @@ This is a standard Xcode project. Use Xcode to build and run:
 - ✅ Notification actions for quick completion and skip directly from notifications
 - ✅ HabitNotificationSettingsView with complete permission management UI
 - ✅ Settings integration in main SettingsView for easy access
+
+### ✅ **Phase 3.6 COMPLETE: Logbook - Task History & Auto-Archive System**
+**Status: Production Ready**
+
+**Successfully Implemented:**
+
+#### ✅ **Task History Tracking**
+**Simple History Management:**
+- ✅ TaskLogEntry model - Lightweight snapshots of completed tasks
+- ✅ Tiered retention: 0-90 days (full Task), 91-365 days (TaskLogEntry), 365+ (deleted)
+- ✅ Automatic archival system runs every 24 hours on app launch
+- ✅ No analytics or statistics - focused on simple history viewing
+
+#### ✅ **Real-Time Logbook UI**
+**Reactive History Display:**
+- ✅ LogbookView with @Query for automatic real-time updates
+- ✅ Period filtering: 7 days, 30 days, 90 days, This Year
+- ✅ Search by title and description across completed tasks
+- ✅ LogEntryRow component for lightweight archived task display
+- ✅ TaskRowView reused for recent completions (0-90 days)
+- ✅ Completed tasks automatically hidden from TasksView
+
+#### ✅ **Technical Implementation**
+**Key Architectural Decisions:**
+- ✅ Manual Swift filtering (SwiftData #Predicate has issues with optional Date comparisons)
+- ✅ @Query-based real-time updates (automatic cross-tab sync)
+- ✅ Environment injection of LogbookManager in DaisyDosApp
+- ✅ 6-tab navigation: Today, Tasks, Habits, **Logbook**, Tags, Settings
 
 ## File Organization
 

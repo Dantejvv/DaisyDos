@@ -116,22 +116,25 @@ struct LogbookView: View {
                     // Task list
                     ForEach(Array(completions.enumerated()), id: \.offset) { _, completion in
                         if let task = completion as? Task {
-                            // Recent completion - full TaskRowView
-                            TaskRowView(
-                                task: task,
-                                onToggleCompletion: { },
-                                onEdit: { },
-                                onDelete: { },
-                                displayMode: .compact,
-                                showsSubtasks: true,
-                                showsTagButton: false
-                            )
-                            .disabled(true)  // Read-only
-                            .opacity(0.9)
+                            // Recent completion (0-90 days) - full TaskRowView with navigation
+                            NavigationLink(destination: TaskDetailView(task: task)) {
+                                TaskRowView(
+                                    task: task,
+                                    onToggleCompletion: { },
+                                    onEdit: { },
+                                    onDelete: { },
+                                    displayMode: .compact,
+                                    showsSubtasks: true,
+                                    showsTagButton: false
+                                )
+                                .opacity(0.9)
+                            }
+                            .buttonStyle(.plain)
                             .padding(.horizontal)
                             .padding(.vertical, 4)
+                            .accessibilityLabel("View details for \(task.title)")
                         } else if let logEntry = completion as? TaskLogEntry {
-                            // Archived completion - lightweight LogEntryRow
+                            // Archived completion (91-365 days) - lightweight LogEntryRow (read-only)
                             LogEntryRow(entry: logEntry)
                                 .padding(.horizontal)
                                 .padding(.vertical, 4)

@@ -3,7 +3,9 @@
 //  DaisyDos
 //
 //  Created by Claude Code on 10/11/25.
-//  Lightweight row view for archived task log entries
+//  Lightweight row view for archived task log entries (91-365 days old)
+//  NOTE: This is intentionally read-only. Only recent completions (0-90 days)
+//  displayed as full Task objects support navigation to TaskDetailView.
 //
 
 import SwiftUI
