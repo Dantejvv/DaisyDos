@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		FE0D50CB2E9952DC00A933C9 /* bugs.md in Resources */ = {isa = PBXBuildFile; fileRef = FE0D50CA2E9952D300A933C9 /* bugs.md */; };
 		FE3537C72E8302B1007B0F25 /* daisydos_plan.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C32E8302B1007B0F25 /* daisydos_plan.md */; };
 		FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C42E8302B1007B0F25 /* daisydos_prd.md */; };
 		FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */; };
@@ -32,7 +31,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		FE0D50CA2E9952D300A933C9 /* bugs.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = bugs.md; sourceTree = "<group>"; };
 		FE3537942E830151007B0F25 /* DaisyDos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DaisyDos.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3537A52E830152007B0F25 /* DaisyDosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaisyDosTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3537AF2E830152007B0F25 /* DaisyDosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaisyDosUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -131,7 +129,6 @@
 			children = (
 				FE3537C32E8302B1007B0F25 /* daisydos_plan.md */,
 				FE3537C42E8302B1007B0F25 /* daisydos_prd.md */,
-				FE0D50CA2E9952D300A933C9 /* bugs.md */,
 				FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */,
 			);
 			path = Docs;
@@ -261,7 +258,6 @@
 				FE3537C72E8302B1007B0F25 /* daisydos_plan.md in Resources */,
 				FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */,
 				FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */,
-				FE0D50CB2E9952DC00A933C9 /* bugs.md in Resources */,
 				FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

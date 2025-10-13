@@ -13,7 +13,7 @@ struct TasksView: View {
     @Environment(TagManager.self) private var tagManager
     @Query(
         filter: #Predicate<Task> { task in
-            task.parentTask == nil
+            task.parentTask == nil && !task.isCompleted
         },
         sort: \Task.createdDate,
         order: .reverse

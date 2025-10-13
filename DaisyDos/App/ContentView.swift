@@ -62,6 +62,20 @@ struct ContentView: View {
             }
             .tag(TabType.habits)
 
+            // MARK: - Logbook Tab
+
+            NavigationStack(path: navigationManager.pathBinding(for: .logbook)) {
+                LogbookView()
+                    .navigationDestination(for: String.self) { _ in
+                        // TODO: Add navigation destinations in future phases
+                        Text("Navigation destination placeholder")
+                    }
+            }
+            .tabItem {
+                TabType.logbook.tabLabel
+            }
+            .tag(TabType.logbook)
+
             // MARK: - Tags Tab
 
             NavigationStack(path: navigationManager.pathBinding(for: .tags)) {

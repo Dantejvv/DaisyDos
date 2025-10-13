@@ -21,6 +21,7 @@ class NavigationManager {
     var todayPath = NavigationPath()
     var tasksPath = NavigationPath()
     var habitsPath = NavigationPath()
+    var logbookPath = NavigationPath()
     var tagsPath = NavigationPath()
     var settingsPath = NavigationPath()
 
@@ -42,6 +43,8 @@ class NavigationManager {
             return tasksPath
         case .habits:
             return habitsPath
+        case .logbook:
+            return logbookPath
         case .tags:
             return tagsPath
         case .settings:
@@ -66,6 +69,11 @@ class NavigationManager {
             return Binding(
                 get: { self.habitsPath },
                 set: { self.habitsPath = $0 }
+            )
+        case .logbook:
+            return Binding(
+                get: { self.logbookPath },
+                set: { self.logbookPath = $0 }
             )
         case .tags:
             return Binding(
@@ -101,6 +109,8 @@ class NavigationManager {
             tasksPath = NavigationPath()
         case .habits:
             habitsPath = NavigationPath()
+        case .logbook:
+            logbookPath = NavigationPath()
         case .tags:
             tagsPath = NavigationPath()
         case .settings:

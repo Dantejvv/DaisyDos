@@ -302,6 +302,7 @@ struct SearchPerformanceTracker: ViewModifier {
             .onChange(of: true) { _ in
                 // This would be connected to actual search text changes
                 // For now, it's a placeholder structure
+                // and it is deprecated in iOS 17.0 need to use onChange with two or zero parameter action closure instead
                 searchStartTime = CFAbsoluteTimeGetCurrent()
             }
     }

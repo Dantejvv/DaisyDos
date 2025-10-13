@@ -18,7 +18,6 @@ import UserNotifications
 struct DaisyDosApp: App {
     let localOnlyModeManager = LocalOnlyModeManager()
     let navigationManager = NavigationManager()
-    @State private var habitNotificationManager: HabitNotificationManager?
 
     // Performance monitoring
     init() {
@@ -26,7 +25,7 @@ struct DaisyDosApp: App {
     }
 
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema(versionedSchema: DaisyDosSchemaV3.self)
+        let schema = Schema(versionedSchema: DaisyDosSchemaV4.self)
         // Explicitly disable CloudKit for local-only mode
         let modelConfiguration = ModelConfiguration(
             schema: schema,
@@ -59,11 +58,9 @@ struct DaisyDosApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .onAppear {
-                    // Initialize notification manager after model container is ready
-                    if habitNotificationManager == nil {
-                        habitNotificationManager = HabitNotificationManager(modelContext: sharedModelContainer.mainContext)
-                    }
+                .task {
+                    // Run logbook housekeeping on app launch (if needed)
+                    await runLogbookHousekeepingIfNeeded()
                 }
         }
         .modelContainer(sharedModelContainer)
@@ -73,6 +70,34 @@ struct DaisyDosApp: App {
         .environment(TaskManager(modelContext: sharedModelContainer.mainContext))
         .environment(HabitManager(modelContext: sharedModelContainer.mainContext))
         .environment(TagManager(modelContext: sharedModelContainer.mainContext))
-        .environment(habitNotificationManager)
+        .environment(HabitNotificationManager(modelContext: sharedModelContainer.mainContext))
+        .environment(LogbookManager(modelContext: sharedModelContainer.mainContext))
+    }
+
+    // MARK: - Logbook Housekeeping
+
+    /// Run logbook housekeeping if it hasn't run in the last 24 hours
+    private func runLogbookHousekeepingIfNeeded() async {
+        let lastRunKey = "lastLogbookHousekeeping"
+        let lastRun = UserDefaults.standard.object(forKey: lastRunKey) as? Date
+        let now = Date()
+
+        // Run if never run or last run was >24 hours ago
+        guard lastRun == nil || now.timeIntervalSince(lastRun!) > 86400 else {
+            return
+        }
+
+        // Perform housekeeping in background
+        let manager = LogbookManager(modelContext: sharedModelContainer.mainContext)
+        let result = manager.performHousekeeping()
+
+        switch result {
+        case .success(let stats):
+            print("Logbook housekeeping completed: \(stats.tasksArchived) archived, \(stats.logsDeleted) deleted")
+            UserDefaults.standard.set(now, forKey: lastRunKey)
+
+        case .failure(let error):
+            print("Logbook housekeeping failed: \(error.userMessage)")
+        }
     }
 }

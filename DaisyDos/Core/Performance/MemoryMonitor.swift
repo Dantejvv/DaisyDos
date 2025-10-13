@@ -17,7 +17,7 @@ struct MemoryMonitor {
     /// Get detailed memory information including different types of memory usage
     static func getDetailedMemoryInfo() -> MemoryInfo {
         var info = mach_task_basic_info()
-        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4 //why divide by 4?
 
         let kerr: kern_return_t = withUnsafeMutablePointer(to: &info) {
             $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
@@ -38,7 +38,7 @@ struct MemoryMonitor {
             )
         }
 
-        let residentSizeMB = Double(info.resident_size) / 1024.0 / 1024.0
+        let residentSizeMB = Double(info.resident_size) / 1024.0 / 1024.0 //why divide by 1024.0 twice?
         let virtualSizeMB = Double(info.virtual_size) / 1024.0 / 1024.0
 
         return MemoryInfo(

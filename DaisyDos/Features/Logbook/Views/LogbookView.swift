@@ -1,0 +1,266 @@
+//
+//  LogbookView.swift
+//  DaisyDos
+//
+//  Created by Claude Code on 10/11/25.
+//  Main logbook view showing completed tasks and statistics
+//
+
+import SwiftUI
+import SwiftData
+
+struct LogbookView: View {
+    @Environment(LogbookManager.self) private var logbookManager
+
+    // Direct SwiftData query for real-time updates
+    @Query(
+        filter: #Predicate<Task> { $0.isCompleted },
+        sort: \Task.completedDate,
+        order: .reverse
+    ) private var completedTasks: [Task]
+
+    @Query(sort: \TaskLogEntry.completedDate, order: .reverse)
+    private var archivedEntries: [TaskLogEntry]
+
+    @State private var selectedPeriod: LogPeriod = .last30Days
+    @State private var searchText = ""
+
+    // MARK: - Period Enum
+
+    enum LogPeriod: String, CaseIterable, Identifiable {
+        case last7Days = "7 Days"
+        case last30Days = "30 Days"
+        case last90Days = "90 Days"
+        case thisYear = "This Year"
+
+        var id: String { rawValue }
+
+        var days: Int {
+            switch self {
+            case .last7Days: return 7
+            case .last30Days: return 30
+            case .last90Days: return 90
+            case .thisYear:
+                let now = Date()
+                let startOfYear = Calendar.current.date(from: Calendar.current.dateComponents([.year], from: now))!
+                return Calendar.current.dateComponents([.day], from: startOfYear, to: now).day ?? 365
+            }
+        }
+
+        var dateRange: (start: Date, end: Date) {
+            let end = Date()
+            let start = Calendar.current.date(byAdding: .day, value: -days, to: end) ?? end
+            return (start, end)
+        }
+    }
+
+    // MARK: - Body
+
+    var body: some View {
+        NavigationStack {
+            mainContent(manager: logbookManager)
+                .navigationTitle("Logbook")
+                .navigationBarTitleDisplayMode(.large)
+                .searchable(text: $searchText, prompt: "Search completions")
+        }
+    }
+
+    // MARK: - Main Content
+
+    @ViewBuilder
+    private func mainContent(manager: LogbookManager) -> some View {
+        VStack(spacing: 0) {
+            // Period selector
+            periodPicker
+
+            // Completions list
+            completionsList(manager: manager)
+        }
+    }
+
+    // MARK: - Period Picker
+
+    private var periodPicker: some View {
+        Picker("Period", selection: $selectedPeriod) {
+            ForEach(LogPeriod.allCases) { period in
+                Text(period.rawValue).tag(period)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding()
+        .accessibilityLabel("Time period selector")
+    }
+
+    // MARK: - Completions List
+
+    @ViewBuilder
+    private func completionsList(manager: LogbookManager) -> some View {
+        let completions = getCompletions(manager: manager)
+
+        if completions.isEmpty {
+            emptyState
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    // Header
+                    HStack {
+                        Text("\(completions.count) \(completions.count == 1 ? "Task" : "Tasks") Completed")
+                            .font(.headline)
+                            .foregroundColor(.daisyText)
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+
+                    // Task list
+                    ForEach(Array(completions.enumerated()), id: \.offset) { _, completion in
+                        if let task = completion as? Task {
+                            // Recent completion - full TaskRowView
+                            TaskRowView(
+                                task: task,
+                                onToggleCompletion: { },
+                                onEdit: { },
+                                onDelete: { },
+                                displayMode: .compact,
+                                showsSubtasks: true,
+                                showsTagButton: false
+                            )
+                            .disabled(true)  // Read-only
+                            .opacity(0.9)
+                            .padding(.horizontal)
+                            .padding(.vertical, 4)
+                        } else if let logEntry = completion as? TaskLogEntry {
+                            // Archived completion - lightweight LogEntryRow
+                            LogEntryRow(entry: logEntry)
+                                .padding(.horizontal)
+                                .padding(.vertical, 4)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 60))
+                .foregroundColor(Colors.Primary.textTertiary)
+
+            Text("No Completed Tasks")
+                .font(.headline)
+                .foregroundColor(.daisyText)
+
+            Text("Complete tasks to see them here")
+                .font(.subheadline)
+                .foregroundColor(.daisyTextSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.top, 100)
+    }
+
+    // MARK: - Helper Methods
+
+    private func getCompletions(manager: LogbookManager) -> [Any] {
+        let range = selectedPeriod.dateRange
+        let cutoffDate = Calendar.current.date(byAdding: .day, value: -90, to: Date())!
+
+        // Filter tasks from @Query (real-time updates)
+        let recentTasks: [Task]
+        if searchText.isEmpty {
+            recentTasks = completedTasks
+                .filter { task in
+                    guard let date = task.completedDate else { return false }
+                    return date >= cutoffDate && date >= range.start && date <= range.end
+                }
+        } else {
+            let query = searchText.lowercased()
+            recentTasks = completedTasks
+                .filter { task in
+                    guard let date = task.completedDate else { return false }
+                    let matchesDate = date >= cutoffDate && date >= range.start && date <= range.end
+                    let matchesSearch = task.title.lowercased().contains(query) ||
+                                      task.taskDescription.lowercased().contains(query)
+                    return matchesDate && matchesSearch
+                }
+        }
+
+        // Filter archived entries from @Query (real-time updates)
+        let filteredArchived: [TaskLogEntry]
+        if searchText.isEmpty {
+            filteredArchived = archivedEntries
+                .filter { entry in
+                    entry.completedDate >= range.start && entry.completedDate <= range.end
+                }
+        } else {
+            let query = searchText.lowercased()
+            filteredArchived = archivedEntries
+                .filter { entry in
+                    let matchesDate = entry.completedDate >= range.start && entry.completedDate <= range.end
+                    let matchesSearch = entry.title.lowercased().contains(query) ||
+                                       entry.taskDescription.lowercased().contains(query) ||
+                                       entry.tagNames.contains { $0.lowercased().contains(query) }
+                    return matchesDate && matchesSearch
+                }
+        }
+
+        // Combine and sort by completion date
+        return (recentTasks as [Any] + filteredArchived as [Any])
+            .sorted { a, b in
+                let dateA = (a as? Task)?.completedDate ?? (a as? TaskLogEntry)?.completedDate ?? Date.distantPast
+                let dateB = (b as? Task)?.completedDate ?? (b as? TaskLogEntry)?.completedDate ?? Date.distantPast
+                return dateA > dateB
+            }
+    }
+
+}
+
+// MARK: - Preview
+
+#Preview("Logbook View") {
+    let container = try! ModelContainer(
+        for: Task.self, TaskLogEntry.self, Tag.self,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+    let context = container.mainContext
+
+    // Create sample completed tasks
+    for i in 1...5 {
+        let task = Task(
+            title: "Completed Task \(i)",
+            taskDescription: "This is a sample completed task",
+            priority: Priority.allCases.randomElement()!,
+            dueDate: Calendar.current.date(byAdding: .day, value: -i, to: Date())
+        )
+        task.setCompleted(true)
+        context.insert(task)
+    }
+
+    // Create sample log entries
+    for i in 1...3 {
+        let entry = TaskLogEntry(
+            originalTaskId: UUID(),
+            title: "Archived Task \(i)",
+            taskDescription: "This is an archived task",
+            completedDate: Calendar.current.date(byAdding: .day, value: -(95 + i), to: Date())!,
+            createdDate: Calendar.current.date(byAdding: .day, value: -(100 + i), to: Date())!,
+            dueDate: nil,
+            priority: Priority.allCases.randomElement()!,
+            wasOverdue: false,
+            subtaskCount: 0,
+            completedSubtaskCount: 0,
+            tagNames: ["Sample"],
+            completionDuration: 86400
+        )
+        context.insert(entry)
+    }
+
+    try! context.save()
+
+    return LogbookView()
+        .modelContainer(container)
+}
