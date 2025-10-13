@@ -12,6 +12,7 @@ struct TodayView: View {
     @Environment(TaskManager.self) private var taskManager
     @Environment(HabitManager.self) private var habitManager
     @Environment(TagManager.self) private var tagManager
+    @Environment(TaskCompletionToastManager.self) private var toastManager
 
     // SwiftData query for automatic updates when tasks change
     @Query(
@@ -194,9 +195,21 @@ struct TodayView: View {
             )
             if case .failure(let error) = result {
                 print("Failed to toggle task completion: \(error)")
+            } else if task.isCompleted {
+                // Show undo toast if task was completed
+                toastManager.showCompletionToast(for: task) {
+                    _ = taskManager.toggleTaskCompletionSafely(task)
+                }
             }
         } else {
             _ = taskManager.toggleTaskCompletionSafely(task)
+
+            // Show undo toast if task was completed (not uncompleted)
+            if task.isCompleted {
+                toastManager.showCompletionToast(for: task) {
+                    _ = taskManager.toggleTaskCompletionSafely(task)
+                }
+            }
         }
     }
 }

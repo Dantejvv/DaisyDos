@@ -11,10 +11,12 @@ import SwiftData
 struct ContentView: View {
     @Environment(NavigationManager.self) private var navigationManager
     @Environment(PerformanceMonitor.self) private var performanceMonitor
-    @State private var toastManager = HabitCompletionToastManager()
+    @State private var habitToastManager = HabitCompletionToastManager()
+    @State private var taskToastManager = TaskCompletionToastManager()
 
     var body: some View {
-        HabitCompletionToastContainer {
+        TaskCompletionToastContainer {
+            HabitCompletionToastContainer {
             TabView(selection: Binding(
                 get: { navigationManager.selectedTab },
                 set: { navigationManager.selectedTab = $0 }
@@ -109,8 +111,10 @@ struct ContentView: View {
             .onAppear {
                 performanceMonitor.markFirstViewRenderComplete()
             }
+            }
+            .environment(habitToastManager)
         }
-        .environment(toastManager)
+        .environment(taskToastManager)
     }
 }
 

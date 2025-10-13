@@ -11,6 +11,7 @@ import SwiftData
 struct TasksView: View {
     @Environment(TaskManager.self) private var taskManager
     @Environment(TagManager.self) private var tagManager
+    @Environment(TaskCompletionToastManager.self) private var toastManager
     @Query(
         filter: #Predicate<Task> { task in
             task.parentTask == nil && !task.isCompleted
@@ -322,7 +323,7 @@ struct TasksView: View {
             task: task,
             onToggleCompletion: {
                 if !isMultiSelectMode {
-                    _ = taskManager.toggleTaskCompletionSafely(task)
+                    handleTaskCompletion(task)
                 }
             },
             onEdit: {
@@ -456,6 +457,19 @@ struct TasksView: View {
 
 
     // MARK: - Helper Methods
+
+    private func handleTaskCompletion(_ task: Task) {
+        // Toggle completion
+        _ = taskManager.toggleTaskCompletionSafely(task)
+
+        // Show undo toast if task was completed (not uncompleted)
+        if task.isCompleted {
+            toastManager.showCompletionToast(for: task) {
+                // Undo action - toggle back
+                _ = taskManager.toggleTaskCompletionSafely(task)
+            }
+        }
+    }
 
     private func toggleTaskSelection(_ task: Task) {
         if selectedTasks.contains(task.id) {
