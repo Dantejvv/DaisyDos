@@ -30,6 +30,8 @@ class TaskLogEntry {
     var wasOverdue: Bool
     var subtaskCount: Int
     var completedSubtaskCount: Int
+    var wasSubtask: Bool  // Was this a subtask of another task?
+    var parentTaskTitle: String?  // Title of parent task if this was a subtask
 
     // MARK: - Tag Snapshot (names only, no relationships)
 
@@ -53,6 +55,8 @@ class TaskLogEntry {
         wasOverdue: Bool,
         subtaskCount: Int,
         completedSubtaskCount: Int,
+        wasSubtask: Bool,
+        parentTaskTitle: String?,
         tagNames: [String],
         completionDuration: TimeInterval?
     ) {
@@ -67,6 +71,8 @@ class TaskLogEntry {
         self.wasOverdue = wasOverdue
         self.subtaskCount = subtaskCount
         self.completedSubtaskCount = completedSubtaskCount
+        self.wasSubtask = wasSubtask
+        self.parentTaskTitle = parentTaskTitle
         self.tagNames = tagNames
         self.completionDuration = completionDuration
     }
@@ -90,6 +96,8 @@ class TaskLogEntry {
             wasOverdue: task.hasOverdueStatus,
             subtaskCount: task.subtaskCount,
             completedSubtaskCount: task.completedSubtaskCount,
+            wasSubtask: task.parentTask != nil,
+            parentTaskTitle: task.parentTask?.title,
             tagNames: task.tags.map { $0.name },
             completionDuration: duration
         )
