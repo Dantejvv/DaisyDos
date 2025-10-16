@@ -35,7 +35,7 @@ class TaskLogEntry {
 
     // MARK: - Tag Snapshot (names only, no relationships)
 
-    var tagNames: [String]
+    var tagNames: [String] = []
 
     // MARK: - Analytics Metadata
 
@@ -85,6 +85,12 @@ class TaskLogEntry {
         // Calculate completion duration
         let duration = completedDate.timeIntervalSince(createdDate)
 
+        // Check if task was overdue at completion time
+        let wasOverdue: Bool = {
+            guard let dueDate = task.dueDate else { return false }
+            return completedDate > dueDate
+        }()
+
         self.init(
             originalTaskId: task.id,
             title: task.title,
@@ -93,7 +99,7 @@ class TaskLogEntry {
             createdDate: createdDate,
             dueDate: task.dueDate,
             priority: task.priority,
-            wasOverdue: task.hasOverdueStatus,
+            wasOverdue: wasOverdue,
             subtaskCount: task.subtaskCount,
             completedSubtaskCount: task.completedSubtaskCount,
             wasSubtask: task.parentTask != nil,

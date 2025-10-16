@@ -14,6 +14,7 @@ struct SettingsView: View {
     @Environment(TaskManager.self) private var taskManager
     @Environment(HabitManager.self) private var habitManager
     @Environment(TagManager.self) private var tagManager
+    @Environment(LogbookManager.self) private var logbookManager
     @Environment(HabitNotificationManager.self) private var notificationManager: HabitNotificationManager?
     @State private var showingAbout = false
     @State private var showingTestViews = false
@@ -168,6 +169,14 @@ private struct AboutView: View {
 
 private struct DeveloperToolsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(LogbookManager.self) private var logbookManager
+    @Environment(TaskManager.self) private var taskManager
+    @Environment(\.modelContext) private var modelContext
+    @State private var showingHousekeepingAlert = false
+    @State private var housekeepingResult = ""
+    @State private var testDataResult = ""
+    @State private var testSuite: LogbookTestSuite?
+    @State private var showingTestResults = false
 
     var body: some View {
         NavigationStack {
@@ -176,6 +185,99 @@ private struct DeveloperToolsView: View {
                     Text("Developer Tools")
                         .font(.largeTitle.bold())
                         .padding(.bottom, Spacing.small)
+
+                    // MARK: - Logbook Testing
+                    VStack(alignment: .leading, spacing: Spacing.medium) {
+                        Text("Logbook Testing")
+                            .font(.title2.bold())
+
+                        Text("Test the automatic archival system without waiting 90 days.")
+                            .font(.body)
+                            .foregroundColor(.daisyTextSecondary)
+
+                        CardView {
+                            VStack(spacing: Spacing.medium) {
+                                DaisyButton(
+                                    title: "Run Automated Test Suite",
+                                    style: .primary,
+                                    icon: "play.circle.fill",
+                                    isLoading: testSuite?.isRunning ?? false,
+                                    action: runTestSuite
+                                )
+
+                                Text("Runs 12 automated tests covering all housekeeping scenarios. Check Xcode console for detailed output.")
+                                    .font(.caption)
+                                    .foregroundColor(.daisyTextSecondary)
+                                    .multilineTextAlignment(.center)
+
+                                Divider()
+
+                                DaisyButton(
+                                    title: "Create Test Tasks",
+                                    style: .secondary,
+                                    icon: "plus.circle",
+                                    action: createTestTasks
+                                )
+
+                                Text("Creates completed tasks with dates: 30 days ago, 95 days ago (for archival), and 370 days ago (for deletion).")
+                                    .font(.caption)
+                                    .foregroundColor(.daisyTextSecondary)
+                                    .multilineTextAlignment(.center)
+
+                                Divider()
+
+                                DaisyButton(
+                                    title: "Run Housekeeping Now",
+                                    style: .tertiary,
+                                    icon: "arrow.clockwise",
+                                    action: runHousekeeping
+                                )
+
+                                Text("Archives completed tasks older than 90 days into TaskLogEntry snapshots and deletes entries older than 365 days.")
+                                    .font(.caption)
+                                    .foregroundColor(.daisyTextSecondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                        }
+
+                        if !testDataResult.isEmpty {
+                            CardView {
+                                VStack(alignment: .leading, spacing: Spacing.small) {
+                                    HStack {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.daisySuccess)
+                                        Text("Test Data Created")
+                                            .font(.headline)
+                                    }
+
+                                    Text(testDataResult)
+                                        .font(.caption)
+                                        .foregroundColor(.daisyTextSecondary)
+                                }
+                            }
+                        }
+
+                        if !housekeepingResult.isEmpty {
+                            CardView {
+                                VStack(alignment: .leading, spacing: Spacing.small) {
+                                    HStack {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.daisySuccess)
+                                        Text("Housekeeping Complete")
+                                            .font(.headline)
+                                    }
+
+                                    Text(housekeepingResult)
+                                        .font(.caption)
+                                        .foregroundColor(.daisyTextSecondary)
+                                }
+                            }
+                        }
+
+                        if let suite = testSuite, !suite.testResults.isEmpty {
+                            TestResultsCard(results: suite.testResults)
+                        }
+                    }
 
                     VStack(alignment: .leading, spacing: Spacing.medium) {
                         Text("Interactive Test Views")
@@ -229,6 +331,247 @@ private struct DeveloperToolsView: View {
                 }
             }
         }
+    }
+
+    private func createTestTasks() {
+        // Create tasks with old completion dates for testing
+        let calendar = Calendar.current
+        let now = Date()
+
+        // Task 1: Recent (30 days ago) - should stay as Task
+        let task1 = Task(
+            title: "Recent Task (30 days old)",
+            taskDescription: "This task should remain as a full Task object",
+            priority: .medium,
+            dueDate: nil
+        )
+        task1.setCompleted(true)
+        if let date = calendar.date(byAdding: .day, value: -30, to: now) {
+            task1.completedDate = date
+            task1.createdDate = calendar.date(byAdding: .day, value: -35, to: now) ?? date
+        }
+        modelContext.insert(task1)
+
+        // Task 2: Medium age (60 days ago) - should stay visible and then be archived
+        let task2 = Task(
+            title: "Medium Task (60 days old)",
+            taskDescription: "This task is visible but will be archived to TaskLogEntry after housekeeping",
+            priority: .high,
+            dueDate: nil
+        )
+        task2.setCompleted(true)
+        if let date = calendar.date(byAdding: .day, value: -60, to: now) {
+            task2.completedDate = date
+            task2.createdDate = calendar.date(byAdding: .day, value: -65, to: now) ?? date
+        }
+        modelContext.insert(task2)
+
+        // Task 3: At the edge (85 days ago) - visible in 90-day filter
+        let task3 = Task(
+            title: "Edge Task (85 days old)",
+            taskDescription: "At the edge of the 90-day window",
+            priority: .medium,
+            dueDate: nil
+        )
+        task3.setCompleted(true)
+        if let date = calendar.date(byAdding: .day, value: -85, to: now) {
+            task3.completedDate = date
+            task3.createdDate = calendar.date(byAdding: .day, value: -90, to: now) ?? date
+        }
+        modelContext.insert(task3)
+
+        // IMPORTANT: These next tasks are hidden by the 90-day filter until housekeeping runs!
+        // After housekeeping, they'll be archived as TaskLogEntry and become visible in longer period filters
+
+        // Task 4: Should be archived (120 days ago)
+        let task4 = Task(
+            title: "Old Task (120 days old)",
+            taskDescription: "Hidden until archived - will show after housekeeping",
+            priority: .high,
+            dueDate: nil
+        )
+        task4.setCompleted(true)
+        if let date = calendar.date(byAdding: .day, value: -120, to: now) {
+            task4.completedDate = date
+            task4.createdDate = calendar.date(byAdding: .day, value: -125, to: now) ?? date
+        }
+        modelContext.insert(task4)
+
+        // Task 5: Should be deleted (370 days ago)
+        let task5 = Task(
+            title: "Ancient Task (370 days old)",
+            taskDescription: "This will be deleted entirely after housekeeping",
+            priority: .low,
+            dueDate: nil
+        )
+        task5.setCompleted(true)
+        if let date = calendar.date(byAdding: .day, value: -370, to: now) {
+            task5.completedDate = date
+            task5.createdDate = calendar.date(byAdding: .day, value: -375, to: now) ?? date
+            #if DEBUG
+            print("📝 Created Ancient Task with completedDate: \(date)")
+            #endif
+        }
+        modelContext.insert(task5)
+
+        // Task 6: Parent task with subtask (100 days old) - test subtask indicators
+        let parentTask = Task(
+            title: "Parent Task (100 days old)",
+            taskDescription: "Parent task with subtask - will be archived",
+            priority: .medium,
+            dueDate: nil
+        )
+        parentTask.setCompleted(true)
+        if let date = calendar.date(byAdding: .day, value: -100, to: now) {
+            parentTask.completedDate = date
+            parentTask.createdDate = calendar.date(byAdding: .day, value: -105, to: now) ?? date
+        }
+        modelContext.insert(parentTask)
+
+        // Subtask (also 100 days old)
+        let subtask = parentTask.createSubtask(title: "Subtask of Parent (100 days old)")
+        subtask.setCompleted(true)
+        if let date = calendar.date(byAdding: .day, value: -100, to: now) {
+            subtask.completedDate = date
+        }
+        modelContext.insert(subtask)
+
+        // Save all
+        try? modelContext.save()
+
+        testDataResult = """
+        Created 7 test tasks:
+
+        BEFORE Housekeeping (90-day filter):
+        • 3 visible tasks (30, 60, 85 days old)
+        • 4 hidden (too old for filter)
+
+        AFTER Housekeeping:
+        • 3 remain as Task objects
+        • 3 archived to TaskLogEntry (120, 100 days)
+        • 1 deleted (370 days)
+
+        Switch to "This Year" filter to see all after housekeeping!
+        """
+    }
+
+    private func runHousekeeping() {
+        let result = logbookManager.performHousekeeping()
+        switch result {
+        case .success(let stats):
+            housekeepingResult = """
+            Housekeeping completed!
+            • \(stats.tasksArchived) tasks archived to log entries
+            • \(stats.tasksDeleted) old tasks deleted (365+ days)
+            • \(stats.logsDeleted) old log entries deleted
+
+            Check the Logbook tab to see the results.
+            """
+        case .failure(let error):
+            housekeepingResult = "Housekeeping failed: \(error.userMessage)"
+        }
+    }
+
+    private func runTestSuite() {
+        testSuite = LogbookTestSuite(modelContext: modelContext, logbookManager: logbookManager)
+        testSuite?.runAllTests()
+    }
+}
+
+// MARK: - Test Results Card
+
+private struct TestResultsCard: View {
+    let results: [LogbookTestSuite.TestResult]
+
+    private var passed: Int {
+        results.filter { $0.passed }.count
+    }
+
+    private var failed: Int {
+        results.count - passed
+    }
+
+    var body: some View {
+        CardView {
+            VStack(alignment: .leading, spacing: Spacing.medium) {
+                headerView
+                Divider()
+                resultsListView
+                footerView
+            }
+        }
+    }
+
+    private var headerView: some View {
+        HStack {
+            Image(systemName: failed == 0 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .foregroundColor(failed == 0 ? .daisySuccess : .daisyError)
+            Text("Test Results")
+                .font(.headline)
+            Spacer()
+            statsView
+        }
+    }
+
+    private var statsView: some View {
+        HStack(spacing: Spacing.small) {
+            Label("\(passed)", systemImage: "checkmark.circle")
+                .font(.caption)
+                .foregroundColor(.daisySuccess)
+            Label("\(failed)", systemImage: "xmark.circle")
+                .font(.caption)
+                .foregroundColor(.daisyError)
+        }
+    }
+
+    private var resultsListView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.small) {
+                ForEach(Array(results.enumerated()), id: \.offset) { index, result in
+                    TestResultRow(result: result)
+                    if index < results.count - 1 {
+                        Divider()
+                    }
+                }
+            }
+        }
+        .frame(maxHeight: 300)
+    }
+
+    private var footerView: some View {
+        Text("Check Xcode console for detailed test output")
+            .font(.caption2)
+            .foregroundColor(.daisyTextSecondary)
+    }
+}
+
+private struct TestResultRow: View {
+    let result: LogbookTestSuite.TestResult
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Spacing.small) {
+            Image(systemName: result.passed ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundColor(result.passed ? .daisySuccess : .daisyError)
+                .font(.caption)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Test \(result.testNumber)")
+                    .font(.caption)
+                    .fontWeight(.bold)
+
+                Text(result.message)
+                    .font(.caption2)
+                    .foregroundColor(.daisyTextSecondary)
+
+                Text("\(String(format: "%.3f", result.duration))s")
+                    .font(.caption2)
+                    .foregroundColor(.daisyTextSecondary)
+                    .opacity(0.7)
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 2)
     }
 }
 

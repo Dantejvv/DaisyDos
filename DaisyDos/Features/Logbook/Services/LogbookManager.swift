@@ -19,8 +19,8 @@ class LogbookManager {
     // Housekeeping statistics
     struct HousekeepingStats {
         var tasksArchived: Int = 0
+        var tasksDeleted: Int = 0
         var logsDeleted: Int = 0
-        var aggregatesCreated: Int = 0
     }
 
     init(modelContext: ModelContext) {
@@ -31,17 +31,28 @@ class LogbookManager {
 
     /// Performs all housekeeping operations: archive old tasks, cleanup old logs
     func performHousekeeping() -> Result<HousekeepingStats, AnyRecoverableError> {
+        #if DEBUG
+        print("\n🧹 [Housekeeping] Starting housekeeping at \(Date())")
+        #endif
+
         return ErrorTransformer.safely(
             operation: "logbook housekeeping",
             entityType: "logbook"
         ) {
             var stats = HousekeepingStats()
 
-            // Archive tasks completed 90+ days ago
-            stats.tasksArchived = try archiveTasks(olderThanDays: 90)
+            // Step 1: Archive tasks in the 91-365 day range FIRST (create log entries)
+            stats.tasksArchived = try archiveTasks(olderThanDays: 91, newerThanDays: 365)
 
-            // Delete log entries 365+ days old
+            // Step 2: Delete very old tasks (366+ days) - tasks exactly 365 days already archived above
+            stats.tasksDeleted = try deleteOldTasks(olderThanDays: 366)
+
+            // Step 3: Delete very old log entries (365+ days)
             stats.logsDeleted = try cleanupLogEntries(olderThanDays: 365)
+
+            #if DEBUG
+            print("✅ [Housekeeping] Complete - Deleted: \(stats.tasksDeleted), Archived: \(stats.tasksArchived), Logs deleted: \(stats.logsDeleted)\n")
+            #endif
 
             return stats
         }
@@ -49,21 +60,83 @@ class LogbookManager {
 
     // MARK: - Archival Logic
 
-    /// Archive tasks completed more than specified days ago
-    /// Converts Task -> TaskLogEntry and deletes original task (with attachments)
-    private func archiveTasks(olderThanDays days: Int) throws -> Int {
-        // Calculate cutoff date using local variable (SwiftData #Predicate requirement)
+    /// Delete very old completed tasks (365+ days) without creating log entries
+    /// These are too old to need archival - just delete them entirely
+    private func deleteOldTasks(olderThanDays days: Int) throws -> Int {
+        // Calculate cutoff date
         let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date())!
 
+        #if DEBUG
+        print("🗑️ [Housekeeping] Looking for tasks to DELETE (365+ days old)")
+        print("   Cutoff date: \(cutoffDate)")
+        #endif
+
+        // Fetch ALL completed tasks (SwiftData #Predicate has issues with optional Date comparisons)
         let descriptor = FetchDescriptor<Task>(
-            predicate: #Predicate<Task> { task in
-                task.isCompleted &&
-                task.completedDate != nil &&
-                task.completedDate! < cutoffDate
-            }
+            predicate: #Predicate<Task> { task in task.isCompleted }
         )
 
-        let tasksToArchive = try modelContext.fetch(descriptor)
+        let allCompleted = try modelContext.fetch(descriptor)
+
+        // Filter manually in Swift
+        let tasksToDelete = allCompleted.filter { task in
+            guard let completedDate = task.completedDate else { return false }
+            return completedDate < cutoffDate
+        }
+
+        #if DEBUG
+        print("   Total completed tasks: \(allCompleted.count)")
+        print("   Found \(tasksToDelete.count) tasks to delete:")
+        for task in tasksToDelete {
+            print("   - \(task.title) (completed: \(task.completedDate ?? Date()))")
+        }
+        #endif
+
+        for task in tasksToDelete {
+            // Delete task directly (cascades to attachments automatically via SwiftData)
+            modelContext.delete(task)
+        }
+
+        if !tasksToDelete.isEmpty {
+            try modelContext.save()
+        }
+
+        return tasksToDelete.count
+    }
+
+    /// Archive tasks completed in the 91-365 day range
+    /// Converts Task -> TaskLogEntry and deletes original task (with attachments)
+    private func archiveTasks(olderThanDays olderDays: Int, newerThanDays newerDays: Int) throws -> Int {
+        // Calculate cutoff dates
+        let olderCutoff = Calendar.current.date(byAdding: .day, value: -olderDays, to: Date())!
+        let newerCutoff = Calendar.current.date(byAdding: .day, value: -newerDays, to: Date())!
+
+        #if DEBUG
+        print("📦 [Housekeeping] Looking for tasks to ARCHIVE (91-365 days old)")
+        print("   Older cutoff (91 days): \(olderCutoff)")
+        print("   Newer cutoff (365 days): \(newerCutoff)")
+        #endif
+
+        // Fetch ALL completed tasks (SwiftData #Predicate has issues with optional Date comparisons)
+        let descriptor = FetchDescriptor<Task>(
+            predicate: #Predicate<Task> { task in task.isCompleted }
+        )
+
+        let allCompleted = try modelContext.fetch(descriptor)
+
+        // Filter manually in Swift for date range
+        let tasksToArchive = allCompleted.filter { task in
+            guard let completedDate = task.completedDate else { return false }
+            return completedDate < olderCutoff && completedDate >= newerCutoff
+        }
+
+        #if DEBUG
+        print("   Total completed tasks: \(allCompleted.count)")
+        print("   Found \(tasksToArchive.count) tasks to archive:")
+        for task in tasksToArchive {
+            print("   - \(task.title) (completed: \(task.completedDate ?? Date()))")
+        }
+        #endif
 
         for task in tasksToArchive {
             // Create lightweight log entry
@@ -83,16 +156,27 @@ class LogbookManager {
 
     /// Delete log entries older than specified days
     private func cleanupLogEntries(olderThanDays days: Int) throws -> Int {
-        // Calculate cutoff date using local variable
+        // Calculate cutoff date
         let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date())!
 
-        let descriptor = FetchDescriptor<TaskLogEntry>(
-            predicate: #Predicate<TaskLogEntry> { entry in
-                entry.completedDate < cutoffDate
-            }
-        )
+        #if DEBUG
+        print("🗄️ [Housekeeping] Looking for log entries to DELETE (365+ days old)")
+        print("   Cutoff date: \(cutoffDate)")
+        #endif
 
-        let entriesToDelete = try modelContext.fetch(descriptor)
+        // Fetch ALL log entries (using manual filter for consistency with other methods)
+        let descriptor = FetchDescriptor<TaskLogEntry>()
+        let allEntries = try modelContext.fetch(descriptor)
+
+        // Filter manually in Swift
+        let entriesToDelete = allEntries.filter { entry in
+            entry.completedDate < cutoffDate
+        }
+
+        #if DEBUG
+        print("   Total log entries: \(allEntries.count)")
+        print("   Found \(entriesToDelete.count) log entries to delete")
+        #endif
 
         for entry in entriesToDelete {
             modelContext.delete(entry)

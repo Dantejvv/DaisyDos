@@ -32,6 +32,7 @@ struct LogbookView: View {
         case last30Days = "30 Days"
         case last90Days = "90 Days"
         case thisYear = "This Year"
+        case allTime = "All Time"
 
         var id: String { rawValue }
 
@@ -44,13 +45,19 @@ struct LogbookView: View {
                 let now = Date()
                 let startOfYear = Calendar.current.date(from: Calendar.current.dateComponents([.year], from: now))!
                 return Calendar.current.dateComponents([.day], from: startOfYear, to: now).day ?? 365
+            case .allTime: return Int.max
             }
         }
 
         var dateRange: (start: Date, end: Date) {
             let end = Date()
-            let start = Calendar.current.date(byAdding: .day, value: -days, to: end) ?? end
-            return (start, end)
+            if self == .allTime {
+                // All time - use distant past
+                return (Date.distantPast, end)
+            } else {
+                let start = Calendar.current.date(byAdding: .day, value: -days, to: end) ?? end
+                return (start, end)
+            }
         }
     }
 
@@ -81,14 +88,38 @@ struct LogbookView: View {
     // MARK: - Period Picker
 
     private var periodPicker: some View {
-        Picker("Period", selection: $selectedPeriod) {
-            ForEach(LogPeriod.allCases) { period in
-                Text(period.rawValue).tag(period)
+        HStack {
+            Text("Period:")
+                .font(.subheadline)
+                .foregroundColor(.daisyTextSecondary)
+
+            Spacer()
+
+            Menu {
+                ForEach(LogPeriod.allCases) { period in
+                    Button(action: {
+                        selectedPeriod = period
+                    }) {
+                        HStack {
+                            Text(period.rawValue)
+                            if selectedPeriod == period {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(selectedPeriod.rawValue)
+                        .font(.subheadline.weight(.medium))
+                    Image(systemName: "chevron.down")
+                        .font(.caption)
+                }
+                .foregroundColor(.daisyTask)
             }
         }
-        .pickerStyle(.segmented)
         .padding()
-        .accessibilityLabel("Time period selector")
+        .accessibilityLabel("Time period selector: \(selectedPeriod.rawValue)")
     }
 
     // MARK: - Completions List
@@ -220,22 +251,22 @@ struct LogbookView: View {
 
     private func getCompletions(manager: LogbookManager) -> [Any] {
         let range = selectedPeriod.dateRange
-        let cutoffDate = Calendar.current.date(byAdding: .day, value: -90, to: Date())!
 
         // Filter tasks from @Query (real-time updates)
+        // Show all completed tasks within the selected period
         let recentTasks: [Task]
         if searchText.isEmpty {
             recentTasks = completedTasks
                 .filter { task in
                     guard let date = task.completedDate else { return false }
-                    return date >= cutoffDate && date >= range.start && date <= range.end
+                    return date >= range.start && date <= range.end
                 }
         } else {
             let query = searchText.lowercased()
             recentTasks = completedTasks
                 .filter { task in
                     guard let date = task.completedDate else { return false }
-                    let matchesDate = date >= cutoffDate && date >= range.start && date <= range.end
+                    let matchesDate = date >= range.start && date <= range.end
                     let matchesSearch = task.title.lowercased().contains(query) ||
                                       task.taskDescription.lowercased().contains(query)
                     return matchesDate && matchesSearch
