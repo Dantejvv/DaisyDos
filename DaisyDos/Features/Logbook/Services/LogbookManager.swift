@@ -79,6 +79,7 @@ class LogbookManager {
         let allCompleted = try modelContext.fetch(descriptor)
 
         // Filter manually in Swift
+        // Note: age > 365 days (strictly greater than 365)
         let tasksToDelete = allCompleted.filter { task in
             guard let completedDate = task.completedDate else { return false }
             return completedDate < cutoffDate
@@ -125,6 +126,7 @@ class LogbookManager {
         let allCompleted = try modelContext.fetch(descriptor)
 
         // Filter manually in Swift for date range
+        // Note: 91 <= age <= 365 (inclusive at both ends)
         let tasksToArchive = allCompleted.filter { task in
             guard let completedDate = task.completedDate else { return false }
             return completedDate < olderCutoff && completedDate >= newerCutoff
