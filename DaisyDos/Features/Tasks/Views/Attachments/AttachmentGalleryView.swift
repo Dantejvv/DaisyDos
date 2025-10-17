@@ -13,7 +13,7 @@ struct AttachmentGalleryView: View {
 
     let task: Task
     let onAttachmentTap: (TaskAttachment) -> Void
-    let onAddAttachment: () -> Void
+    let onAddAttachment: (() -> Void)?  // Made optional
     let onShareAttachment: (TaskAttachment) -> Void
 
     @State private var viewMode: ViewMode = .list
@@ -116,13 +116,15 @@ struct AttachmentGalleryView: View {
                 .frame(width: 120)
             }
 
-            // Add button
-            Button(action: onAddAttachment) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(.daisyTask)
+            // Add button (only if callback provided)
+            if let onAddAttachment = onAddAttachment {
+                Button(action: onAddAttachment) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.daisyTask)
+                }
+                .accessibilityLabel("Add attachment")
             }
-            .accessibilityLabel("Add attachment")
         }
         .padding()
         .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
@@ -230,24 +232,32 @@ struct AttachmentGalleryView: View {
                     .font(.title3.weight(.medium))
                     .foregroundColor(.daisyText)
 
-                Text("Add photos, documents, or other files to keep everything organized with your task.")
-                    .font(.subheadline)
-                    .foregroundColor(.daisyTextSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                if onAddAttachment != nil {
+                    Text("Add photos, documents, or other files to keep everything organized with your task.")
+                        .font(.subheadline)
+                        .foregroundColor(.daisyTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
 
-                Button(action: onAddAttachment) {
-                    HStack {
-                        Image(systemName: "plus")
-                        Text("Add Attachment")
+                    Button(action: onAddAttachment!) {
+                        HStack {
+                            Image(systemName: "plus")
+                            Text("Add Attachment")
+                        }
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(Color.daisyTask, in: Capsule())
                     }
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Color.daisyTask, in: Capsule())
+                    .accessibilityLabel("Add first attachment")
+                } else {
+                    Text("This completed task has no attachments.")
+                        .font(.subheadline)
+                        .foregroundColor(.daisyTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
-                .accessibilityLabel("Add first attachment")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

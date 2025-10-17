@@ -13,8 +13,9 @@ struct LogbookView: View {
     @Environment(LogbookManager.self) private var logbookManager
 
     // Direct SwiftData query for real-time updates
+    // Only show root tasks (no subtasks) to keep logbook organized
     @Query(
-        filter: #Predicate<Task> { $0.isCompleted },
+        filter: #Predicate<Task> { $0.isCompleted && $0.parentTask == nil },
         sort: \Task.completedDate,
         order: .reverse
     ) private var completedTasks: [Task]
@@ -148,7 +149,7 @@ struct LogbookView: View {
                     ForEach(Array(completions.enumerated()), id: \.offset) { _, completion in
                         if let task = completion as? Task {
                             // Recent completion (0-90 days) - full TaskRowView with navigation
-                            NavigationLink(destination: TaskDetailView(task: task)) {
+                            NavigationLink(destination: TaskDetailView(task: task, isLogbookMode: true)) {
                                 VStack(alignment: .leading, spacing: 4) {
                                     // Task row with inline subtask indicator
                                     HStack(spacing: 8) {

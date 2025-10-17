@@ -218,6 +218,22 @@ class TaskManager {
         }
     }
 
+    /// Recover a completed task by marking it incomplete
+    func recoverTask(_ task: Task) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "recover task",
+            entityType: "task"
+        ) {
+            guard task.isCompleted else {
+                throw DaisyDosError.validationFailed("Only completed tasks can be recovered")
+            }
+
+            task.setCompleted(false)
+            task.modifiedDate = Date()
+            try modelContext.save()
+        }
+    }
+
     func deleteTask(_ task: Task) -> Result<Void, AnyRecoverableError> {
         return ErrorTransformer.safely(
             operation: "delete task",
@@ -664,6 +680,17 @@ class TaskManager {
     /// Toggle task completion and handle errors internally
     func toggleTaskCompletionSafely(_ task: Task) -> Bool {
         switch toggleTaskCompletion(task) {
+        case .success:
+            return true
+        case .failure(let error):
+            lastError = error.wrapped
+            return false
+        }
+    }
+
+    /// Recover a completed task and handle errors internally
+    func recoverTaskSafely(_ task: Task) -> Bool {
+        switch recoverTask(task) {
         case .success:
             return true
         case .failure(let error):

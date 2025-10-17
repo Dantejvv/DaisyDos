@@ -80,9 +80,13 @@ class LogbookManager {
 
         // Filter manually in Swift
         // Note: age > 365 days (strictly greater than 365)
+        // IMPORTANT: Only delete root tasks (parentTask == nil)
+        // Subtasks are deleted via cascade when parent is deleted
         let tasksToDelete = allCompleted.filter { task in
             guard let completedDate = task.completedDate else { return false }
-            return completedDate < cutoffDate
+            let isOldEnough = completedDate < cutoffDate
+            let isRootTask = task.parentTask == nil
+            return isOldEnough && isRootTask
         }
 
         #if DEBUG
@@ -127,9 +131,13 @@ class LogbookManager {
 
         // Filter manually in Swift for date range
         // Note: 91 <= age <= 365 (inclusive at both ends)
+        // IMPORTANT: Only archive root tasks (parentTask == nil)
+        // Subtasks are deleted via cascade when parent is archived
         let tasksToArchive = allCompleted.filter { task in
             guard let completedDate = task.completedDate else { return false }
-            return completedDate < olderCutoff && completedDate >= newerCutoff
+            let isInDateRange = completedDate < olderCutoff && completedDate >= newerCutoff
+            let isRootTask = task.parentTask == nil
+            return isInDateRange && isRootTask
         }
 
         #if DEBUG

@@ -14,6 +14,7 @@ struct TaskDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     let task: Task
+    let isLogbookMode: Bool
 
     @State private var selectedTab: DetailTab = .overview
     @State private var showingEditView = false
@@ -24,6 +25,13 @@ struct TaskDetailView: View {
     @State private var showingAttachmentDetail: TaskAttachment?
     @State private var showingTaskShare = false
     @State private var showingRecurrencePicker = false
+    @State private var showingRecoverConfirmation = false
+
+    // MARK: - Computed Properties
+
+    private var canModify: Bool {
+        !task.isCompleted || !isLogbookMode
+    }
 
     // MARK: - Detail Tabs
 
@@ -67,13 +75,16 @@ struct TaskDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button {
-                            showingEditView = true
-                        } label: {
-                            Label("Edit", systemImage: "pencil")
-                        }
+                        // Only show Edit if task can be modified
+                        if canModify {
+                            Button {
+                                showingEditView = true
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
 
-                        Divider()
+                            Divider()
+                        }
 
                         Button {
                             duplicateTask()
@@ -85,6 +96,17 @@ struct TaskDetailView: View {
                             showingTaskShare = true
                         } label: {
                             Label("Share", systemImage: "square.and.arrow.up")
+                        }
+
+                        // Add Recover option for completed tasks in logbook mode
+                        if isLogbookMode && task.isCompleted {
+                            Divider()
+
+                            Button {
+                                showingRecoverConfirmation = true
+                            } label: {
+                                Label("Recover Task", systemImage: "arrow.uturn.backward.circle")
+                            }
                         }
 
                         Divider()
@@ -100,21 +122,23 @@ struct TaskDetailView: View {
                 }
             }
             .overlay(alignment: .bottomTrailing) {
-                // Floating completion toggle
-                Button(action: {
-                    _ = taskManager.toggleTaskCompletionSafely(task)
-                }) {
-                    Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 56))
-                        .foregroundColor(task.isCompleted ? .daisySuccess : .daisyTask)
-                        .background(
-                            Circle()
-                                .fill(.regularMaterial)
-                                .shadow(radius: 8)
-                        )
+                // Floating completion toggle (hidden in logbook mode)
+                if !isLogbookMode {
+                    Button(action: {
+                        _ = taskManager.toggleTaskCompletionSafely(task)
+                    }) {
+                        Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 56))
+                            .foregroundColor(task.isCompleted ? .daisySuccess : .daisyTask)
+                            .background(
+                                Circle()
+                                    .fill(.regularMaterial)
+                                    .shadow(radius: 8)
+                            )
+                    }
+                    .padding()
+                    .accessibilityLabel(task.isCompleted ? "Mark as incomplete" : "Mark as complete")
                 }
-                .padding()
-                .accessibilityLabel(task.isCompleted ? "Mark as incomplete" : "Mark as complete")
             }
         }
         .sheet(isPresented: $showingEditView) {
@@ -171,6 +195,14 @@ struct TaskDetailView: View {
             }
         } message: {
             Text("Are you sure you want to delete '\(task.title)'? This action cannot be undone.")
+        }
+        .alert("Recover Task", isPresented: $showingRecoverConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Recover") {
+                recoverTask()
+            }
+        } message: {
+            Text("This task will be moved back to your active tasks list and marked as incomplete.")
         }
     }
 
@@ -496,17 +528,33 @@ struct TaskDetailView: View {
                         Text("All Subtasks")
                             .font(.headline)
                         Spacer()
-                        Button(action: {
-                            showingSubtaskCreation = true
-                        }) {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.daisyTask)
+                        if canModify {
+                            Button(action: {
+                                showingSubtaskCreation = true
+                            }) {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.daisyTask)
+                            }
+                            .accessibilityLabel("Add subtask")
                         }
-                        .accessibilityLabel("Add subtask")
+                    }
+
+                    // Info banner when restricted
+                    if !canModify && task.isCompleted {
+                        HStack(spacing: 8) {
+                            Image(systemName: "info.circle")
+                                .foregroundColor(.daisyTask)
+                            Text("Completed tasks in Logbook cannot have new subtasks added")
+                                .font(.caption)
+                                .foregroundColor(.daisyTextSecondary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.daisyTask.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
                     }
 
                     if task.hasSubtasks {
-                        SubtaskListView(parentTask: task)
+                        SubtaskListView(parentTask: task, isReadOnly: isLogbookMode)
                     } else {
                         VStack(spacing: 16) {
                             Image(systemName: "checklist")
@@ -517,19 +565,26 @@ struct TaskDetailView: View {
                                 .font(.headline)
                                 .foregroundColor(.daisyText)
 
-                            Text("Break this task into smaller steps")
-                                .font(.subheadline)
-                                .foregroundColor(.daisyTextSecondary)
-                                .multilineTextAlignment(.center)
+                            if canModify {
+                                Text("Break this task into smaller steps")
+                                    .font(.subheadline)
+                                    .foregroundColor(.daisyTextSecondary)
+                                    .multilineTextAlignment(.center)
 
-                            Button(action: {
-                                showingSubtaskCreation = true
-                            }) {
-                                Label("Add Subtask", systemImage: "plus.circle.fill")
-                                    .font(.subheadline.weight(.medium))
+                                Button(action: {
+                                    showingSubtaskCreation = true
+                                }) {
+                                    Label("Add Subtask", systemImage: "plus.circle.fill")
+                                        .font(.subheadline.weight(.medium))
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.daisyTask)
+                            } else {
+                                Text("This completed task has no subtasks")
+                                    .font(.subheadline)
+                                    .foregroundColor(.daisyTextSecondary)
+                                    .multilineTextAlignment(.center)
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.daisyTask)
                         }
                         .padding(.vertical, 32)
                     }
@@ -547,6 +602,20 @@ struct TaskDetailView: View {
     private var attachmentsTab: some View {
         ScrollView {
             LazyVStack(spacing: 20) {
+                // Info banner when restricted
+                if !canModify && task.isCompleted {
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.daisyTask)
+                        Text("Completed tasks in Logbook cannot have new attachments added")
+                            .font(.caption)
+                            .foregroundColor(.daisyTextSecondary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.daisyTask.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                }
+
                 // Storage Info Card
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Storage")
@@ -603,9 +672,9 @@ struct TaskDetailView: View {
                     onAttachmentTap: { attachment in
                         showingAttachmentDetail = attachment
                     },
-                    onAddAttachment: {
+                    onAddAttachment: canModify ? {
                         showingAttachmentPicker = true
-                    },
+                    } : nil,  // Disable add when !canModify
                     onShareAttachment: { attachment in
                         shareAttachment(attachment)
                     }
@@ -615,7 +684,21 @@ struct TaskDetailView: View {
         }
     }
 
+    // MARK: - Initializer
+
+    init(task: Task, isLogbookMode: Bool = false) {
+        self.task = task
+        self.isLogbookMode = isLogbookMode
+    }
+
     // MARK: - Helper Methods
+
+    private func recoverTask() {
+        let success = taskManager.recoverTaskSafely(task)
+        if success {
+            dismiss()  // Return to logbook after recovery
+        }
+    }
 
     private func updateTaskTags(_ newTags: [Tag]) {
         // Remove tags that are no longer selected

@@ -10,17 +10,20 @@ import SwiftData
 
 struct SubtaskRowView: View {
     let subtask: Task
+    let isReadOnly: Bool
     let onToggleCompletion: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
 
     init(
         subtask: Task,
+        isReadOnly: Bool = false,
         onToggleCompletion: @escaping () -> Void,
         onEdit: @escaping () -> Void,
         onDelete: @escaping () -> Void
     ) {
         self.subtask = subtask
+        self.isReadOnly = isReadOnly
         self.onToggleCompletion = onToggleCompletion
         self.onEdit = onEdit
         self.onDelete = onDelete
@@ -36,7 +39,13 @@ struct SubtaskRowView: View {
             }
             .buttonStyle(.plain)
             .frame(minWidth: 44, minHeight: 44)
-            .accessibilityLabel(subtask.isCompleted ? "Mark as incomplete" : "Mark as complete")
+            .disabled(isReadOnly)
+            .opacity(isReadOnly ? 0.6 : 1.0)
+            .accessibilityLabel(
+                isReadOnly
+                    ? "Completed subtask (read-only)"
+                    : (subtask.isCompleted ? "Mark as incomplete" : "Mark as complete")
+            )
 
             // Subtask content
             VStack(alignment: .leading, spacing: 4) {
@@ -63,24 +72,26 @@ struct SubtaskRowView: View {
                 }
             }
 
-            // Action menu
-            Menu {
-                Button(action: onEdit) {
-                    Label("Edit", systemImage: "pencil")
-                }
+            // Action menu (hidden in read-only mode)
+            if !isReadOnly {
+                Menu {
+                    Button(action: onEdit) {
+                        Label("Edit", systemImage: "pencil")
+                    }
 
-                Divider()
+                    Divider()
 
-                Button(role: .destructive, action: onDelete) {
-                    Label("Delete", systemImage: "trash")
+                    Button(role: .destructive, action: onDelete) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.body)
+                        .foregroundColor(.daisyTextSecondary)
                 }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .font(.body)
-                    .foregroundColor(.daisyTextSecondary)
+                .buttonStyle(.plain)
+                .frame(minWidth: 44, minHeight: 44)
             }
-            .buttonStyle(.plain)
-            .frame(minWidth: 44, minHeight: 44)
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 16)

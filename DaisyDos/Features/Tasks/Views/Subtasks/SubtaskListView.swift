@@ -11,6 +11,7 @@ import SwiftData
 struct SubtaskListView: View {
     @Environment(TaskManager.self) private var taskManager
     let parentTask: Task
+    let isReadOnly: Bool
 
     @State private var showingSubtaskCreation = false
     @State private var subtaskToEdit: Task?
@@ -30,6 +31,7 @@ struct SubtaskListView: View {
                 ForEach(displayedSubtasks, id: \.id) { subtask in
                     SubtaskRowView(
                         subtask: subtask,
+                        isReadOnly: isReadOnly,
                         onToggleCompletion: {
                             toggleSubtaskCompletion(subtask)
                         },
@@ -44,35 +46,39 @@ struct SubtaskListView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 2)
                     .overlay(
-                        // Reordering arrows (always shown in manage mode)
-                        HStack {
-                            Spacer()
-                            VStack(spacing: 4) {
-                                // Up arrow
-                                Button(action: {
-                                    moveSubtaskUp(subtask)
-                                }) {
-                                    Image(systemName: "chevron.up")
-                                        .font(.caption)
-                                        .foregroundColor(canMoveUp(subtask) ? .daisyTask : .daisyTextSecondary)
-                                        .frame(width: 32, height: 24)
-                                        .background(Color.daisySurface.opacity(0.8), in: RoundedRectangle(cornerRadius: 6))
-                                }
-                                .disabled(!canMoveUp(subtask))
+                        // Reordering arrows (hidden in read-only mode)
+                        Group {
+                            if !isReadOnly {
+                                HStack {
+                                    Spacer()
+                                    VStack(spacing: 4) {
+                                        // Up arrow
+                                        Button(action: {
+                                            moveSubtaskUp(subtask)
+                                        }) {
+                                            Image(systemName: "chevron.up")
+                                                .font(.caption)
+                                                .foregroundColor(canMoveUp(subtask) ? .daisyTask : .daisyTextSecondary)
+                                                .frame(width: 32, height: 24)
+                                                .background(Color.daisySurface.opacity(0.8), in: RoundedRectangle(cornerRadius: 6))
+                                        }
+                                        .disabled(!canMoveUp(subtask))
 
-                                // Down arrow
-                                Button(action: {
-                                    moveSubtaskDown(subtask)
-                                }) {
-                                    Image(systemName: "chevron.down")
-                                        .font(.caption)
-                                        .foregroundColor(canMoveDown(subtask) ? .daisyTask : .daisyTextSecondary)
-                                        .frame(width: 32, height: 24)
-                                        .background(Color.daisySurface.opacity(0.8), in: RoundedRectangle(cornerRadius: 6))
+                                        // Down arrow
+                                        Button(action: {
+                                            moveSubtaskDown(subtask)
+                                        }) {
+                                            Image(systemName: "chevron.down")
+                                                .font(.caption)
+                                                .foregroundColor(canMoveDown(subtask) ? .daisyTask : .daisyTextSecondary)
+                                                .frame(width: 32, height: 24)
+                                                .background(Color.daisySurface.opacity(0.8), in: RoundedRectangle(cornerRadius: 6))
+                                        }
+                                        .disabled(!canMoveDown(subtask))
+                                    }
+                                    .padding(.trailing, 8)
                                 }
-                                .disabled(!canMoveDown(subtask))
                             }
-                            .padding(.trailing, 8)
                         },
                         alignment: .trailing
                     )
@@ -137,25 +143,27 @@ struct SubtaskListView: View {
 
     @ViewBuilder
     private var addSubtaskButton: some View {
-        Button(action: {
-            showingSubtaskCreation = true
-        }) {
-            HStack(spacing: 8) {
-                Image(systemName: "plus.circle.fill")
-                    .foregroundColor(.daisyTask)
-                Text("Add Subtask")
-                    .font(.body.weight(.medium))
-                    .foregroundColor(.daisyTask)
-                Spacer()
+        if !isReadOnly {
+            Button(action: {
+                showingSubtaskCreation = true
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(.daisyTask)
+                    Text("Add Subtask")
+                        .font(.body.weight(.medium))
+                        .foregroundColor(.daisyTask)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.daisySurface.opacity(0.5))
+                .cornerRadius(8)
             }
+            .buttonStyle(.plain)
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.daisySurface.opacity(0.5))
-            .cornerRadius(8)
+            .padding(.top, 8)
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
     }
 
     // MARK: - Actions
@@ -255,7 +263,7 @@ struct SubtaskListView: View {
 
     subtask1.setCompleted(true)
 
-    return SubtaskListView(parentTask: parentTask)
+    return SubtaskListView(parentTask: parentTask, isReadOnly: false)
         .modelContainer(container)
         .environment(taskManager)
         .background(Color.daisyBackground)
@@ -277,7 +285,7 @@ struct SubtaskListView: View {
 
     container.mainContext.insert(parentTask)
 
-    return SubtaskListView(parentTask: parentTask)
+    return SubtaskListView(parentTask: parentTask, isReadOnly: false)
         .modelContainer(container)
         .environment(taskManager)
         .background(Color.daisyBackground)

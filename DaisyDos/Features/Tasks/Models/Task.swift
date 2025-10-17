@@ -223,7 +223,14 @@ class Task {
                 }
             }
         } else {
-            // When uncompleting a task, propagate up to parent if necessary
+            // When uncompleting a parent task, also uncomplete all subtasks
+            for subtask in subtasks {
+                if subtask.isCompleted {
+                    subtask.setCompleted(false)
+                }
+            }
+
+            // When uncompleting a subtask, propagate up to parent if necessary
             updateParentCompletionStatus()
         }
     }
