@@ -31,6 +31,10 @@ struct TaskRowView: View {
     let showsSubtasks: Bool
     let showsTagButton: Bool
 
+    // Animation state
+    @State private var isAnimatingCompletion = false
+    @State private var checkmarkScale: CGFloat = 1.0
+
     // MARK: - Initializers
 
     init(
@@ -130,7 +134,18 @@ struct TaskRowView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 8))
+        .background(
+            ZStack {
+                // Base background
+                Color.daisySurface
+
+                // Success highlight (only during animation)
+                if isAnimatingCompletion {
+                    Color.daisySuccess.opacity(0.2)
+                }
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 8))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
@@ -187,7 +202,18 @@ struct TaskRowView: View {
             metadataFooter
         }
         .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+        .background(
+            ZStack {
+                // Base background
+                Color.daisySurface
+
+                // Success highlight (only during animation)
+                if isAnimatingCompletion {
+                    Color.daisySuccess.opacity(0.2)
+                }
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
@@ -254,7 +280,18 @@ struct TaskRowView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 10))
+        .background(
+            ZStack {
+                // Base background
+                Color.daisySurface
+
+                // Success highlight (only during animation)
+                if isAnimatingCompletion {
+                    Color.daisySuccess.opacity(0.2)
+                }
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 10))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
@@ -264,10 +301,40 @@ struct TaskRowView: View {
 
     @ViewBuilder
     private var completionToggle: some View {
-        Button(action: onToggleCompletion) {
+        Button(action: {
+            // Only animate when marking as complete (not uncomplete)
+            if !task.isCompleted {
+                // Phase 1: Initial bounce (checkmark grows)
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.5)) {
+                    isAnimatingCompletion = true
+                    checkmarkScale = 1.4
+                }
+
+                // Phase 2: Settle back to normal size
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                        checkmarkScale = 1.0
+                    }
+                }
+
+                // Phase 3: Reset animation state after complete
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    isAnimatingCompletion = false
+                }
+
+                // Call the actual completion after brief delay to show animation
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    onToggleCompletion()
+                }
+            } else {
+                // Immediate action when uncompleting
+                onToggleCompletion()
+            }
+        }) {
             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                 .font(.title2)
                 .foregroundColor(task.isCompleted ? .daisySuccess : Colors.Primary.textTertiary)
+                .scaleEffect(isAnimatingCompletion ? checkmarkScale : 1.0)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(task.isCompleted ? "Mark as incomplete" : "Mark as complete")
