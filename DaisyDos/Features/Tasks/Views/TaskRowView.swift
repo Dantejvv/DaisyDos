@@ -151,7 +151,7 @@ struct TaskRowView: View {
                         .foregroundColor(task.isCompleted ? .daisyTextSecondary : .daisyText)
 
                     if !task.taskDescription.isEmpty {
-                        Text(task.taskDescription)
+                        Text(task.taskDescriptionAttributed)
                             .font(.caption)
                             .foregroundColor(.daisyTextSecondary)
                             .lineLimit(2)

@@ -15,7 +15,7 @@ struct TaskEditView: View {
     let task: Task
 
     @State private var title: String
-    @State private var taskDescription: String
+    @State private var taskDescriptionAttributed: AttributedString
     @State private var priority: Priority
     @State private var dueDate: Date?
     @State private var hasDueDate: Bool
@@ -32,7 +32,7 @@ struct TaskEditView: View {
     init(task: Task) {
         self.task = task
         self._title = State(initialValue: task.title)
-        self._taskDescription = State(initialValue: task.taskDescription)
+        self._taskDescriptionAttributed = State(initialValue: task.taskDescriptionAttributed)
         self._priority = State(initialValue: task.priority)
         self._dueDate = State(initialValue: task.dueDate)
         self._hasDueDate = State(initialValue: task.dueDate != nil)
@@ -51,7 +51,7 @@ struct TaskEditView: View {
     }
 
     var descriptionCharacterCount: Int {
-        taskDescription.count
+        taskDescriptionAttributed.characterCount
     }
 
     private let maxTitleLength = DesignSystem.inputValidation.CharacterLimits.title
@@ -77,10 +77,9 @@ struct TaskEditView: View {
 
     var hasChanges: Bool {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedDescription = taskDescription.trimmingCharacters(in: .whitespacesAndNewlines)
 
         return trimmedTitle != task.title ||
-               trimmedDescription != task.taskDescription ||
+               taskDescriptionAttributed != task.taskDescriptionAttributed ||
                priority != task.priority ||
                (hasDueDate ? dueDate : nil) != task.dueDate ||
                (hasStartDate ? startDate : nil) != task.startDate ||
@@ -131,24 +130,17 @@ struct TaskEditView: View {
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        TextField("Description (optional)", text: $taskDescription, axis: .vertical)
-                            .lineLimit(3...6)
-                            .accessibilityLabel("Task description")
-                            .onChange(of: taskDescription) { _, newValue in
-                                DesignSystem.inputValidation.enforceCharacterLimit(
-                                    &taskDescription,
-                                    newValue: newValue,
-                                    maxLength: maxDescriptionLength
-                                )
-                            }
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Description (optional)")
+                            .font(.subheadline)
+                            .foregroundColor(.daisyTextSecondary)
+                            .padding(.bottom, Spacing.extraSmall)
 
-                        HStack {
-                            Spacer()
-                            Text("\(descriptionCharacterCount)/\(maxDescriptionLength)")
-                                .font(.caption)
-                                .foregroundColor(descriptionCountColor)
-                        }
+                        RichTextEditor(
+                            attributedText: $taskDescriptionAttributed,
+                            placeholder: "Add details, notes, or formatting...",
+                            maxLength: maxDescriptionLength
+                        )
                     }
                 }
 
@@ -334,7 +326,6 @@ struct TaskEditView: View {
 
     private func saveChanges() {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedDescription = taskDescription.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedTitle.isEmpty else {
             showError("Task title cannot be empty")
@@ -346,24 +337,18 @@ struct TaskEditView: View {
             return
         }
 
-        let result = taskManager.updateTask(
-            task,
-            title: trimmedTitle,
-            taskDescription: trimmedDescription,
-            priority: priority,
-            dueDate: hasDueDate ? dueDate : nil,
-            startDate: hasStartDate ? startDate : nil,
-            recurrenceRule: recurrenceRule
-        )
+        // Update task properties directly
+        task.title = trimmedTitle
+        task.taskDescriptionAttributed = taskDescriptionAttributed
+        task.priority = priority
+        task.dueDate = hasDueDate ? dueDate : nil
+        task.startDate = hasStartDate ? startDate : nil
+        task.recurrenceRule = recurrenceRule
+        task.modifiedDate = Date()
 
-        switch result {
-        case .success:
-            // Update tags
-            updateTaskTags()
-            dismiss()
-        case .failure(let error):
-            showError(error.wrapped.userMessage)
-        }
+        // Update tags
+        updateTaskTags()
+        dismiss()
     }
 
     private func updateTaskTags() {

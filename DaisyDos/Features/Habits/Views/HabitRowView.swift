@@ -163,7 +163,7 @@ struct HabitRowView: View {
                         )
 
                     if !habit.habitDescription.isEmpty {
-                        Text(habit.habitDescription)
+                        Text(habit.habitDescriptionAttributed)
                             .font(.caption)
                             .foregroundColor(.daisyTextSecondary)
                             .lineLimit(2)
@@ -535,18 +535,10 @@ struct HabitRowViewPreview: View {
                 onMarkComplete: {
                     habit.markCompleted()
                 },
-                onEdit: {
-                    print("Edit tapped")
-                },
-                onDelete: {
-                    print("Delete tapped")
-                },
-                onSkip: {
-                    print("Skip tapped")
-                },
-                onTagAssignment: {
-                    print("Tag assignment tapped")
-                },
+                onEdit: {},
+                onDelete: {},
+                onSkip: {},
+                onTagAssignment: {},
                 displayMode: displayMode
             )
 

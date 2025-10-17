@@ -101,7 +101,7 @@ class TagManager {
         }
 
         if let tagDescription = tagDescription {
-            tag.tagDescription = tagDescription.isEmpty ? nil : tagDescription
+            tag.tagDescription = tagDescription
         }
 
         do {

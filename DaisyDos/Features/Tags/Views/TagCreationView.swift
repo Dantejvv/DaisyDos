@@ -13,7 +13,7 @@ struct TagCreationView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var tagName = ""
-    @State private var tagDescription = ""
+    @State private var tagDescriptionAttributed: AttributedString = AttributedString()
     @State private var selectedColor: String = "blue"
     @State private var selectedSymbol: String = "tag"
     @State private var showingError = false
@@ -21,29 +21,17 @@ struct TagCreationView: View {
 
     var isFormValid: Bool {
         !tagName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        tagName.count <= DesignSystem.inputValidation.CharacterLimits.tagName &&
-        tagDescription.count <= DesignSystem.inputValidation.CharacterLimits.description
+        tagName.count <= DesignSystem.inputValidation.CharacterLimits.tagName
     }
 
     var tagNameCharacterCount: Int {
         tagName.count
     }
 
-    var tagDescriptionCharacterCount: Int {
-        tagDescription.count
-    }
-
     private var tagNameCountColor: Color {
         return DesignSystem.inputValidation.characterCountColorExact(
             currentCount: tagNameCharacterCount,
             maxLength: DesignSystem.inputValidation.CharacterLimits.tagName
-        )
-    }
-
-    private var tagDescriptionCountColor: Color {
-        return DesignSystem.inputValidation.characterCountColorExact(
-            currentCount: tagDescriptionCharacterCount,
-            maxLength: DesignSystem.inputValidation.CharacterLimits.description
         )
     }
 
@@ -83,26 +71,18 @@ struct TagCreationView: View {
                     }
                 }
 
-                Section("Description (Optional)") {
-                    VStack(alignment: .leading, spacing: 4) {
-                        TextField("Add a description...", text: $tagDescription, axis: .vertical)
-                            .lineLimit(3...5)
-                            .textFieldStyle(.plain)
-                            .onChange(of: tagDescription) { _, newValue in
-                                DesignSystem.inputValidation.enforceCharacterLimit(
-                                    &tagDescription,
-                                    newValue: newValue,
-                                    maxLength: DesignSystem.inputValidation.CharacterLimits.description
-                                )
-                            }
-                            .accessibilityLabel("Tag description field")
+                Section {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Description (optional)")
+                            .font(.subheadline)
+                            .foregroundColor(.daisyTextSecondary)
+                            .padding(.bottom, Spacing.extraSmall)
 
-                        HStack {
-                            Spacer()
-                            Text("\(tagDescriptionCharacterCount)/\(DesignSystem.inputValidation.CharacterLimits.description)")
-                                .font(.caption2)
-                                .foregroundColor(tagDescriptionCountColor)
-                        }
+                        RichTextEditor(
+                            attributedText: $tagDescriptionAttributed,
+                            placeholder: "Add tag description with formatting...",
+                            maxLength: DesignSystem.inputValidation.CharacterLimits.description
+                        )
                     }
                 }
 
@@ -163,7 +143,6 @@ struct TagCreationView: View {
 
     private func createTag() {
         let trimmedName = tagName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedDescription = tagDescription.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedName.isEmpty else {
             showError("Tag name cannot be empty")
@@ -180,12 +159,17 @@ struct TagCreationView: View {
             return
         }
 
-        if let _ = tagManager.createTag(
+        // Create tag with plain text description first
+        if let newTag = tagManager.createTag(
             name: trimmedName,
             sfSymbolName: selectedSymbol,
             colorName: selectedColor,
-            tagDescription: trimmedDescription
+            tagDescription: ""
         ) {
+            // Update with AttributedString description if present
+            if !tagDescriptionAttributed.characters.isEmpty {
+                newTag.tagDescriptionAttributed = tagDescriptionAttributed
+            }
             dismiss()
         } else {
             showError("Failed to create tag. Please try again.")

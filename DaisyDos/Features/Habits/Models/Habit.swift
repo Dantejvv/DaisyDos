@@ -6,13 +6,42 @@
 //
 
 import Foundation
+import SwiftUI
 import SwiftData
 
 @Model
 class Habit {
     var id: UUID
     var title: String
-    var habitDescription: String
+
+    // Rich text description storage (Data-backed AttributedString)
+    @Attribute(.externalStorage) var habitDescriptionData: Data?
+
+    // Backward compatibility: Computed property for plain text access
+    var habitDescription: String {
+        get {
+            guard let data = habitDescriptionData else { return "" }
+            return AttributedString.extractText(from: data)
+        }
+        set {
+            // Convert plain text to AttributedString and store as Data
+            habitDescriptionData = AttributedString.migrate(from: newValue)
+        }
+    }
+
+    // Rich text accessor for UI components
+    var habitDescriptionAttributed: AttributedString {
+        get {
+            guard let data = habitDescriptionData else {
+                return AttributedString.fromPlainText("")
+            }
+            return AttributedString.fromData(data) ?? AttributedString.fromPlainText("")
+        }
+        set {
+            habitDescriptionData = newValue.toData()
+        }
+    }
+
     var currentStreak: Int
     var longestStreak: Int
     var createdDate: Date
@@ -49,7 +78,7 @@ class Habit {
     init(title: String, habitDescription: String = "", recurrenceRule: RecurrenceRule? = nil, priority: HabitPriority = .none) {
         self.id = UUID()
         self.title = title
-        self.habitDescription = habitDescription
+        self.habitDescriptionData = AttributedString.migrate(from: habitDescription)
         self.currentStreak = 0
         self.longestStreak = 0
         self.createdDate = Date()

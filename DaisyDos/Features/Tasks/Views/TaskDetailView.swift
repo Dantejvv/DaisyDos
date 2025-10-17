@@ -269,7 +269,7 @@ struct TaskDetailView: View {
             }
 
             if !task.taskDescription.isEmpty {
-                Text(task.taskDescription)
+                Text(task.taskDescriptionAttributed)
                     .font(.body)
                     .foregroundColor(.daisyText)
             } else {

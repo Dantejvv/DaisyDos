@@ -188,7 +188,7 @@ struct TagInfoSheet: View {
                 // Tag Description
                 if !tag.descriptionText.isEmpty {
                     ScrollView {
-                        Text(tag.descriptionText)
+                        Text(tag.tagDescriptionAttributed)
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -294,12 +294,8 @@ struct DraggableTagChipView: View {
     return VStack(spacing: 16) {
         TagChipView(tag: tag)
         TagChipView(tag: tag, isSelected: true)
-        TagChipView(tag: tag, isRemovable: true, onRemove: {
-            print("Remove tapped")
-        })
-        TagChipView(tag: tag, isSelected: true, isRemovable: true, onRemove: {
-            print("Remove tapped")
-        })
+        TagChipView(tag: tag, isRemovable: true, onRemove: {})
+        TagChipView(tag: tag, isSelected: true, isRemovable: true, onRemove: {})
     }
     .padding()
 }
@@ -314,15 +310,9 @@ struct DraggableTagChipView: View {
             .font(.headline)
 
         HStack(spacing: 6) {
-            IconOnlyTagChipView(tag: workTag) {
-                print("Work tag tapped")
-            }
-            IconOnlyTagChipView(tag: personalTag, isSelected: true) {
-                print("Personal tag tapped")
-            }
-            IconOnlyTagChipView(tag: fitnessTag) {
-                print("Fitness tag tapped")
-            }
+            IconOnlyTagChipView(tag: workTag) {}
+            IconOnlyTagChipView(tag: personalTag, isSelected: true) {}
+            IconOnlyTagChipView(tag: fitnessTag) {}
         }
 
         Text("Long press any tag to see tooltip")
@@ -341,8 +331,6 @@ struct DraggableTagChipView: View {
 #Preview("Draggable Chip") {
     let tag = Tag(name: "Personal", sfSymbolName: "house", colorName: "green")
 
-    return DraggableTagChipView(tag: tag, isSelected: false) {
-        print("Tag tapped")
-    }
+    return DraggableTagChipView(tag: tag, isSelected: false) {}
     .padding()
 }

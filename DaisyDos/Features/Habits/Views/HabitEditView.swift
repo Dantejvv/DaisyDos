@@ -18,7 +18,7 @@ struct HabitEditView: View {
 
     @State private var habitManager: HabitManager
     @State private var habitTitle: String
-    @State private var habitDescription: String
+    @State private var habitDescriptionAttributed: AttributedString
     @State private var recurrenceRule: RecurrenceRule?
     @State private var selectedTags: [Tag] = []
     @State private var selectedPriority: HabitPriority
@@ -86,7 +86,7 @@ struct HabitEditView: View {
         self.habit = habit
         self._habitManager = State(initialValue: HabitManager(modelContext: ModelContext(habit.modelContext!.container)))
         self._habitTitle = State(initialValue: habit.title)
-        self._habitDescription = State(initialValue: habit.habitDescription)
+        self._habitDescriptionAttributed = State(initialValue: habit.habitDescriptionAttributed)
         self._recurrenceRule = State(initialValue: habit.recurrenceRule)
         self._selectedTags = State(initialValue: Array(habit.tags))
         self._selectedPriority = State(initialValue: habit.priority)
@@ -96,10 +96,9 @@ struct HabitEditView: View {
 
     private var hasChanges: Bool {
         let trimmedTitle = habitTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedDescription = habitDescription.trimmingCharacters(in: .whitespacesAndNewlines)
 
         return trimmedTitle != habit.title ||
-               trimmedDescription != habit.habitDescription ||
+               habitDescriptionAttributed != habit.habitDescriptionAttributed ||
                selectedPriority != habit.priority ||
                recurrenceRule != habit.recurrenceRule ||
                Set(selectedTags.map(\.id)) != Set(habit.tags.map(\.id))
@@ -111,13 +110,6 @@ struct HabitEditView: View {
         return DesignSystem.inputValidation.characterCountColorExact(
             currentCount: habitTitle.count,
             maxLength: DesignSystem.inputValidation.CharacterLimits.title
-        )
-    }
-
-    private var descriptionCountColor: Color {
-        return DesignSystem.inputValidation.characterCountColorExact(
-            currentCount: habitDescription.count,
-            maxLength: DesignSystem.inputValidation.CharacterLimits.description
         )
     }
 
@@ -217,26 +209,17 @@ struct HabitEditView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                TextField("Description (optional)", text: $habitDescription, axis: .vertical)
-                    .lineLimit(3...6)
-                    .textInputAutocapitalization(.sentences)
-                    .autocorrectionDisabled(true)
-                    .onChange(of: habitDescription) { _, newValue in
-                        DesignSystem.inputValidation.enforceCharacterLimit(
-                            &habitDescription,
-                            newValue: newValue,
-                            maxLength: DesignSystem.inputValidation.CharacterLimits.description
-                        )
-                        validateForm()
-                    }
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Description (optional)")
+                    .font(.subheadline)
+                    .foregroundColor(.daisyTextSecondary)
+                    .padding(.bottom, Spacing.extraSmall)
 
-                HStack {
-                    Spacer()
-                    Text("\(habitDescription.count)/\(DesignSystem.inputValidation.CharacterLimits.description)")
-                        .font(.caption2)
-                        .foregroundColor(descriptionCountColor)
-                }
+                RichTextEditor(
+                    attributedText: $habitDescriptionAttributed,
+                    placeholder: "Add details, notes, or formatting...",
+                    maxLength: DesignSystem.inputValidation.CharacterLimits.description
+                )
             }
 
             // Priority picker
@@ -414,7 +397,6 @@ struct HabitEditView: View {
         var errors: Set<ValidationError> = []
 
         let trimmedTitle = habitTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedDescription = habitDescription.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Title validation
         if trimmedTitle.isEmpty {
@@ -424,7 +406,7 @@ struct HabitEditView: View {
         }
 
         // Description validation
-        if trimmedDescription.count > DesignSystem.inputValidation.CharacterLimits.description {
+        if habitDescriptionAttributed.characterCount > DesignSystem.inputValidation.CharacterLimits.description {
             errors.insert(.descriptionTooLong)
         }
 
@@ -441,7 +423,7 @@ struct HabitEditView: View {
 
         // Update habit properties
         habit.title = habitTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        habit.habitDescription = habitDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        habit.habitDescriptionAttributed = habitDescriptionAttributed
         habit.recurrenceRule = recurrenceRule
         habit.priority = selectedPriority
 

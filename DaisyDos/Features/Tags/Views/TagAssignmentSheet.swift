@@ -99,9 +99,7 @@ extension TagAssignmentSheet {
     return TagAssignmentSheet(
         title: "Select Tags",
         selectedTags: $selectedTags,
-        onSave: { newTags in
-            print("Selected tags: \(newTags.map(\.name))")
-        }
+        onSave: { _ in }
     )
     .modelContainer(container)
     .environment(tagManager)

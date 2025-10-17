@@ -241,7 +241,7 @@ struct HabitDetailView: View {
                 .foregroundColor(.daisyText)
 
             if !habit.habitDescription.isEmpty {
-                Text(habit.habitDescription)
+                Text(habit.habitDescriptionAttributed)
                     .font(.body)
                     .foregroundColor(.daisyTextSecondary)
             }

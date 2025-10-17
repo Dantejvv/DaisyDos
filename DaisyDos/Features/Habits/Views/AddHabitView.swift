@@ -19,7 +19,7 @@ struct AddHabitView: View {
     // MARK: - State Properties
 
     @State private var habitTitle = ""
-    @State private var habitDescription = ""
+    @State private var habitDescriptionAttributed = AttributedString("")
     @State private var recurrenceRule: RecurrenceRule?
     @State private var selectedTags: [Tag] = []
     @State private var selectedPriority: HabitPriority = .none
@@ -89,12 +89,6 @@ struct AddHabitView: View {
         )
     }
 
-    private var descriptionCountColor: Color {
-        return DesignSystem.inputValidation.characterCountColorExact(
-            currentCount: habitDescription.count,
-            maxLength: DesignSystem.inputValidation.CharacterLimits.description
-        )
-    }
 
     // MARK: - Body
 
@@ -180,26 +174,17 @@ struct AddHabitView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                TextField("Description (optional)", text: $habitDescription, axis: .vertical)
-                    .lineLimit(3...6)
-                    .textInputAutocapitalization(.sentences)
-                    .autocorrectionDisabled(true)
-                    .onChange(of: habitDescription) { _, newValue in
-                        DesignSystem.inputValidation.enforceCharacterLimit(
-                            &habitDescription,
-                            newValue: newValue,
-                            maxLength: DesignSystem.inputValidation.CharacterLimits.description
-                        )
-                        validateForm()
-                    }
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Description (optional)")
+                    .font(.subheadline)
+                    .foregroundColor(.daisyTextSecondary)
+                    .padding(.bottom, Spacing.extraSmall)
 
-                HStack {
-                    Spacer()
-                    Text("\(habitDescription.count)/\(DesignSystem.inputValidation.CharacterLimits.description)")
-                        .font(.caption2)
-                        .foregroundColor(descriptionCountColor)
-                }
+                RichTextEditor(
+                    attributedText: $habitDescriptionAttributed,
+                    placeholder: "Add details, notes, or formatting...",
+                    maxLength: DesignSystem.inputValidation.CharacterLimits.description
+                )
             }
 
             // Priority picker
@@ -377,7 +362,6 @@ struct AddHabitView: View {
         var errors: Set<ValidationError> = []
 
         let trimmedTitle = habitTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedDescription = habitDescription.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Title validation
         if trimmedTitle.isEmpty {
@@ -387,7 +371,7 @@ struct AddHabitView: View {
         }
 
         // Description validation
-        if trimmedDescription.count > DesignSystem.inputValidation.CharacterLimits.description {
+        if habitDescriptionAttributed.characterCount > DesignSystem.inputValidation.CharacterLimits.description {
             errors.insert(.descriptionTooLong)
         }
 
@@ -404,10 +388,13 @@ struct AddHabitView: View {
 
         let habit = Habit(
             title: habitTitle.trimmingCharacters(in: .whitespacesAndNewlines),
-            habitDescription: habitDescription.trimmingCharacters(in: .whitespacesAndNewlines),
+            habitDescription: "", // Placeholder for backward compatibility
             recurrenceRule: recurrenceRule,
             priority: selectedPriority
         )
+
+        // Set rich text description
+        habit.habitDescriptionAttributed = habitDescriptionAttributed
 
         // Add to context
         modelContext.insert(habit)

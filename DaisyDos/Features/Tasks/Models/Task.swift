@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 import SwiftData
 
 @Model
@@ -13,7 +14,35 @@ class Task {
     // MARK: - Core Properties
     var id: UUID
     var title: String
-    var taskDescription: String
+
+    // Rich text description storage (Data-backed AttributedString)
+    @Attribute(.externalStorage) var taskDescriptionData: Data?
+
+    // Backward compatibility: Computed property for plain text access
+    var taskDescription: String {
+        get {
+            guard let data = taskDescriptionData else { return "" }
+            return AttributedString.extractText(from: data)
+        }
+        set {
+            // Convert plain text to AttributedString and store as Data
+            taskDescriptionData = AttributedString.migrate(from: newValue)
+        }
+    }
+
+    // Rich text accessor for UI components
+    var taskDescriptionAttributed: AttributedString {
+        get {
+            guard let data = taskDescriptionData else {
+                return AttributedString.fromPlainText("")
+            }
+            return AttributedString.fromData(data) ?? AttributedString.fromPlainText("")
+        }
+        set {
+            taskDescriptionData = newValue.toData()
+        }
+    }
+
     var isCompleted: Bool
     var createdDate: Date
     var modifiedDate: Date
@@ -59,7 +88,7 @@ class Task {
     ) {
         self.id = UUID()
         self.title = title
-        self.taskDescription = taskDescription
+        self.taskDescriptionData = AttributedString.migrate(from: taskDescription)
         self.priority = priority
         self.dueDate = dueDate
         self.startDate = startDate

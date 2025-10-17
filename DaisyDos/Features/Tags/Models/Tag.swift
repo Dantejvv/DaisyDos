@@ -15,7 +15,10 @@ class Tag: Identifiable {
     @Attribute(.unique) var name: String
     var sfSymbolName: String
     var colorName: String
-    var tagDescription: String?
+
+    // Rich text description storage (Data-backed AttributedString)
+    @Attribute(.externalStorage) var tagDescriptionData: Data?
+
     var createdDate: Date
 
     @Relationship(deleteRule: .nullify)
@@ -29,13 +32,38 @@ class Tag: Identifiable {
         self.name = name
         self.sfSymbolName = sfSymbolName
         self.colorName = colorName
-        self.tagDescription = tagDescription.isEmpty ? nil : tagDescription
+        self.tagDescriptionData = tagDescription.isEmpty ? nil : AttributedString.migrate(from: tagDescription)
         self.createdDate = Date()
+    }
+
+    // Backward compatibility: Computed property for plain text access
+    var tagDescription: String {
+        get {
+            guard let data = tagDescriptionData else { return "" }
+            return AttributedString.extractText(from: data)
+        }
+        set {
+            // Convert plain text to AttributedString and store as Data
+            tagDescriptionData = newValue.isEmpty ? nil : AttributedString.migrate(from: newValue)
+        }
+    }
+
+    // Rich text accessor for UI components
+    var tagDescriptionAttributed: AttributedString {
+        get {
+            guard let data = tagDescriptionData else {
+                return AttributedString.fromPlainText("")
+            }
+            return AttributedString.fromData(data) ?? AttributedString.fromPlainText("")
+        }
+        set {
+            tagDescriptionData = newValue.characters.isEmpty ? nil : newValue.toData()
+        }
     }
 
     // Convenience property for non-optional access
     var descriptionText: String {
-        tagDescription ?? ""
+        tagDescription
     }
 
     var color: Color {

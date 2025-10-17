@@ -13,7 +13,7 @@ struct AddTaskView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var title = ""
-    @State private var taskDescription = ""
+    @State private var taskDescriptionAttributed = AttributedString("")
     @State private var priority: Priority = .none
     @State private var dueDate: Date?
     @State private var hasDueDate = false
@@ -44,7 +44,7 @@ struct AddTaskView: View {
     }
 
     var descriptionCharacterCount: Int {
-        taskDescription.count
+        taskDescriptionAttributed.characterCount
     }
 
     private let maxTitleLength = DesignSystem.inputValidation.CharacterLimits.title
@@ -58,13 +58,6 @@ struct AddTaskView: View {
         return DesignSystem.inputValidation.characterCountColorExact(
             currentCount: titleCharacterCount,
             maxLength: maxTitleLength
-        )
-    }
-
-    private var descriptionCountColor: Color {
-        return DesignSystem.inputValidation.characterCountColorExact(
-            currentCount: descriptionCharacterCount,
-            maxLength: maxDescriptionLength
         )
     }
 
@@ -103,25 +96,17 @@ struct AddTaskView: View {
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        TextField("Description (optional)", text: $taskDescription, axis: .vertical)
-                            .autocorrectionDisabled(true)
-                            .lineLimit(3...6)
-                            .accessibilityLabel("Task description")
-                            .onChange(of: taskDescription) { _, newValue in
-                                DesignSystem.inputValidation.enforceCharacterLimit(
-                                    &taskDescription,
-                                    newValue: newValue,
-                                    maxLength: maxDescriptionLength
-                                )
-                            }
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Description (optional)")
+                            .font(.subheadline)
+                            .foregroundColor(.daisyTextSecondary)
+                            .padding(.bottom, Spacing.extraSmall)
 
-                        HStack {
-                            Spacer()
-                            Text("\(descriptionCharacterCount)/\(maxDescriptionLength)")
-                                .font(.caption)
-                                .foregroundColor(descriptionCountColor)
-                        }
+                        RichTextEditor(
+                            attributedText: $taskDescriptionAttributed,
+                            placeholder: "Add details, notes, or formatting...",
+                            maxLength: maxDescriptionLength
+                        )
                     }
                 }
 
@@ -301,9 +286,10 @@ struct AddTaskView: View {
             return
         }
 
+        // Create task with plain title first
         let result = taskManager.createTask(
             title: trimmedTitle,
-            taskDescription: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),
+            taskDescription: "", // Placeholder for backward compatibility
             priority: priority,
             dueDate: hasDueDate ? dueDate : nil,
             startDate: hasStartDate ? startDate : nil,
@@ -312,6 +298,9 @@ struct AddTaskView: View {
 
         switch result {
         case .success(let createdTask):
+            // Set rich text description
+            createdTask.taskDescriptionAttributed = taskDescriptionAttributed
+
             // Add selected tags
             for tag in selectedTags {
                 _ = taskManager.addTagSafely(tag, to: createdTask)
