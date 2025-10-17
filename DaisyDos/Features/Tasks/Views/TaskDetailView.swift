@@ -67,22 +67,32 @@ struct TaskDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button("Edit Task") {
+                        Button {
                             showingEditView = true
-                        }
-
-                        Button("Duplicate Task") {
-                            duplicateTask()
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
                         }
 
                         Divider()
 
-                        Button("Share Task") {
-                            showingTaskShare = true
+                        Button {
+                            duplicateTask()
+                        } label: {
+                            Label("Duplicate", systemImage: "plus.square.on.square")
                         }
 
-                        Button("Delete Task", role: .destructive) {
+                        Button {
+                            showingTaskShare = true
+                        } label: {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
+
+                        Divider()
+
+                        Button(role: .destructive) {
                             showingDeleteConfirmation = true
+                        } label: {
+                            Label("Delete", systemImage: "trash")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -227,9 +237,6 @@ struct TaskDetailView: View {
                 // Current Status Card
                 currentStatusCard
 
-                // Quick Actions Card
-                quickActionsCard
-
                 // Tags Section
                 if !task.tags.isEmpty {
                     tagsCard
@@ -342,90 +349,6 @@ struct TaskDetailView: View {
                         }
                     }
                 }
-            }
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    @ViewBuilder
-    private var quickActionsCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Quick Actions")
-                .font(.headline)
-
-            HStack(spacing: 12) {
-                // Edit button
-                Button(action: {
-                    showingEditView = true
-                }) {
-                    VStack(spacing: 8) {
-                        Image(systemName: "pencil")
-                            .font(.title3)
-                            .foregroundColor(.daisyTask)
-                        Text("Edit")
-                            .font(.caption)
-                            .foregroundColor(.daisyText)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.daisyBackground, in: RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-
-                // Manage Tags button
-                Button(action: {
-                    showingTagAssignment = true
-                }) {
-                    VStack(spacing: 8) {
-                        Image(systemName: "tag")
-                            .font(.title3)
-                            .foregroundColor(.daisyTag)
-                        Text("Tags")
-                            .font(.caption)
-                            .foregroundColor(.daisyText)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.daisyBackground, in: RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-
-                // Share button
-                Button(action: {
-                    showingTaskShare = true
-                }) {
-                    VStack(spacing: 8) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.title3)
-                            .foregroundColor(.daisyTask)
-                        Text("Share")
-                            .font(.caption)
-                            .foregroundColor(.daisyText)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.daisyBackground, in: RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-
-                // Duplicate button
-                Button(action: {
-                    duplicateTask()
-                }) {
-                    VStack(spacing: 8) {
-                        Image(systemName: "plus.square.on.square")
-                            .font(.title3)
-                            .foregroundColor(.daisyTask)
-                        Text("Duplicate")
-                            .font(.caption)
-                            .foregroundColor(.daisyText)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.daisyBackground, in: RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
             }
         }
         .padding()

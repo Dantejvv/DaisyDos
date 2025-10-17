@@ -16,9 +16,8 @@ struct AttachmentGalleryView: View {
     let onAddAttachment: () -> Void
     let onShareAttachment: (TaskAttachment) -> Void
 
-    @State private var viewMode: ViewMode = .grid
+    @State private var viewMode: ViewMode = .list
     @State private var showingDeleteConfirmation: TaskAttachment?
-    @State private var searchText = ""
 
     enum ViewMode: String, CaseIterable {
         case grid = "Grid"
@@ -34,19 +33,12 @@ struct AttachmentGalleryView: View {
         }
     }
 
-    private var filteredAttachments: [TaskAttachment] {
-        if searchText.isEmpty {
-            return task.attachments.sorted { $0.createdDate > $1.createdDate }
-        } else {
-            return task.attachments.filter { attachment in
-                attachment.displayName.localizedCaseInsensitiveContains(searchText) ||
-                attachment.attachmentType.displayName.localizedCaseInsensitiveContains(searchText)
-            }.sorted { $0.createdDate > $1.createdDate }
-        }
+    private var sortedAttachments: [TaskAttachment] {
+        task.attachments.sorted { $0.createdDate > $1.createdDate }
     }
 
     private var attachmentsByType: [(TaskAttachment.AttachmentType, [TaskAttachment])] {
-        let grouped = Dictionary(grouping: filteredAttachments) { $0.attachmentType }
+        let grouped = Dictionary(grouping: sortedAttachments) { $0.attachmentType }
         return TaskAttachment.AttachmentType.allCases.compactMap { type in
             guard let attachments = grouped[type], !attachments.isEmpty else { return nil }
             return (type, attachments)
@@ -58,21 +50,23 @@ struct AttachmentGalleryView: View {
             // Header
             headerView
 
-            if filteredAttachments.isEmpty {
+            if sortedAttachments.isEmpty {
                 emptyStateView
             } else {
                 // Content
                 ScrollView {
-                    LazyVStack(spacing: 16) {
+                    VStack(spacing: 16) {
                         if viewMode == .grid {
                             gridContent
+                                .id("grid-\(viewMode.rawValue)")
                         } else {
                             listContent
+                                .id("list-\(viewMode.rawValue)")
                         }
                     }
                     .padding()
                 }
-                .searchable(text: $searchText, prompt: "Search attachments...")
+                .id(viewMode)
             }
         }
         .alert(
@@ -101,8 +95,8 @@ struct AttachmentGalleryView: View {
                     .font(.headline)
                     .foregroundColor(.daisyText)
 
-                if !filteredAttachments.isEmpty {
-                    Text("\(filteredAttachments.count) \(filteredAttachments.count == 1 ? "file" : "files")")
+                if !sortedAttachments.isEmpty {
+                    Text("\(sortedAttachments.count) \(sortedAttachments.count == 1 ? "file" : "files")")
                         .font(.caption)
                         .foregroundColor(.daisyTextSecondary)
                 }
@@ -226,52 +220,34 @@ struct AttachmentGalleryView: View {
     @ViewBuilder
     private var emptyStateView: some View {
         VStack(spacing: 16) {
-            if searchText.isEmpty {
-                // No attachments state
-                VStack(spacing: 12) {
-                    Image(systemName: "paperclip.circle")
-                        .font(.system(size: 64))
-                        .foregroundColor(.daisyTextSecondary)
+            // No attachments state
+            VStack(spacing: 12) {
+                Image(systemName: "paperclip.circle")
+                    .font(.system(size: 64))
+                    .foregroundColor(.daisyTextSecondary)
 
-                    Text("No Attachments")
-                        .font(.title3.weight(.medium))
-                        .foregroundColor(.daisyText)
+                Text("No Attachments")
+                    .font(.title3.weight(.medium))
+                    .foregroundColor(.daisyText)
 
-                    Text("Add photos, documents, or other files to keep everything organized with your task.")
-                        .font(.subheadline)
-                        .foregroundColor(.daisyTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                Text("Add photos, documents, or other files to keep everything organized with your task.")
+                    .font(.subheadline)
+                    .foregroundColor(.daisyTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
 
-                    Button(action: onAddAttachment) {
-                        HStack {
-                            Image(systemName: "plus")
-                            Text("Add Attachment")
-                        }
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(Color.daisyTask, in: Capsule())
+                Button(action: onAddAttachment) {
+                    HStack {
+                        Image(systemName: "plus")
+                        Text("Add Attachment")
                     }
-                    .accessibilityLabel("Add first attachment")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color.daisyTask, in: Capsule())
                 }
-            } else {
-                // No search results state
-                VStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 48))
-                        .foregroundColor(.daisyTextSecondary)
-
-                    Text("No Results")
-                        .font(.title3.weight(.medium))
-                        .foregroundColor(.daisyText)
-
-                    Text("No attachments match '\(searchText)'")
-                        .font(.subheadline)
-                        .foregroundColor(.daisyTextSecondary)
-                        .multilineTextAlignment(.center)
-                }
+                .accessibilityLabel("Add first attachment")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

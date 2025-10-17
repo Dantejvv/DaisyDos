@@ -71,12 +71,45 @@ struct HabitDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button("Edit Habit") {
+                        Button {
                             showingEditView = true
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
                         }
 
-                        Button("Delete Habit", role: .destructive) {
+                        Divider()
+
+                        // Quick Actions
+                        if habit.isCompletedToday {
+                            Button {
+                                let _ = habitManager.undoHabitCompletion(habit)
+                            } label: {
+                                Label("Mark Incomplete", systemImage: "minus.circle")
+                            }
+                        } else {
+                            Button {
+                                if let _ = habitManager.markHabitCompletedWithTracking(habit) {
+                                    toastManager.showCompletionToast(for: habit) {
+                                        let _ = habitManager.undoHabitCompletion(habit)
+                                    }
+                                }
+                            } label: {
+                                Label("Mark Complete", systemImage: "checkmark.circle")
+                            }
+                        }
+
+                        Button {
+                            showingSkipView = true
+                        } label: {
+                            Label("Skip Today", systemImage: "forward.end")
+                        }
+
+                        Divider()
+
+                        Button(role: .destructive) {
                             showingDeleteAlert = true
+                        } label: {
+                            Label("Delete", systemImage: "trash")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -168,9 +201,6 @@ struct HabitDetailView: View {
                 // Current Status Card
                 currentStatusCard
 
-                // Quick Actions Card
-                quickActionsCard
-
                 // Tags Section
                 if !habit.tags.isEmpty {
                     tagsCard
@@ -180,6 +210,31 @@ struct HabitDetailView: View {
             .padding()
         }
         .background(Color.daisyBackground)
+        .overlay(alignment: .bottomTrailing) {
+            // Floating completion toggle
+            Button(action: {
+                if habit.isCompletedToday {
+                    let _ = habitManager.undoHabitCompletion(habit)
+                } else {
+                    if let _ = habitManager.markHabitCompletedWithTracking(habit) {
+                        toastManager.showCompletionToast(for: habit) {
+                            let _ = habitManager.undoHabitCompletion(habit)
+                        }
+                    }
+                }
+            }) {
+                Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 56))
+                    .foregroundColor(habit.isCompletedToday ? .daisySuccess : .daisyHabit)
+                    .background(
+                        Circle()
+                            .fill(.regularMaterial)
+                            .shadow(radius: 8)
+                    )
+            }
+            .padding()
+            .accessibilityLabel(habit.isCompletedToday ? "Mark as incomplete" : "Mark as complete")
+        }
     }
 
     // MARK: - Analytics Tab
@@ -313,57 +368,6 @@ struct HabitDetailView: View {
                 }
             }
 
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    @ViewBuilder
-    private var quickActionsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Quick Actions")
-                .font(.headline)
-                .foregroundColor(.daisyText)
-
-            HStack(spacing: 12) {
-                // Mark Complete/Incomplete Button
-                Button(action: {
-                    if habit.isCompletedToday {
-                        // Undo completion directly in detail view
-                        let _ = habitManager.undoHabitCompletion(habit)
-                    } else {
-                        // Mark complete and show undo toast
-                        if let _ = habitManager.markHabitCompletedWithTracking(habit) {
-                            toastManager.showCompletionToast(for: habit) {
-                                let _ = habitManager.undoHabitCompletion(habit)
-                            }
-                        }
-                    }
-                }) {
-                    Label(
-                        habit.isCompletedToday ? "Mark Incomplete" : "Mark Complete",
-                        systemImage: habit.isCompletedToday ? "minus.circle" : "checkmark.circle"
-                    )
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        habit.isCompletedToday ? Color.daisyError.opacity(0.1) : Color.daisySuccess.opacity(0.1),
-                        in: RoundedRectangle(cornerRadius: 8)
-                    )
-                    .foregroundColor(habit.isCompletedToday ? .daisyError : .daisySuccess)
-                }
-
-                // Skip Button
-                Button(action: {
-                    showingSkipView = true
-                }) {
-                    Label("Skip Today", systemImage: "forward.end")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
-                        .foregroundColor(.orange)
-                }
-            }
         }
         .padding()
         .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
