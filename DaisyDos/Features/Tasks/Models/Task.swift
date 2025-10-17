@@ -240,8 +240,13 @@ class Task {
     // MARK: - Subtask Management
 
     func addSubtask(_ subtask: Task) -> Bool {
-        guard subtask != self && !subtask.hasAncestor(self) else {
-            return false // Prevent circular references
+        // Prevent subtasks of subtasks - only one level allowed
+        guard self.parentTask == nil else {
+            return false // This task is already a subtask, cannot have subtasks
+        }
+
+        guard subtask != self else {
+            return false // Prevent self-reference
         }
 
         // Assign the next order value
@@ -313,17 +318,6 @@ class Task {
 
         _ = addSubtask(subtask)
         return subtask
-    }
-
-    private func hasAncestor(_ potentialAncestor: Task) -> Bool {
-        var current = self.parentTask
-        while let parent = current {
-            if parent == potentialAncestor {
-                return true
-            }
-            current = parent.parentTask
-        }
-        return false
     }
 
     // MARK: - Attachment Management
@@ -446,7 +440,6 @@ class Task {
     }
 
     // MARK: - Hierarchy Helpers
-    // Note: nestingLevel calculation is now unified in Task+Transferable.swift
 
     var rootTask: Task {
         var current = self
@@ -454,15 +447,6 @@ class Task {
             current = parent
         }
         return current
-    }
-
-    func allSubtasks() -> [Task] {
-        var allSubtasks: [Task] = []
-        for subtask in subtasks {
-            allSubtasks.append(subtask)
-            allSubtasks.append(contentsOf: subtask.allSubtasks())
-        }
-        return allSubtasks
     }
 }
 

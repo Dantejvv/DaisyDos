@@ -133,8 +133,7 @@ extension TaskManager {
             task: task,
             totalSubtasks: task.subtaskCount,
             completedSubtasks: task.completedSubtaskCount,
-            partiallyCompleteSubtasks: task.subtasks.filter(\.isPartiallyComplete).count,
-            deepestNestingLevel: task.subtaskDepth,
+            partiallyCompleteSubtasks: 0, // No nested subtasks, so no partial completion at subtask level
             canAutoComplete: canAutoCompleteTask(task),
             shouldPropagateUp: shouldPropagateToParent(task),
             blockedSubtasks: findBlockedSubtasks(task)
@@ -199,10 +198,7 @@ extension TaskManager {
             }
         }
 
-        // Recursively propagate up the hierarchy
-        if let grandparent = parent.parentTask {
-            try updateParentCompletionStatus(grandparent, strategy: strategy)
-        }
+        // No recursive propagation - only one level of subtasks allowed
     }
 
     private func completeAllSubtasks(
@@ -211,11 +207,7 @@ extension TaskManager {
     ) throws {
         for subtask in task.subtasks where !subtask.isCompleted {
             subtask.setCompleted(true)
-
-            // Recursively complete nested subtasks
-            if subtask.hasSubtasks {
-                try completeAllSubtasks(of: subtask, strategy: strategy)
-            }
+            // No recursion - subtasks cannot have subtasks
         }
     }
 
@@ -319,7 +311,6 @@ struct SubtaskCompletionAnalysis {
     let totalSubtasks: Int
     let completedSubtasks: Int
     let partiallyCompleteSubtasks: Int
-    let deepestNestingLevel: Int
     let canAutoComplete: Bool
     let shouldPropagateUp: Bool
     let blockedSubtasks: [Task]

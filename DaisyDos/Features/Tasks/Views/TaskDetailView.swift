@@ -506,7 +506,7 @@ struct TaskDetailView: View {
                     }
 
                     if task.hasSubtasks {
-                        SubtaskListView(parentTask: task, nestingLevel: 0)
+                        SubtaskListView(parentTask: task)
                     } else {
                         VStack(spacing: 16) {
                             Image(systemName: "checklist")

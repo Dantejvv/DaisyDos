@@ -82,7 +82,7 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
         case .invalidDateRange:
             return "Start date must be before due date"
         case .circularReference:
-            return "Cannot create circular subtask reference"
+            return "Subtasks cannot have subtasks"
         case .attachmentLimitExceeded:
             return "Attachment size limit exceeded"
         case .duplicateEntity(let type):
@@ -117,7 +117,7 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
         case .invalidDateRange:
             return "The start date cannot be after the due date"
         case .circularReference:
-            return "This would create a circular reference in the subtask hierarchy"
+            return "Only tasks can have subtasks - subtasks cannot have their own subtasks"
         case .attachmentLimitExceeded:
             return "This would exceed the attachment size limit (200MB per task)"
         case .duplicateEntity:
@@ -152,7 +152,7 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
         case .invalidDateRange:
             return "Set the start date before the due date, or remove one of the dates."
         case .circularReference:
-            return "Choose a different parent task that isn't a subtask of the current task."
+            return "Only root-level tasks can have subtasks. Choose a task that isn't already a subtask."
         case .attachmentLimitExceeded:
             return "Remove existing attachments or choose smaller files."
         case .duplicateEntity:

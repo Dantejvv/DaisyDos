@@ -50,7 +50,7 @@ class TagManager {
     func createTag(name: String, sfSymbolName: String = "tag", colorName: String = "blue", tagDescription: String = "") -> Tag? {
         // Check if we can create a new tag (system limit)
         guard canCreateNewTag else {
-            print("Cannot create tag: System limit of 30 tags reached")
+            lastError = DaisyDosError.tagLimitExceeded
             return nil
         }
 
@@ -63,7 +63,7 @@ class TagManager {
 
         if let existingTags = try? modelContext.fetch(existingTagDescriptor),
            !existingTags.isEmpty {
-            print("Cannot create tag: Tag with name '\(name)' already exists")
+            lastError = DaisyDosError.duplicateEntity("tag")
             return nil
         }
 
@@ -86,7 +86,7 @@ class TagManager {
             let existingTags = allTags.filter { $0.name == newName && $0.id != tag.id }
 
             if !existingTags.isEmpty {
-                print("Cannot update tag: Tag with name '\(newName)' already exists")
+                lastError = DaisyDosError.duplicateEntity("tag")
                 return false
             }
             tag.name = newName
@@ -116,7 +116,7 @@ class TagManager {
     func deleteTag(_ tag: Tag) -> Bool {
         // Check if tag is in use
         if tag.isInUse {
-            print("Cannot delete tag '\(tag.name)': Tag is currently in use by \(tag.totalItemCount) items")
+            lastError = DaisyDosError.validationFailed("Cannot delete tag in use")
             return false
         }
 

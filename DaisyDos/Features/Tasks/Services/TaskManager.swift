@@ -352,6 +352,11 @@ class TaskManager {
                 throw DaisyDosError.validationFailed("title")
             }
 
+            // Prevent subtasks of subtasks - only one level allowed
+            guard parentTask.parentTask == nil else {
+                throw DaisyDosError.circularReference
+            }
+
             let subtask = parentTask.createSubtask(
                 title: title.trimmingCharacters(in: .whitespacesAndNewlines),
                 taskDescription: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),

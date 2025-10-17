@@ -11,7 +11,6 @@ import SwiftData
 struct SubtaskListView: View {
     @Environment(TaskManager.self) private var taskManager
     let parentTask: Task
-    let nestingLevel: Int
 
     @State private var showingSubtaskCreation = false
     @State private var subtaskToEdit: Task?
@@ -31,7 +30,6 @@ struct SubtaskListView: View {
                 ForEach(displayedSubtasks, id: \.id) { subtask in
                     SubtaskRowView(
                         subtask: subtask,
-                        nestingLevel: nestingLevel,
                         onToggleCompletion: {
                             toggleSubtaskCompletion(subtask)
                         },
@@ -41,20 +39,9 @@ struct SubtaskListView: View {
                         onDelete: {
                             subtaskToDelete = subtask
                             showingDeleteConfirmation = true
-                        },
-                        onNestedToggleCompletion: { nestedTask in
-                            toggleSubtaskCompletion(nestedTask)
-                        },
-                        onNestedEdit: { nestedTask in
-                            subtaskToEdit = nestedTask
-                        },
-                        onNestedDelete: { nestedTask in
-                            subtaskToDelete = nestedTask
-                            showingDeleteConfirmation = true
                         }
                     )
-                    .cornerRadius(8)
-                    .padding(.horizontal, nestingLevel > 0 ? 8 : 16)
+                    .padding(.horizontal, 16)
                     .padding(.vertical, 2)
                     .overlay(
                         // Reordering arrows (always shown in manage mode)
@@ -115,7 +102,7 @@ struct SubtaskListView: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: { subtask in
-            Text("Are you sure you want to delete '\(subtask.title)' and all its subtasks?")
+            Text("Are you sure you want to delete '\(subtask.title)'?")
         }
         .alert("Subtask Error", isPresented: $showingErrorAlert) {
             Button("OK") { }
@@ -167,7 +154,7 @@ struct SubtaskListView: View {
             .cornerRadius(8)
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, nestingLevel > 0 ? 8 : 16)
+        .padding(.horizontal, 16)
         .padding(.top, 8)
     }
 
@@ -184,9 +171,8 @@ struct SubtaskListView: View {
         case .success:
             // Success - UI will update automatically via @Query
             break
-        case .failure(let error):
+        case .failure:
             // Handle error with user feedback
-            print("Failed to toggle subtask completion: \(error)")
             errorMessage = "Unable to update subtask completion. Please try again."
             showingErrorAlert = true
         }
@@ -195,8 +181,8 @@ struct SubtaskListView: View {
     private func deleteSubtask(_ subtask: Task) {
         let success = taskManager.deleteTaskSafely(subtask)
         if !success {
-            // Handle error
-            print("Failed to delete subtask")
+            errorMessage = "Unable to delete subtask. Please try again."
+            showingErrorAlert = true
         }
     }
 
@@ -209,8 +195,7 @@ struct SubtaskListView: View {
         switch result {
         case .success:
             break
-        case .failure(let error):
-            print("Failed to move subtask up: \(error)")
+        case .failure:
             errorMessage = "Unable to reorder subtasks. Please try again."
             showingErrorAlert = true
         }
@@ -221,8 +206,7 @@ struct SubtaskListView: View {
         switch result {
         case .success:
             break
-        case .failure(let error):
-            print("Failed to move subtask down: \(error)")
+        case .failure:
             errorMessage = "Unable to reorder subtasks. Please try again."
             showingErrorAlert = true
         }
@@ -259,22 +243,19 @@ struct SubtaskListView: View {
     let subtask1 = Task(title: "Setup Xcode Project", priority: .medium)
     let subtask2 = Task(title: "Design User Interface", priority: .medium)
     let subtask3 = Task(title: "Implement Core Features", priority: .high)
-    let nestedSubtask = Task(title: "Create wireframes", priority: .low)
 
     container.mainContext.insert(parentTask)
     container.mainContext.insert(subtask1)
     container.mainContext.insert(subtask2)
     container.mainContext.insert(subtask3)
-    container.mainContext.insert(nestedSubtask)
 
     _ = parentTask.addSubtask(subtask1)
     _ = parentTask.addSubtask(subtask2)
     _ = parentTask.addSubtask(subtask3)
-    _ = subtask2.addSubtask(nestedSubtask)
 
     subtask1.setCompleted(true)
 
-    return SubtaskListView(parentTask: parentTask, nestingLevel: 0)
+    return SubtaskListView(parentTask: parentTask)
         .modelContainer(container)
         .environment(taskManager)
         .background(Color.daisyBackground)
@@ -296,7 +277,7 @@ struct SubtaskListView: View {
 
     container.mainContext.insert(parentTask)
 
-    return SubtaskListView(parentTask: parentTask, nestingLevel: 0)
+    return SubtaskListView(parentTask: parentTask)
         .modelContainer(container)
         .environment(taskManager)
         .background(Color.daisyBackground)

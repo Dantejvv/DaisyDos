@@ -75,7 +75,7 @@ This is a standard Xcode project. Use Xcode to build and run:
 - Priority System: Low/Medium/High with visual indicators
 - Due Dates & Start Dates: Full date management with validation
 - Task Descriptions: Rich text descriptions
-- Subtask Relationships: Unlimited nesting with circular reference protection
+- Subtask Relationships: One-level subtasks only (tasks can have subtasks, subtasks cannot have subtasks)
 - File Attachments: PhotoKit integration, 50MB per file, 200MB per task limit
 - Recurrence Rules: Daily/weekly/monthly/yearly patterns with dynamic calculations
 - Advanced Filtering: Priority, due date, overdue, smart sectioning
@@ -91,7 +91,7 @@ This is a standard Xcode project. Use Xcode to build and run:
 - TaskDetailView: Comprehensive display with subtask and attachment management
 - TaskEditView: Dedicated editing with validation and change detection
 - Enhanced TasksView: Multi-select, bulk operations, context menus
-- Subtask Management: Order-based reordering, progress visualization
+- Subtask Management: One-level hierarchy, order-based reordering, progress visualization
 - Attachment System: Complete PhotoKit integration with gallery and preview
 - Recurrence System: Full UI integration with preset and custom patterns
 

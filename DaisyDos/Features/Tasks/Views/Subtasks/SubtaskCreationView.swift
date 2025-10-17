@@ -23,13 +23,10 @@ struct SubtaskCreationView: View {
     @State private var showingError = false
     @State private var errorMessage = ""
 
-    private var maxNestingDepth: Int { 10 }
-    private var currentNestingLevel: Int { parentTask.nestingLevel + 1 }
-    private var canCreateSubtask: Bool { currentNestingLevel < maxNestingDepth }
-
     var isFormValid: Bool {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmedTitle.isEmpty && canCreateSubtask
+        let parentIsRootTask = parentTask.parentTask == nil
+        return !trimmedTitle.isEmpty && parentIsRootTask
     }
 
     private var titleCountColor: Color {
@@ -42,9 +39,9 @@ struct SubtaskCreationView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // Nesting warning section
-                if !canCreateSubtask {
-                    nestingWarningSection
+                // Parent validation warning section
+                if parentTask.parentTask != nil {
+                    parentValidationWarningSection
                 }
 
                 // Subtask details section
@@ -86,18 +83,18 @@ struct SubtaskCreationView: View {
     // MARK: - Sections
 
     @ViewBuilder
-    private var nestingWarningSection: some View {
+    private var parentValidationWarningSection: some View {
         Section {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.daisyError)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Maximum Nesting Reached")
+                    Text("Cannot Add Subtask")
                         .font(.headline)
                         .foregroundColor(.daisyError)
 
-                    Text("You've reached the maximum nesting depth of \(maxNestingDepth) levels. Consider reorganizing your task structure.")
+                    Text("Only tasks can have subtasks. '\(parentTask.title)' is already a subtask and cannot have subtasks of its own.")
                         .font(.caption)
                         .foregroundColor(.daisyTextSecondary)
                 }
@@ -112,7 +109,6 @@ struct SubtaskCreationView: View {
             VStack(alignment: .leading, spacing: 4) {
                 TextField("Title", text: $title)
                     .accessibilityLabel("Subtask title")
-                    .disabled(!canCreateSubtask)
                     .onChange(of: title) { _, newValue in
                         DesignSystem.inputValidation.enforceCharacterLimit(
                             &title,
@@ -140,7 +136,6 @@ struct SubtaskCreationView: View {
                     placeholder: "Add details, notes, or formatting...",
                     maxLength: DesignSystem.inputValidation.CharacterLimits.description
                 )
-                .disabled(!canCreateSubtask)
             }
         }
     }
@@ -162,7 +157,6 @@ struct SubtaskCreationView: View {
             if parentTask.dueDate != nil {
                 VStack(alignment: .leading, spacing: 8) {
                     Toggle("Inherit due date from parent", isOn: $inheritDueDate)
-                        .disabled(!canCreateSubtask)
 
                     if inheritDueDate {
                         HStack {
@@ -218,7 +212,6 @@ struct SubtaskCreationView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(priority == priorityOption ? .daisyTask : .daisyText)
-                .disabled(!canCreateSubtask)
             }
         }
         .padding(.horizontal, 4)
@@ -227,14 +220,12 @@ struct SubtaskCreationView: View {
     @ViewBuilder
     private var customDueDatePicker: some View {
         Toggle("Set custom due date", isOn: $hasDueDate)
-            .disabled(!canCreateSubtask)
 
         if hasDueDate {
             DatePicker("Due date", selection: Binding(
                 get: { dueDate ?? Date() },
                 set: { dueDate = $0 }
             ), displayedComponents: [.date])
-            .disabled(!canCreateSubtask)
         }
     }
 
@@ -250,27 +241,6 @@ struct SubtaskCreationView: View {
                         .foregroundColor(.daisyText)
                         .lineLimit(2)
                     Spacer()
-                }
-
-                // Nesting level indicator
-                HStack {
-                    Text("Nesting Level:")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
-
-                    Spacer()
-
-                    HStack(spacing: 4) {
-                        ForEach(0..<currentNestingLevel, id: \.self) { level in
-                            Circle()
-                                .fill(level < maxNestingDepth ? Color.daisyTask : Color.daisyError)
-                                .frame(width: 8, height: 8)
-                        }
-
-                        Text("\(currentNestingLevel)/\(maxNestingDepth)")
-                            .font(.caption)
-                            .foregroundColor(currentNestingLevel < maxNestingDepth ? .daisyTextSecondary : .daisyError)
-                    }
                 }
 
                 // Parent subtask count
@@ -300,15 +270,16 @@ struct SubtaskCreationView: View {
     }
 
     private func createSubtask() {
-        guard canCreateSubtask else {
-            showError("Cannot create subtask: maximum nesting depth reached")
-            return
-        }
-
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedTitle.isEmpty else {
             showError("Subtask title cannot be empty")
+            return
+        }
+
+        // Validation for parent being a root task is handled in isFormValid and TaskManager
+        guard parentTask.parentTask == nil else {
+            showError("Only tasks can have subtasks. This task is already a subtask.")
             return
         }
 

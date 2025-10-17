@@ -66,7 +66,8 @@ extension Task: Transferable {
 // MARK: - Drag & Drop Validation
 
 extension Task {
-    /// Validates if a task can be moved to a new parent without creating circular references
+    /// Validates if a task can be moved to a new parent
+    /// With one-level subtasks, we only need to ensure the new parent is not a subtask itself
     func canBeMovedTo(newParent: Task?) -> Bool {
         // Allow moving to root (no parent)
         guard let newParent = newParent else { return true }
@@ -74,45 +75,8 @@ extension Task {
         // Cannot move to self
         if newParent.id == self.id { return false }
 
-        // Cannot move to one of our descendants (circular reference)
-        return !newParent.hasAncestorForDrag(self)
-    }
-
-    /// Validates if the nesting level would be acceptable
-    func canBeMovedToNestingLevel(_ level: Int, maxDepth: Int = 10) -> Bool {
-        let wouldExceedDepth = level + subtaskDepth > maxDepth
-        return !wouldExceedDepth
-    }
-
-    /// Gets the maximum depth of subtasks under this task
-    var subtaskDepth: Int {
-        guard hasSubtasks else { return 0 }
-
-        let maxChildDepth = subtasks.map(\.subtaskDepth).max() ?? 0
-        return maxChildDepth + 1
-    }
-
-    /// Checks if this task has the given task as an ancestor (for drag validation)
-    func hasAncestorForDrag(_ potentialAncestor: Task) -> Bool {
-        var current = self.parentTask
-        while let parent = current {
-            if parent.id == potentialAncestor.id {
-                return true
-            }
-            current = parent.parentTask
-        }
-        return false
-    }
-
-    /// Helper property to get nesting level (unified calculation)
-    var nestingLevel: Int {
-        var level = 0
-        var current = self.parentTask
-        while current != nil {
-            level += 1
-            current = current?.parentTask
-        }
-        return level
+        // New parent must be a root task (not already a subtask)
+        return newParent.parentTask == nil
     }
 }
 
@@ -120,7 +84,6 @@ extension Task {
 
 struct TaskDragPreview: View {
     let task: Task
-    let nestingLevel: Int
 
     var body: some View {
         HStack(spacing: 8) {
