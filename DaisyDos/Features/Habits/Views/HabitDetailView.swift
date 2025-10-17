@@ -291,9 +291,21 @@ struct HabitDetailView: View {
     @ViewBuilder
     private var habitInfoCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("About")
-                .font(.headline)
-                .foregroundColor(.daisyText)
+            HStack {
+                Text("About")
+                    .font(.headline)
+                    .foregroundColor(.daisyText)
+                Spacer()
+                if habit.priority != .none {
+                    HStack(spacing: 6) {
+                        habit.priority.indicatorView()
+                            .font(.caption)
+                        Text(habit.priority.displayName)
+                            .font(.caption.weight(.medium))
+                            .foregroundColor(.daisyTextSecondary)
+                    }
+                }
+            }
 
             if !habit.habitDescription.isEmpty {
                 Text(habit.habitDescriptionAttributed)
@@ -310,17 +322,24 @@ struct HabitDetailView: View {
                 .foregroundColor(.daisyTextSecondary)
             }
 
-            HStack {
+            VStack(alignment: .leading, spacing: 4) {
                 Label(
-                    "Created \(DateFormatter.mediumDate.string(from: habit.createdDate))",
+                    "Created \(habit.createdDate.formatted(date: .abbreviated, time: .omitted))",
                     systemImage: "calendar"
                 )
+                .font(.caption)
+                .foregroundColor(.daisyTextSecondary)
 
-                Spacer()
-
+                // Only show modified if different from created (more than 1 minute difference)
+                if habit.modifiedDate.timeIntervalSince(habit.createdDate) > 60 {
+                    Label(
+                        "Modified \(habit.modifiedDate.formatted(date: .abbreviated, time: .omitted))",
+                        systemImage: "pencil.circle"
+                    )
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+                }
             }
-            .font(.caption)
-            .foregroundColor(.daisyTextSecondary)
         }
         .padding()
         .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))

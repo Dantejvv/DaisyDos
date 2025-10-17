@@ -427,6 +427,9 @@ struct HabitEditView: View {
         habit.recurrenceRule = recurrenceRule
         habit.priority = selectedPriority
 
+        // Update modified date
+        habit.modifiedDate = Date()
+
         // Update tags
         let currentTags = Set(habit.tags)
         let newTags = Set(selectedTags)

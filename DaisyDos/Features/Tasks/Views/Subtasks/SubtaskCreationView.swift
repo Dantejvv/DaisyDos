@@ -15,9 +15,8 @@ struct SubtaskCreationView: View {
     let parentTask: Task
 
     @State private var title = ""
-    @State private var taskDescription = ""
+    @State private var taskDescriptionAttributed = AttributedString()
     @State private var priority: Priority = .none
-    @State private var inheritFromParent = true
     @State private var inheritDueDate = true
     @State private var dueDate: Date?
     @State private var hasDueDate = false
@@ -31,6 +30,13 @@ struct SubtaskCreationView: View {
     var isFormValid: Bool {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         return !trimmedTitle.isEmpty && canCreateSubtask
+    }
+
+    private var titleCountColor: Color {
+        return DesignSystem.inputValidation.characterCountColorExact(
+            currentCount: title.count,
+            maxLength: DesignSystem.inputValidation.CharacterLimits.title
+        )
     }
 
     var body: some View {
@@ -107,39 +113,49 @@ struct SubtaskCreationView: View {
                 TextField("Title", text: $title)
                     .accessibilityLabel("Subtask title")
                     .disabled(!canCreateSubtask)
+                    .onChange(of: title) { _, newValue in
+                        DesignSystem.inputValidation.enforceCharacterLimit(
+                            &title,
+                            newValue: newValue,
+                            maxLength: DesignSystem.inputValidation.CharacterLimits.title
+                        )
+                    }
 
-                if !title.isEmpty && title.count > 50 {
-                    Text("\(title.count)/100 characters")
-                        .font(.caption)
-                        .foregroundColor(title.count > 80 ? .daisyError : .daisyTextSecondary)
+                HStack {
+                    Spacer()
+                    Text("\(title.count)/\(DesignSystem.inputValidation.CharacterLimits.title)")
+                        .font(.caption2)
+                        .foregroundColor(titleCountColor)
                 }
             }
 
-            TextField("Description (optional)", text: $taskDescription, axis: .vertical)
-                .lineLimit(2...4)
-                .accessibilityLabel("Subtask description")
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Description (optional)")
+                    .font(.subheadline)
+                    .foregroundColor(.daisyTextSecondary)
+                    .padding(.bottom, Spacing.extraSmall)
+
+                RichTextEditor(
+                    attributedText: $taskDescriptionAttributed,
+                    placeholder: "Add details, notes, or formatting...",
+                    maxLength: DesignSystem.inputValidation.CharacterLimits.description
+                )
                 .disabled(!canCreateSubtask)
+            }
         }
     }
 
     @ViewBuilder
     private var settingsSection: some View {
         Section("Settings") {
-            // Priority inheritance
+            // Priority selection
             VStack(alignment: .leading, spacing: 8) {
-                Toggle("Inherit priority from parent", isOn: $inheritFromParent)
-                    .disabled(!canCreateSubtask)
+                Text("Priority")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.daisyText)
 
-                if inheritFromParent {
-                    HStack {
-                        parentTask.priority.indicatorView()
-                        Text("Will use \(parentTask.priority.displayName) priority")
-                            .font(.caption)
-                            .foregroundColor(.daisyTextSecondary)
-                    }
-                } else {
-                    priorityPicker
-                }
+                priorityPicker
             }
 
             // Due date inheritance
@@ -278,7 +294,8 @@ struct SubtaskCreationView: View {
     // MARK: - Actions
 
     private func setupInitialValues() {
-        priority = parentTask.priority
+        // Priority defaults to .none (no inheritance)
+        priority = .none
         dueDate = parentTask.dueDate
     }
 
@@ -289,14 +306,12 @@ struct SubtaskCreationView: View {
         }
 
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedDescription = taskDescription.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedTitle.isEmpty else {
             showError("Subtask title cannot be empty")
             return
         }
 
-        let finalPriority = inheritFromParent ? parentTask.priority : priority
         let finalDueDate: Date?
 
         if inheritDueDate && parentTask.dueDate != nil {
@@ -307,11 +322,14 @@ struct SubtaskCreationView: View {
             finalDueDate = nil
         }
 
+        // Extract plain text from attributed string for the model
+        let descriptionText = AttributedString.extractText(from: taskDescriptionAttributed.toData() ?? Data())
+
         let result = taskManager.createSubtask(
             for: parentTask,
             title: trimmedTitle,
-            taskDescription: trimmedDescription,
-            priority: finalPriority
+            taskDescription: descriptionText,
+            priority: priority
         )
 
         switch result {
@@ -379,7 +397,7 @@ struct QuickSubtaskAddView: View {
         let result = taskManager.createSubtask(
             for: parentTask,
             title: trimmedTitle,
-            priority: parentTask.priority
+            priority: .none
         )
 
         switch result {

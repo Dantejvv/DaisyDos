@@ -14,13 +14,11 @@ struct SubtaskRowView: View {
     let onToggleCompletion: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
-    let onAddSubtask: () -> Void
 
     // Optional action forwarders for nested subtasks
     var onNestedToggleCompletion: ((Task) -> Void)? = nil
     var onNestedEdit: ((Task) -> Void)? = nil
     var onNestedDelete: ((Task) -> Void)? = nil
-    var onNestedAddSubtask: ((Task) -> Void)? = nil
 
     @State private var isExpanded: Bool = true
 
@@ -31,22 +29,18 @@ struct SubtaskRowView: View {
         onToggleCompletion: @escaping () -> Void,
         onEdit: @escaping () -> Void,
         onDelete: @escaping () -> Void,
-        onAddSubtask: @escaping () -> Void,
         onNestedToggleCompletion: ((Task) -> Void)? = nil,
         onNestedEdit: ((Task) -> Void)? = nil,
-        onNestedDelete: ((Task) -> Void)? = nil,
-        onNestedAddSubtask: ((Task) -> Void)? = nil
+        onNestedDelete: ((Task) -> Void)? = nil
     ) {
         self.subtask = subtask
         self.nestingLevel = nestingLevel
         self.onToggleCompletion = onToggleCompletion
         self.onEdit = onEdit
         self.onDelete = onDelete
-        self.onAddSubtask = onAddSubtask
         self.onNestedToggleCompletion = onNestedToggleCompletion
         self.onNestedEdit = onNestedEdit
         self.onNestedDelete = onNestedDelete
-        self.onNestedAddSubtask = onNestedAddSubtask
     }
 
     private var indentationWidth: CGFloat {
@@ -142,20 +136,15 @@ struct SubtaskRowView: View {
 
                 // Action menu
                 Menu {
-                    Button(action: onAddSubtask) {
-                        Label("Add Subtask", systemImage: "plus.circle")
-                    }
-
                     Button(action: onEdit) {
                         Label("Edit", systemImage: "pencil")
                     }
 
                     Divider()
 
-                    Button(action: onDelete) {
+                    Button(role: .destructive, action: onDelete) {
                         Label("Delete", systemImage: "trash")
                     }
-                    .foregroundColor(.daisyError)
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .font(.body)
@@ -185,13 +174,9 @@ struct SubtaskRowView: View {
                             onDelete: {
                                 onNestedDelete?(nestedSubtask)
                             },
-                            onAddSubtask: {
-                                onNestedAddSubtask?(nestedSubtask)
-                            },
                             onNestedToggleCompletion: onNestedToggleCompletion,
                             onNestedEdit: onNestedEdit,
-                            onNestedDelete: onNestedDelete,
-                            onNestedAddSubtask: onNestedAddSubtask
+                            onNestedDelete: onNestedDelete
                         )
                     }
                 }
@@ -300,9 +285,6 @@ extension SubtaskRowView {
         },
         onDelete: {
             print("Delete subtask")
-        },
-        onAddSubtask: {
-            print("Add nested subtask")
         }
     )
     .modelContainer(container)
@@ -345,9 +327,6 @@ extension SubtaskRowView {
                 },
                 onDelete: {
                     print("Delete: \(subtask.title)")
-                },
-                onAddSubtask: {
-                    print("Add subtask to: \(subtask.title)")
                 }
             )
         }

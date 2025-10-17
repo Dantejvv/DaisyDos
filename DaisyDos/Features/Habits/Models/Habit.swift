@@ -45,6 +45,7 @@ class Habit {
     var currentStreak: Int
     var longestStreak: Int
     var createdDate: Date
+    var modifiedDate: Date = Date()
     var lastCompletedDate: Date?
 
     // MARK: - Enhanced Properties for Phase 3
@@ -81,7 +82,9 @@ class Habit {
         self.habitDescriptionData = AttributedString.migrate(from: habitDescription)
         self.currentStreak = 0
         self.longestStreak = 0
-        self.createdDate = Date()
+        let now = Date()
+        self.createdDate = now
+        self.modifiedDate = now
         self.lastCompletedDate = nil
         self.recurrenceRule = recurrenceRule
         self.priority = priority

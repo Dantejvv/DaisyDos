@@ -106,6 +106,7 @@ class HabitManager {
             }
 
             if hasChanges {
+                habit.modifiedDate = Date()
                 try modelContext.save()
             }
         }

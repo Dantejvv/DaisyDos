@@ -301,13 +301,12 @@ class Task {
     func createSubtask(
         title: String,
         taskDescription: String = "",
-        priority: Priority? = nil
+        priority: Priority = .none
     ) -> Task {
-        let inheritedPriority = priority ?? self.priority
         let subtask = Task(
             title: title,
             taskDescription: taskDescription,
-            priority: inheritedPriority,
+            priority: priority,
             dueDate: self.dueDate, // Inherit due date by default
             startDate: self.startDate
         )

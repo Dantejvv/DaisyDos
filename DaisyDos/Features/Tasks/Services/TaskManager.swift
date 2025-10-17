@@ -342,7 +342,7 @@ class TaskManager {
         for parentTask: Task,
         title: String,
         taskDescription: String = "",
-        priority: Priority? = nil
+        priority: Priority = .none
     ) -> Result<Task, AnyRecoverableError> {
         return ErrorTransformer.safely(
             operation: "create subtask",

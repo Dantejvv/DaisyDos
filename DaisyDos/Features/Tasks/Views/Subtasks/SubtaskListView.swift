@@ -42,9 +42,6 @@ struct SubtaskListView: View {
                             subtaskToDelete = subtask
                             showingDeleteConfirmation = true
                         },
-                        onAddSubtask: {
-                            createNestedSubtask(for: subtask)
-                        },
                         onNestedToggleCompletion: { nestedTask in
                             toggleSubtaskCompletion(nestedTask)
                         },
@@ -54,9 +51,6 @@ struct SubtaskListView: View {
                         onNestedDelete: { nestedTask in
                             subtaskToDelete = nestedTask
                             showingDeleteConfirmation = true
-                        },
-                        onNestedAddSubtask: { nestedTask in
-                            createNestedSubtask(for: nestedTask)
                         }
                     )
                     .cornerRadius(8)
@@ -196,12 +190,6 @@ struct SubtaskListView: View {
             errorMessage = "Unable to update subtask completion. Please try again."
             showingErrorAlert = true
         }
-    }
-
-    private func createNestedSubtask(for parentSubtask: Task) {
-        // For now, we'll use the creation sheet
-        // In the future, this could open a specific nested creation interface
-        showingSubtaskCreation = true
     }
 
     private func deleteSubtask(_ subtask: Task) {

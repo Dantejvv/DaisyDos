@@ -251,20 +251,19 @@ struct TaskDetailView: View {
                 if task.hasRecurrence {
                     recurrenceCard
                 }
-
-                // Metadata Card
-                metadataCard
             }
             .padding()
         }
+        .background(Color.daisyBackground)
     }
 
     @ViewBuilder
     private var taskInfoCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Task Information")
+                Text("About")
                     .font(.headline)
+                    .foregroundColor(.daisyText)
                 Spacer()
                 HStack(spacing: 6) {
                     task.priority.indicatorView()
@@ -278,12 +277,36 @@ struct TaskDetailView: View {
             if !task.taskDescription.isEmpty {
                 Text(task.taskDescriptionAttributed)
                     .font(.body)
-                    .foregroundColor(.daisyText)
-            } else {
-                Text("No description")
-                    .font(.body)
                     .foregroundColor(.daisyTextSecondary)
-                    .italic()
+            }
+
+            if let recurrenceRule = task.recurrenceRule {
+                Label(
+                    recurrenceRule.displayDescription,
+                    systemImage: "repeat"
+                )
+                .font(.caption)
+                .foregroundColor(.daisyTextSecondary)
+            }
+
+            // Metadata
+            VStack(alignment: .leading, spacing: 4) {
+                Label(
+                    "Created \(task.createdDate.formatted(date: .abbreviated, time: .omitted))",
+                    systemImage: "calendar"
+                )
+                .font(.caption)
+                .foregroundColor(.daisyTextSecondary)
+
+                // Only show modified if different from created (more than 1 minute difference)
+                if task.modifiedDate.timeIntervalSince(task.createdDate) > 60 {
+                    Label(
+                        "Modified \(task.modifiedDate.formatted(date: .abbreviated, time: .omitted))",
+                        systemImage: "pencil.circle"
+                    )
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+                }
             }
         }
         .padding()
@@ -358,16 +381,9 @@ struct TaskDetailView: View {
     @ViewBuilder
     private var tagsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Tags")
-                    .font(.headline)
-                Spacer()
-                Button("Manage") {
-                    showingTagAssignment = true
-                }
-                .font(.caption)
-                .foregroundColor(.daisyTask)
-            }
+            Text("Tags")
+                .font(.headline)
+                .foregroundColor(.daisyText)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -451,52 +467,6 @@ struct TaskDetailView: View {
                     showingRecurrencePicker = true
                 }
             )
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    @ViewBuilder
-    private var metadataCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Metadata")
-                .font(.headline)
-
-            VStack(spacing: 12) {
-                HStack {
-                    Text("Created")
-                        .font(.subheadline)
-                        .foregroundColor(.daisyTextSecondary)
-                    Spacer()
-                    Text(task.createdDate.formatted(date: .abbreviated, time: .shortened))
-                        .font(.subheadline)
-                }
-
-                Divider()
-
-                HStack {
-                    Text("Modified")
-                        .font(.subheadline)
-                        .foregroundColor(.daisyTextSecondary)
-                    Spacer()
-                    Text(task.modifiedDate.formatted(date: .abbreviated, time: .shortened))
-                        .font(.subheadline)
-                }
-
-                if task.isCompleted, let completedDate = task.completedDate {
-                    Divider()
-
-                    HStack {
-                        Text("Completed")
-                            .font(.subheadline)
-                            .foregroundColor(.daisySuccess)
-                        Spacer()
-                        Text(completedDate.formatted(date: .abbreviated, time: .shortened))
-                            .font(.subheadline)
-                            .foregroundColor(.daisySuccess)
-                    }
-                }
-            }
         }
         .padding()
         .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
