@@ -108,7 +108,7 @@ struct DaisyButton: View {
         var height: CGFloat {
             switch self {
             case .small:
-                return 36
+                return AccessibilityHelpers.TouchTarget.minimum.height // Changed from 36 to 44pt minimum
             case .medium:
                 return AccessibilityHelpers.TouchTarget.recommended.height
             case .large:

@@ -22,6 +22,7 @@ class HabitCompletion {
 
     // MARK: - Relationships
 
+    @Relationship(inverse: \Habit.completionEntries)
     var habit: Habit?
 
     // MARK: - Mood Tracking

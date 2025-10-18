@@ -50,7 +50,6 @@ class Task {
     // MARK: - Enhanced Properties (Phase 2.1)
     var priority: Priority
     var dueDate: Date?
-    var startDate: Date?
     var recurrenceRule: RecurrenceRule?
     var completedDate: Date?
 
@@ -83,7 +82,6 @@ class Task {
         taskDescription: String = "",
         priority: Priority = .none,
         dueDate: Date? = nil,
-        startDate: Date? = nil,
         recurrenceRule: RecurrenceRule? = nil
     ) {
         self.id = UUID()
@@ -91,7 +89,6 @@ class Task {
         self.taskDescriptionData = AttributedString.migrate(from: taskDescription)
         self.priority = priority
         self.dueDate = dueDate
-        self.startDate = startDate
         self.recurrenceRule = recurrenceRule
         self.isCompleted = false
         self.createdDate = Date()
@@ -162,14 +159,6 @@ class Task {
         return daysDifference >= 0 && daysDifference <= 3
     }
 
-    var isStarted: Bool {
-        guard let startDate = startDate else { return true } // No start date means can start anytime
-        return Date() >= startDate
-    }
-
-    var canStart: Bool {
-        return isStarted && !isCompleted
-    }
 
     var subtaskCompletionPercentage: Double {
         guard hasSubtasks else { return isCompleted ? 1.0 : 0.0 }
@@ -319,8 +308,7 @@ class Task {
             title: title,
             taskDescription: taskDescription,
             priority: priority,
-            dueDate: self.dueDate, // Inherit due date by default
-            startDate: self.startDate
+            dueDate: self.dueDate // Inherit due date by default
         )
 
         _ = addSubtask(subtask)
@@ -362,18 +350,6 @@ class Task {
         _ = attachment.deleteFile()
     }
 
-    // MARK: - Date Validation
-
-    var hasValidDates: Bool {
-        guard let startDate = startDate, let dueDate = dueDate else {
-            return true // If either is nil, no conflict possible
-        }
-        return startDate <= dueDate
-    }
-
-    func validateDates() -> Bool {
-        return hasValidDates
-    }
 
     // MARK: - Recurrence Management
 
@@ -397,11 +373,6 @@ class Task {
             taskDescription: taskDescription,
             priority: priority,
             dueDate: nextDate,
-            startDate: startDate != nil ? {
-                let referenceDate = dueDate ?? createdDate
-                let daysDifference = Calendar.current.dateComponents([.day], from: referenceDate, to: nextDate).day ?? 0
-                return Calendar.current.date(byAdding: .day, value: daysDifference, to: startDate!)
-            }() : nil,
             recurrenceRule: recurrenceRule
         )
 

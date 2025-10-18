@@ -353,6 +353,7 @@ struct HeatmapCell: View {
             .accessibilityLabel(accessibilityLabel)
             .accessibilityHint("Tap to see details")
             .accessibilityAddTraits(.isButton)
+            .accessibilityElement(children: .ignore)
     }
 
     private var cellColor: Color {

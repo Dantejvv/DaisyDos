@@ -17,8 +17,6 @@ struct AddTaskView: View {
     @State private var priority: Priority = .none
     @State private var dueDate: Date?
     @State private var hasDueDate = false
-    @State private var startDate: Date?
-    @State private var hasStartDate = false
     @State private var selectedTags: [Tag] = []
     @State private var showingTagSelection = false
     @State private var recurrenceRule: RecurrenceRule?
@@ -27,16 +25,7 @@ struct AddTaskView: View {
     @State private var errorMessage = ""
 
     var isFormValid: Bool {
-        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && hasValidDates
-    }
-
-    var hasValidDates: Bool {
-        guard hasStartDate && hasDueDate,
-              let start = startDate,
-              let due = dueDate else {
-            return true
-        }
-        return start <= due
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var titleCharacterCount: Int {
@@ -150,18 +139,7 @@ struct AddTaskView: View {
                     .padding(.horizontal, 4)
                 }
 
-                Section("Dates") {
-                    // Start Date
-                    Toggle("Set start date", isOn: $hasStartDate)
-
-                    if hasStartDate {
-                        DatePicker("Start date", selection: Binding(
-                            get: { startDate ?? Date() },
-                            set: { startDate = $0 }
-                        ), displayedComponents: [.date])
-                    }
-
-                    // Due Date
+                Section("Due Date") {
                     Toggle("Set due date", isOn: $hasDueDate)
 
                     if hasDueDate {
@@ -169,17 +147,6 @@ struct AddTaskView: View {
                             get: { dueDate ?? Date() },
                             set: { dueDate = $0 }
                         ), displayedComponents: [.date])
-                    }
-
-                    // Date validation warning
-                    if !hasValidDates {
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.daisyError)
-                            Text("Start date must be before due date")
-                                .font(.caption)
-                                .foregroundColor(.daisyError)
-                        }
                     }
                 }
 
@@ -292,7 +259,6 @@ struct AddTaskView: View {
             taskDescription: "", // Placeholder for backward compatibility
             priority: priority,
             dueDate: hasDueDate ? dueDate : nil,
-            startDate: hasStartDate ? startDate : nil,
             recurrenceRule: recurrenceRule
         )
 

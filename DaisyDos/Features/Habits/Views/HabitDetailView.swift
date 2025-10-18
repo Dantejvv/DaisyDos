@@ -151,11 +151,12 @@ struct HabitDetailView: View {
                 }) {
                     VStack(spacing: 4) {
                         Image(systemName: tab.icon)
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.body.weight(.medium))
 
                         Text(tab.rawValue)
                             .font(.caption.weight(.medium))
                     }
+                    .frame(minWidth: 44, minHeight: 44)
                     .foregroundColor(selectedTab == tab ? .daisyHabit : .daisyTextSecondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -224,7 +225,8 @@ struct HabitDetailView: View {
                 }
             }) {
                 Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 56))
+                    .font(.largeTitle)
+                    .imageScale(.large)
                     .foregroundColor(habit.isCompletedToday ? .daisySuccess : .daisyHabit)
                     .background(
                         Circle()
@@ -232,8 +234,10 @@ struct HabitDetailView: View {
                             .shadow(radius: 8)
                     )
             }
+            .frame(minWidth: 64, minHeight: 64)
             .padding()
             .accessibilityLabel(habit.isCompletedToday ? "Mark as incomplete" : "Mark as complete")
+            .accessibilityHint("Double tap to toggle completion status")
         }
     }
 

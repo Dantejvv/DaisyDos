@@ -669,13 +669,17 @@ private struct AccessibilityDashboardView: View {
 
     private func runFullAudit() {
         // Simulate full audit for now
+        #if DEBUG
         print("Full audit would run here")
+        #endif
     }
 
     private func generateComplianceReport() {
         let report = auditor.generateComplianceReport()
         // In a real implementation, this would export or display the report
+        #if DEBUG
         print("Generated compliance report with \(report.recommendations.count) recommendations")
+        #endif
     }
 }
 
@@ -1198,7 +1202,9 @@ private struct PerformanceDashboardView: View {
             VStack(spacing: Spacing.small) {
                 DaisyButton.secondary("Export Performance Data") {
                     let csvData = performanceMonitor.exportPerformanceData()
+                    #if DEBUG
                     print("📊 Performance Data Export:\n\(csvData)")
+                    #endif
                 }
 
                 DaisyButton.secondary("Clear Performance Alerts") {

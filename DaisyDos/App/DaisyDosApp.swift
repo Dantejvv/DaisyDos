@@ -93,11 +93,15 @@ struct DaisyDosApp: App {
 
         switch result {
         case .success(let stats):
+            #if DEBUG
             print("Logbook housekeeping completed: \(stats.tasksArchived) archived, \(stats.tasksDeleted) tasks deleted, \(stats.logsDeleted) logs deleted")
+            #endif
             UserDefaults.standard.set(now, forKey: lastRunKey)
 
         case .failure(let error):
+            #if DEBUG
             print("Logbook housekeeping failed: \(error.userMessage)")
+            #endif
         }
     }
 }

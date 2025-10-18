@@ -64,7 +64,12 @@ class LogbookManager {
     /// These are too old to need archival - just delete them entirely
     private func deleteOldTasks(olderThanDays days: Int) throws -> Int {
         // Calculate cutoff date
-        let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date())!
+        guard let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) else {
+            #if DEBUG
+            print("⚠️ [Housekeeping] Failed to calculate cutoff date")
+            #endif
+            return 0
+        }
 
         #if DEBUG
         print("🗑️ [Housekeeping] Looking for tasks to DELETE (365+ days old)")
@@ -113,8 +118,13 @@ class LogbookManager {
     /// Converts Task -> TaskLogEntry and deletes original task (with attachments)
     private func archiveTasks(olderThanDays olderDays: Int, newerThanDays newerDays: Int) throws -> Int {
         // Calculate cutoff dates
-        let olderCutoff = Calendar.current.date(byAdding: .day, value: -olderDays, to: Date())!
-        let newerCutoff = Calendar.current.date(byAdding: .day, value: -newerDays, to: Date())!
+        guard let olderCutoff = Calendar.current.date(byAdding: .day, value: -olderDays, to: Date()),
+              let newerCutoff = Calendar.current.date(byAdding: .day, value: -newerDays, to: Date()) else {
+            #if DEBUG
+            print("⚠️ [Housekeeping] Failed to calculate cutoff dates")
+            #endif
+            return 0
+        }
 
         #if DEBUG
         print("📦 [Housekeeping] Looking for tasks to ARCHIVE (91-365 days old)")
@@ -167,7 +177,12 @@ class LogbookManager {
     /// Delete log entries older than specified days
     private func cleanupLogEntries(olderThanDays days: Int) throws -> Int {
         // Calculate cutoff date
-        let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date())!
+        guard let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) else {
+            #if DEBUG
+            print("⚠️ [Housekeeping] Failed to calculate cutoff date")
+            #endif
+            return 0
+        }
 
         #if DEBUG
         print("🗄️ [Housekeeping] Looking for log entries to DELETE (365+ days old)")
@@ -214,7 +229,9 @@ class LogbookManager {
         let allCompleted = (try? modelContext.fetch(allCompletedDescriptor)) ?? []
 
         // Filter manually in Swift
-        let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date())!
+        guard let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) else {
+            return []
+        }
         return allCompleted.filter { task in
             guard let completedDate = task.completedDate else { return false }
             return completedDate >= cutoffDate
@@ -248,7 +265,9 @@ class LogbookManager {
         let allCompleted = (try? modelContext.fetch(allCompletedDescriptor)) ?? []
 
         // Filter by date and search query manually
-        let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date())!
+        guard let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) else {
+            return []
+        }
         let lowercaseQuery = trimmedQuery.lowercased()
 
         return allCompleted.filter { task in

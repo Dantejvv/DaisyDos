@@ -247,14 +247,9 @@ extension TaskManager {
     }
 
     private func findBlockedSubtasks(_ task: Task) -> [Task] {
-        return task.subtasks.filter { subtask in
-            // A subtask is "blocked" if it has dependencies or constraints
-            // For now, we'll consider subtasks with start dates in the future as blocked
-            if let startDate = subtask.startDate, startDate > Date() {
-                return true
-            }
-            return false
-        }
+        // Currently no blocking logic without start dates
+        // This method can be enhanced in the future with dependencies or other constraints
+        return []
     }
 
     // MARK: - Safe Wrapper Methods

@@ -194,7 +194,9 @@ struct TodayView: View {
                 propagateToParent: true
             )
             if case .failure(let error) = result {
+                #if DEBUG
                 print("Failed to toggle task completion: \(error)")
+                #endif
             } else if task.isCompleted {
                 // Show undo toast if task was completed
                 toastManager.showCompletionToast(for: task) {

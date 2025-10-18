@@ -81,7 +81,6 @@ class TaskManager {
         taskDescription: String = "",
         priority: Priority = .medium,
         dueDate: Date? = nil,
-        startDate: Date? = nil,
         recurrenceRule: RecurrenceRule? = nil
     ) -> Result<Task, AnyRecoverableError> {
         return ErrorTransformer.safely(
@@ -90,11 +89,6 @@ class TaskManager {
         ) {
             guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw DaisyDosError.validationFailed("title")
-            }
-
-            // Validate dates if both provided
-            if let startDate = startDate, let dueDate = dueDate, startDate > dueDate {
-                throw DaisyDosError.invalidDateRange
             }
 
             // Validate recurrence rule
@@ -107,7 +101,6 @@ class TaskManager {
                 taskDescription: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),
                 priority: priority,
                 dueDate: dueDate,
-                startDate: startDate,
                 recurrenceRule: recurrenceRule
             )
 
@@ -144,7 +137,6 @@ class TaskManager {
         taskDescription: String? = nil,
         priority: Priority? = nil,
         dueDate: Date? = nil,
-        startDate: Date? = nil,
         recurrenceRule: RecurrenceRule? = nil,
         isCompleted: Bool? = nil
     ) -> Result<Void, AnyRecoverableError> {
@@ -178,11 +170,6 @@ class TaskManager {
                 hasChanges = true
             }
 
-            if let startDate = startDate {
-                task.startDate = startDate
-                hasChanges = true
-            }
-
             if let recurrenceRule = recurrenceRule {
                 guard recurrenceRule.isValid else {
                     throw DaisyDosError.invalidRecurrence
@@ -194,11 +181,6 @@ class TaskManager {
             if let isCompleted = isCompleted {
                 task.setCompleted(isCompleted)
                 hasChanges = true
-            }
-
-            // Validate dates after all updates
-            guard task.hasValidDates else {
-                throw DaisyDosError.invalidDateRange
             }
 
             if hasChanges {
@@ -518,8 +500,8 @@ class TaskManager {
                 return true
             }
 
-            // Include if no due date but can be started today
-            if task.dueDate == nil && task.canStart {
+            // Include if no due date
+            if task.dueDate == nil {
                 return true
             }
 
@@ -577,7 +559,6 @@ class TaskManager {
                 taskDescription: task.taskDescription,
                 priority: task.priority,
                 dueDate: duplicateDueDate,
-                startDate: task.startDate,
                 recurrenceRule: task.recurrenceRule
             )
 
@@ -655,7 +636,6 @@ class TaskManager {
         taskDescription: String? = nil,
         priority: Priority? = nil,
         dueDate: Date? = nil,
-        startDate: Date? = nil,
         recurrenceRule: RecurrenceRule? = nil,
         isCompleted: Bool? = nil
     ) -> Bool {
@@ -665,7 +645,6 @@ class TaskManager {
             taskDescription: taskDescription,
             priority: priority,
             dueDate: dueDate,
-            startDate: startDate,
             recurrenceRule: recurrenceRule,
             isCompleted: isCompleted
         ) {

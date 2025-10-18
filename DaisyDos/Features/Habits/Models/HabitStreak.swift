@@ -24,6 +24,7 @@ class HabitStreak {
 
     // MARK: - Relationships
 
+    @Relationship(inverse: \Habit.streaks)
     var habit: Habit?
 
     // MARK: - Streak Types

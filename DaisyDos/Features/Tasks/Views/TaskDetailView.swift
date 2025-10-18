@@ -182,7 +182,6 @@ struct TaskDetailView: View {
                         taskDescription: task.taskDescription,
                         priority: task.priority,
                         dueDate: task.dueDate,
-                        startDate: task.startDate,
                         recurrenceRule: newRule
                     )
                 }
@@ -275,7 +274,7 @@ struct TaskDetailView: View {
                 }
 
                 // Dates Card
-                if task.dueDate != nil || task.startDate != nil {
+                if task.dueDate != nil {
                     datesCard
                 }
 
@@ -433,21 +432,10 @@ struct TaskDetailView: View {
     @ViewBuilder
     private var datesCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Dates")
+            Text("Due Date")
                 .font(.headline)
 
             VStack(spacing: 12) {
-                if let startDate = task.startDate {
-                    HStack {
-                        Label("Start Date", systemImage: "calendar.badge.plus")
-                            .font(.subheadline)
-                            .foregroundColor(.daisyTextSecondary)
-                        Spacer()
-                        Text(startDate.formatted(date: .abbreviated, time: .omitted))
-                            .font(.subheadline)
-                    }
-                }
-
                 if let dueDate = task.dueDate {
                     HStack {
                         Label("Due Date", systemImage: "calendar.badge.clock")
@@ -775,8 +763,7 @@ struct TaskDetailView: View {
         title: "Complete Quarterly Report",
         taskDescription: "Prepare the comprehensive quarterly report including all metrics, analysis, and recommendations for the executive team. This is a critical deliverable for the company.",
         priority: .high,
-        dueDate: Calendar.current.date(byAdding: .day, value: 2, to: Date()),
-        startDate: Date()
+        dueDate: Calendar.current.date(byAdding: .day, value: 2, to: Date())
     )
     _ = task.addTag(workTag)
     _ = task.addTag(urgentTag)

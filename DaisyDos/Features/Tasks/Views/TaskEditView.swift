@@ -19,8 +19,6 @@ struct TaskEditView: View {
     @State private var priority: Priority
     @State private var dueDate: Date?
     @State private var hasDueDate: Bool
-    @State private var startDate: Date?
-    @State private var hasStartDate: Bool
     @State private var selectedTags: [Tag]
     @State private var showingTagSelection = false
     @State private var recurrenceRule: RecurrenceRule?
@@ -36,14 +34,12 @@ struct TaskEditView: View {
         self._priority = State(initialValue: task.priority)
         self._dueDate = State(initialValue: task.dueDate)
         self._hasDueDate = State(initialValue: task.dueDate != nil)
-        self._startDate = State(initialValue: task.startDate)
-        self._hasStartDate = State(initialValue: task.startDate != nil)
         self._selectedTags = State(initialValue: task.tags)
         self._recurrenceRule = State(initialValue: task.recurrenceRule)
     }
 
     var isFormValid: Bool {
-        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && hasValidDates
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var titleCharacterCount: Int {
@@ -82,17 +78,7 @@ struct TaskEditView: View {
                taskDescriptionAttributed != task.taskDescriptionAttributed ||
                priority != task.priority ||
                (hasDueDate ? dueDate : nil) != task.dueDate ||
-               (hasStartDate ? startDate : nil) != task.startDate ||
                Set(selectedTags.map(\.id)) != Set(task.tags.map(\.id))
-    }
-
-    var hasValidDates: Bool {
-        guard hasStartDate && hasDueDate,
-              let start = startDate,
-              let due = dueDate else {
-            return true
-        }
-        return start <= due
     }
 
     var body: some View {
@@ -184,18 +170,7 @@ struct TaskEditView: View {
                     .padding(.horizontal, 4)
                 }
 
-                Section("Dates") {
-                    // Start Date
-                    Toggle("Set start date", isOn: $hasStartDate)
-
-                    if hasStartDate {
-                        DatePicker("Start date", selection: Binding(
-                            get: { startDate ?? Date() },
-                            set: { startDate = $0 }
-                        ), displayedComponents: [.date])
-                    }
-
-                    // Due Date
+                Section("Due Date") {
                     Toggle("Set due date", isOn: $hasDueDate)
 
                     if hasDueDate {
@@ -203,17 +178,6 @@ struct TaskEditView: View {
                             get: { dueDate ?? Date() },
                             set: { dueDate = $0 }
                         ), displayedComponents: [.date])
-                    }
-
-                    // Date validation warning
-                    if !hasValidDates {
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.daisyError)
-                            Text("Start date must be before due date")
-                                .font(.caption)
-                                .foregroundColor(.daisyError)
-                        }
                     }
                 }
 
@@ -288,7 +252,7 @@ struct TaskEditView: View {
                     Button("Save") {
                         saveChanges()
                     }
-                    .disabled(!isFormValid || !hasValidDates || !hasChanges)
+                    .disabled(!isFormValid || !hasChanges)
                 }
             }
             .sheet(isPresented: $showingTagSelection) {
@@ -332,17 +296,11 @@ struct TaskEditView: View {
             return
         }
 
-        guard hasValidDates else {
-            showError("Start date must be before due date")
-            return
-        }
-
         // Update task properties directly
         task.title = trimmedTitle
         task.taskDescriptionAttributed = taskDescriptionAttributed
         task.priority = priority
         task.dueDate = hasDueDate ? dueDate : nil
-        task.startDate = hasStartDate ? startDate : nil
         task.recurrenceRule = recurrenceRule
         task.modifiedDate = Date()
 
@@ -391,8 +349,7 @@ struct TaskEditView: View {
         title: "Sample Task to Edit",
         taskDescription: "This is a sample task with description for editing demo",
         priority: .high,
-        dueDate: Calendar.current.date(byAdding: .day, value: 2, to: Date()),
-        startDate: Date()
+        dueDate: Calendar.current.date(byAdding: .day, value: 2, to: Date())
     )
     _ = task.addTag(workTag)
     container.mainContext.insert(task)

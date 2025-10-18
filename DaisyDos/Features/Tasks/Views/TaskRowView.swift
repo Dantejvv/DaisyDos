@@ -492,8 +492,7 @@ struct TaskRowViewPreview: View {
             title: "Sample Task with Description",
             taskDescription: "This is a sample task description that demonstrates the reusable TaskRowView component in action.",
             priority: .high,
-            dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()),
-            startDate: Date()
+            dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date())
         )
         context.insert(task)
         _ = task.addTag(workTag)

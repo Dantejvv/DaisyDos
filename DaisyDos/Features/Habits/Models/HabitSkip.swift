@@ -20,6 +20,7 @@ class HabitSkip {
 
     // MARK: - Relationships
 
+    @Relationship(inverse: \Habit.skips)
     var habit: Habit?
 
     // MARK: - Initializers
