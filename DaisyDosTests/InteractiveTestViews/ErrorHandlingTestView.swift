@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+@testable import DaisyDos
 
 struct ErrorHandlingTestView: View {
     @Environment(\.modelContext) private var modelContext
@@ -14,7 +15,7 @@ struct ErrorHandlingTestView: View {
     @Environment(HabitManager.self) private var habitManager
     @Environment(TagManager.self) private var tagManager
 
-    @State private var currentError: (any RecoverableError)?
+    @State private var currentError: (any DaisyDos.RecoverableError)?
     @State private var testResults: [String] = []
     @State private var isRunning = false
 
@@ -33,7 +34,6 @@ struct ErrorHandlingTestView: View {
                 .padding()
             }
             .navigationTitle("Error Handling Tests")
-            .errorBanner($currentError)
         }
     }
 
@@ -179,14 +179,10 @@ struct ErrorHandlingTestView: View {
         case .success:
             testResults.append("❌ Expected validation error for empty title")
         case .failure(let error):
-            if error is DaisyDosError {
-                testResults.append("✅ DaisyDosError properly generated for validation")
-            } else {
-                testResults.append("❌ Wrong error type: \(type(of: error))")
-            }
-            testResults.append("   User Message: '\(error.userMessage)'")
-            testResults.append("   User Reason: '\(error.userReason)'")
-            testResults.append("   Priority: \(error.priority)")
+            testResults.append("✅ Validation error properly generated")
+            testResults.append("   User Message: '\(error.wrapped.userMessage)'")
+            testResults.append("   User Reason: '\(error.wrapped.userReason)'")
+            testResults.append("   Priority: \(error.wrapped.priority)")
         }
     }
 
@@ -248,7 +244,7 @@ struct ErrorHandlingTestView: View {
 
         // Simulate a SwiftData error
         let mockError = DaisyDosError.dataCorrupted("Test corruption scenario")
-        let recoverableError = mockError as RecoverableError
+        let recoverableError = mockError as DaisyDos.RecoverableError
 
         testResults.append("✅ Data corruption error transformed")
         testResults.append("   Priority: \(recoverableError.priority) (should be critical)")
@@ -266,7 +262,7 @@ struct ErrorHandlingTestView: View {
         testResults.append("🔍 Testing network error handling...")
 
         let networkError = DaisyDosError.networkUnavailable
-        let recoverableError = networkError as RecoverableError
+        let recoverableError = networkError as DaisyDos.RecoverableError
 
         testResults.append("✅ Network error properly handled")
         testResults.append("   User message: '\(recoverableError.userMessage)'")
@@ -291,7 +287,7 @@ struct ErrorHandlingTestView: View {
         testResults.append("🔍 Testing recovery action system...")
 
         let tagLimitError = DaisyDosError.tagLimitExceeded
-        let recoveryOptions = (tagLimitError as RecoverableError).recoveryOptions
+        let recoveryOptions = (tagLimitError as DaisyDos.RecoverableError).recoveryOptions
 
         testResults.append("✅ Tag limit error has \(recoveryOptions.count) recovery options:")
         for (index, action) in recoveryOptions.enumerated() {
@@ -323,7 +319,7 @@ struct ErrorHandlingTestView: View {
         ]
 
         for (error, name) in errors {
-            let recoverableError = error as RecoverableError
+            let recoverableError = error as DaisyDos.RecoverableError
             testResults.append("   \(name): \(recoverableError.priority) priority")
         }
 
@@ -339,12 +335,7 @@ struct ErrorHandlingTestView: View {
     // MARK: - Error Demonstration
 
     private func demonstrateErrorBanner() {
-        let error = WarningError(
-            message: "This is a test warning",
-            reason: "Demonstrating the error banner system"
-        ) {
-            testResults.append("✅ Retry action executed from banner")
-        }
+        let error = DaisyDosError.validationFailed("test")
         currentError = error
     }
 

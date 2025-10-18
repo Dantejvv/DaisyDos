@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+@testable import DaisyDos
 import SwiftData
+@testable import DaisyDos
 
 /// Comprehensive performance testing interface for validating app performance
 /// Includes stress tests, memory monitoring, and response time validation

@@ -22,7 +22,7 @@ struct AddHabitView: View {
     @State private var habitDescriptionAttributed = AttributedString("")
     @State private var recurrenceRule: RecurrenceRule?
     @State private var selectedTags: [Tag] = []
-    @State private var selectedPriority: HabitPriority = .none
+    @State private var selectedPriority: Priority = .none
 
     // UI State
     @State private var showingRecurrencePicker = false
@@ -79,16 +79,6 @@ struct AddHabitView: View {
             }
         }
     }
-
-    // MARK: - Character Count Colors
-
-    private var titleCountColor: Color {
-        return DesignSystem.inputValidation.characterCountColorExact(
-            currentCount: habitTitle.count,
-            maxLength: DesignSystem.inputValidation.CharacterLimits.title
-        )
-    }
-
 
     // MARK: - Body
 
@@ -153,25 +143,12 @@ struct AddHabitView: View {
     @ViewBuilder
     private var basicInfoSection: some View {
         Section("Habit Details") {
-            VStack(alignment: .leading, spacing: 4) {
-                TextField("Habit title", text: $habitTitle)
-                    .textInputAutocapitalization(.words)
-                    .autocorrectionDisabled(true)
-                    .onChange(of: habitTitle) { _, newValue in
-                        DesignSystem.inputValidation.enforceCharacterLimit(
-                            &habitTitle,
-                            newValue: newValue,
-                            maxLength: DesignSystem.inputValidation.CharacterLimits.title
-                        )
-                        validateForm()
-                    }
-
-                HStack {
-                    Spacer()
-                    Text("\(habitTitle.count)/\(DesignSystem.inputValidation.CharacterLimits.title)")
-                        .font(.caption2)
-                        .foregroundColor(titleCountColor)
-                }
+            ValidatedTitleField(
+                text: $habitTitle,
+                placeholder: "Habit title"
+            )
+            .onChange(of: habitTitle) { _, _ in
+                validateForm()
             }
 
             VStack(alignment: .leading, spacing: 0) {
@@ -194,43 +171,10 @@ struct AddHabitView: View {
                     .fontWeight(.medium)
                     .foregroundColor(.daisyText)
 
-                HStack(spacing: 0) {
-                    ForEach(HabitPriority.allCases, id: \.self) { priorityOption in
-                        Button(action: {
-                            selectedPriority = priorityOption
-                        }) {
-                            VStack(spacing: 4) {
-                                // Use fixed height for icon area to ensure consistent button sizes
-                                Group {
-                                    if priorityOption.sfSymbol != nil {
-                                        priorityOption.indicatorView()
-                                            .font(.caption)
-                                    } else {
-                                        Color.clear
-                                            .frame(width: 1, height: 1)
-                                    }
-                                }
-                                .frame(height: 16) // Fixed height for icon area
-
-                                Text(priorityOption.rawValue)
-                                    .font(.caption2)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(selectedPriority == priorityOption ? Color.daisyHabit.opacity(0.2) : Color.clear)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.daisyHabit, lineWidth: selectedPriority == priorityOption ? 2 : 0.5)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundColor(selectedPriority == priorityOption ? .daisyHabit : .daisyText)
-                    }
-                }
-                .padding(.horizontal, 4)
+                PriorityPicker(
+                    priority: $selectedPriority,
+                    accentColor: .daisyHabit
+                )
             }
         }
     }
@@ -271,53 +215,21 @@ struct AddHabitView: View {
 
     @ViewBuilder
     private var tagsSection: some View {
-        Section(content: {
-            if selectedTags.isEmpty {
-                Button("Add Tags") {
-                    showingTagAssignment = true
-                }
-                .foregroundColor(.daisyHabit)
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(selectedTags, id: \.id) { tag in
-                            TagChipView(
-                                tag: tag,
-                                isSelected: true,
-                                isRemovable: true,
-                                onRemove: {
-                                    selectedTags.removeAll { $0.id == tag.id }
-                                    validateForm()
-                                }
-                            )
-                        }
-
-                        if selectedTags.count < 3 {
-                            Button(action: {
-                                showingTagAssignment = true
-                            }) {
-                                Image(systemName: "plus.circle")
-                                    .font(.title2)
-                                    .foregroundColor(.daisyHabit)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Add more tags")
-                        }
-                    }
-                    .padding(.horizontal, 4)
-                }
-
-                if selectedTags.count == 3 {
-                    Text("Maximum tags reached (3/3)")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
-                }
+        Section(
+            content: {
+                TagSelectionRow(
+                    selectedTags: $selectedTags,
+                    accentColor: .daisyHabit,
+                    onShowTagSelection: { showingTagAssignment = true }
+                )
+            },
+            header: {
+                Text("Tags")
+            },
+            footer: {
+                Text("Organize with up to 3 tags for easy filtering and grouping.")
             }
-        }, header: {
-            Text("Tags")
-        }, footer: {
-            Text("Organize with up to 3 tags for easy filtering and grouping.")
-        })
+        )
     }
 
     @ViewBuilder

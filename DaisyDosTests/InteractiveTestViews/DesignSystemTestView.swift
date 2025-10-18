@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+@testable import DaisyDos
 
 /// Test view to demonstrate and validate the DaisyDos design system
 /// Shows all design system components in action with proper styling

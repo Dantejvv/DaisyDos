@@ -28,62 +28,14 @@ struct AddTaskView: View {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    var titleCharacterCount: Int {
-        title.count
-    }
-
-    var descriptionCharacterCount: Int {
-        taskDescriptionAttributed.characterCount
-    }
-
-    private let maxTitleLength = DesignSystem.inputValidation.CharacterLimits.title
-    private let maxDescriptionLength = DesignSystem.inputValidation.CharacterLimits.description
-
-    private var showTitleError: Bool {
-        title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !title.isEmpty
-    }
-
-    private var titleCountColor: Color {
-        return DesignSystem.inputValidation.characterCountColorExact(
-            currentCount: titleCharacterCount,
-            maxLength: maxTitleLength
-        )
-    }
-
     var body: some View {
         NavigationStack {
             Form {
                 Section("Task Details") {
-                    VStack(alignment: .leading, spacing: 4) {
-                        TextField("Title", text: $title)
-                            .autocorrectionDisabled(true)
-                            .accessibilityLabel("Task title")
-                            .onChange(of: title) { _, newValue in
-                                DesignSystem.inputValidation.enforceCharacterLimit(
-                                    &title,
-                                    newValue: newValue,
-                                    maxLength: maxTitleLength
-                                )
-                            }
-
-                        HStack {
-                            if showTitleError {
-                                HStack {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundColor(.daisyError)
-                                    Text("Title cannot be empty")
-                                        .font(.caption)
-                                        .foregroundColor(.daisyError)
-                                }
-                            }
-
-                            Spacer()
-
-                            Text("\(titleCharacterCount)/\(maxTitleLength)")
-                                .font(.caption)
-                                .foregroundColor(titleCountColor)
-                        }
-                    }
+                    ValidatedTitleField(
+                        text: $title,
+                        placeholder: "Task title"
+                    )
 
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Description (optional)")
@@ -94,49 +46,16 @@ struct AddTaskView: View {
                         RichTextEditor(
                             attributedText: $taskDescriptionAttributed,
                             placeholder: "Add details, notes, or formatting...",
-                            maxLength: maxDescriptionLength
+                            maxLength: DesignSystem.inputValidation.CharacterLimits.description
                         )
                     }
                 }
 
                 Section("Priority") {
-                    HStack(spacing: 0) {
-                        ForEach(Priority.allCases, id: \.self) { priorityOption in
-                            Button(action: {
-                                priority = priorityOption
-                            }) {
-                                VStack(spacing: 4) {
-                                    // Use fixed height for icon area to ensure consistent button sizes
-                                    Group {
-                                        if priorityOption.sfSymbol != nil {
-                                            priorityOption.indicatorView()
-                                                .font(.caption)
-                                        } else {
-                                            Color.clear
-                                                .frame(width: 1, height: 1)
-                                        }
-                                    }
-                                    .frame(height: 16) // Fixed height for icon area
-
-                                    Text(priorityOption.rawValue)
-                                        .font(.caption2)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(priority == priorityOption ? Color.daisyTask.opacity(0.2) : Color.clear)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.daisyTask, lineWidth: priority == priorityOption ? 2 : 0.5)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundColor(priority == priorityOption ? .daisyTask : .daisyText)
-                        }
-                    }
-                    .padding(.horizontal, 4)
+                    PriorityPicker(
+                        priority: $priority,
+                        accentColor: .daisyTask
+                    )
                 }
 
                 Section("Due Date") {
@@ -150,52 +69,21 @@ struct AddTaskView: View {
                     }
                 }
 
-                Section(content: {
-                    if selectedTags.isEmpty {
-                        Button("Add Tags") {
-                            showingTagSelection = true
-                        }
-                        .foregroundColor(.daisyTask)
-                    } else {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(selectedTags, id: \.id) { tag in
-                                    TagChipView(
-                                        tag: tag,
-                                        isSelected: true,
-                                        isRemovable: true,
-                                        onRemove: {
-                                            selectedTags.removeAll { $0.id == tag.id }
-                                        }
-                                    )
-                                }
-
-                                if selectedTags.count < 3 {
-                                    Button(action: {
-                                        showingTagSelection = true
-                                    }) {
-                                        Image(systemName: "plus.circle")
-                                            .font(.title2)
-                                            .foregroundColor(.daisyTask)
-                                    }
-                                    .buttonStyle(.plain)
-                                    .accessibilityLabel("Add more tags")
-                                }
-                            }
-                            .padding(.horizontal, 4)
-                        }
-
-                        if selectedTags.count == 3 {
-                            Text("Maximum tags reached (3/3)")
-                                .font(.caption)
-                                .foregroundColor(.daisyTextSecondary)
-                        }
+                Section(
+                    content: {
+                        TagSelectionRow(
+                            selectedTags: $selectedTags,
+                            accentColor: .daisyTask,
+                            onShowTagSelection: { showingTagSelection = true }
+                        )
+                    },
+                    header: {
+                        Text("Tags")
+                    },
+                    footer: {
+                        Text("Organize with up to 3 tags for easy filtering and grouping.")
                     }
-                }, header: {
-                    Text("Tags")
-                }, footer: {
-                    Text("Organize with up to 3 tags for easy filtering and grouping.")
-                })
+                )
 
                 Section("Recurrence") {
                     RecurrenceToggleRow(

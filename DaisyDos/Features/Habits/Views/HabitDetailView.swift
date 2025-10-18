@@ -312,9 +312,10 @@ struct HabitDetailView: View {
             }
 
             if !habit.habitDescription.isEmpty {
-                Text(habit.habitDescriptionAttributed)
-                    .font(.body)
-                    .foregroundColor(.daisyTextSecondary)
+                ScrollableDescriptionView(
+                    text: habit.habitDescriptionAttributed,
+                    maxHeight: 200
+                )
             }
 
             if let recurrenceRule = habit.recurrenceRule {

@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+@testable import DaisyDos
 import SwiftData
+@testable import DaisyDos
 
 /// Touch target audit tool with visual overlay and compliance validation
 /// Provides color-coded validation, automated measurement, and compliance reporting

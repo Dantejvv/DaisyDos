@@ -155,7 +155,15 @@ class Task {
 
     var isDueSoon: Bool {
         guard let dueDate = dueDate, !isCompleted else { return false }
-        let daysDifference = Calendar.current.dateComponents([.day], from: Date(), to: dueDate).day ?? 0
+
+        // Use start of day for both dates to avoid time-of-day issues
+        let calendar = Calendar.current
+        guard let todayStart = calendar.startOfDay(for: Date()) as Date?,
+              let dueDateStart = calendar.startOfDay(for: dueDate) as Date? else {
+            return false
+        }
+
+        let daysDifference = calendar.dateComponents([.day], from: todayStart, to: dueDateStart).day ?? 0
         return daysDifference >= 0 && daysDifference <= 3
     }
 
@@ -206,9 +214,11 @@ class Task {
 
         if completed {
             // When completing a parent task, mark all subtasks as complete
+            // and inherit the parent's completion date for age-based housekeeping
             for subtask in subtasks {
                 if !subtask.isCompleted {
                     subtask.setCompleted(true)
+                    subtask.completedDate = self.completedDate
                 }
             }
         } else {
@@ -310,6 +320,9 @@ class Task {
             priority: priority,
             dueDate: self.dueDate // Inherit due date by default
         )
+
+        // Inherit parent's creation date for age-based housekeeping
+        subtask.createdDate = self.createdDate
 
         _ = addSubtask(subtask)
         return subtask
@@ -428,9 +441,9 @@ class Task {
     }
 }
 
-// MARK: - TaskPriorityProvider Conformance
+// MARK: - PriorityProvider Conformance
 
-extension Task: TaskPriorityProvider {}
+extension Task: PriorityProvider {}
 
 // MARK: - Equatable Conformance
 

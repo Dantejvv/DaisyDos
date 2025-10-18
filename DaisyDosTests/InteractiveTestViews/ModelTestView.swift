@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+@testable import DaisyDos
 import SwiftData
+@testable import DaisyDos
 
 struct ModelTestView: View {
     @Environment(\.modelContext) private var modelContext

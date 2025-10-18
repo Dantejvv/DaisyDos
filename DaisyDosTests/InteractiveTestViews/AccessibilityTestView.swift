@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+@testable import DaisyDos
 import SwiftData
+@testable import DaisyDos
 
 /// Comprehensive accessibility testing interface for VoiceOver validation
 /// Tests navigation flows, accessibility labels, and user experience compliance

@@ -186,10 +186,43 @@ private struct DeveloperToolsView: View {
                         .font(.largeTitle.bold())
                         .padding(.bottom, Spacing.small)
 
-                    // MARK: - Logbook Testing
+                    // MARK: - Feature Testing
                     VStack(alignment: .leading, spacing: Spacing.medium) {
-                        Text("Logbook Testing")
+                        Text("Feature Testing")
                             .font(.title2.bold())
+
+                        Text("Run automated test suites to validate core functionality.")
+                            .font(.body)
+                            .foregroundColor(.daisyTextSecondary)
+
+                        // Due Date Testing
+                        NavigationLink {
+                            DueDateTestView()
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Label("Due Date Test Suite", systemImage: "calendar.badge.clock")
+                                        .font(.headline)
+                                        .foregroundColor(.daisyTask)
+
+                                    Text("20 automated tests for due date functionality")
+                                        .font(.caption)
+                                        .foregroundColor(.daisyTextSecondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.daisyTextSecondary)
+                            }
+                            .padding()
+                            .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+
+                        // Logbook Testing
+                        Text("Logbook Testing")
+                            .font(.title3.bold())
+                            .padding(.top, Spacing.medium)
 
                         Text("Test the automatic archival system without waiting 90 days.")
                             .font(.body)

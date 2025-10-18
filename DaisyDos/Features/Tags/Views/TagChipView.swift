@@ -39,6 +39,7 @@ struct TagChipView: View {
             Text(tag.name)
                 .font(.caption.weight(.medium))
                 .lineLimit(1)
+                .truncationMode(.middle)
                 .foregroundColor(isSelected ? .white : .daisyText)
 
             // Remove button for removable chips
@@ -54,6 +55,7 @@ struct TagChipView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
+        .frame(maxWidth: 200) // Prevent tags from being too wide
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(chipBackgroundColor)

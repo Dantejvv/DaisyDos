@@ -102,7 +102,7 @@ struct TaskShareSheet: View {
                     if let symbol = task.priority.sfSymbol {
                         Image(systemName: symbol)
                             .font(.title2)
-                            .foregroundColor(task.priority.color)
+                            .foregroundColor(task.priority.displayColor)
                     }
 
                     Text(task.priority.displayName)

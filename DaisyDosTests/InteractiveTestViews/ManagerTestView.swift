@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+@testable import DaisyDos
 import SwiftData
+@testable import DaisyDos
 
 struct ManagerTestView: View {
     @Environment(TaskManager.self) private var taskManager

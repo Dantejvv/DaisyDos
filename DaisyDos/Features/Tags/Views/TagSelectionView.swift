@@ -32,9 +32,19 @@ struct TagSelectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Selected tags section
+            // Search bar (moved to top)
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.daisyTextSecondary)
+
+                TextField("Search tags...", text: $searchText)
+            }
+            .padding()
+            .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 10))
+
+            // Selected tags section (now below search)
             if !selectedTags.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Text("Selected Tags (\(selectedTags.count)/3)")
                             .font(.headline)
@@ -48,33 +58,28 @@ struct TagSelectionView: View {
                         }
                     }
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(selectedTags, id: \.id) { tag in
-                                TagChipView(
-                                    tag: tag,
-                                    isSelected: true,
-                                    isRemovable: true,
-                                    onRemove: {
-                                        removeTag(tag)
-                                    }
-                                )
-                            }
+                    // Wrapping tag chips using LazyVGrid
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(), spacing: 8),
+                            GridItem(.flexible(), spacing: 8)
+                        ],
+                        alignment: .leading,
+                        spacing: 8
+                    ) {
+                        ForEach(selectedTags, id: \.id) { tag in
+                            TagChipView(
+                                tag: tag,
+                                isSelected: true,
+                                isRemovable: true,
+                                onRemove: {
+                                    removeTag(tag)
+                                }
+                            )
                         }
-                        .padding(.horizontal)
                     }
                 }
             }
-
-            // Search bar
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.daisyTextSecondary)
-
-                TextField("Search tags...", text: $searchText)
-            }
-            .padding()
-            .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 10))
 
             // Available tags section
             VStack(alignment: .leading, spacing: 8) {

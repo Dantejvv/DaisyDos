@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+@testable import DaisyDos
 
 /// Test view to demonstrate all core reusable components
 /// Validates functionality, accessibility, and visual consistency

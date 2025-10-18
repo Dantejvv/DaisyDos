@@ -54,7 +54,7 @@ class Habit {
     var recurrenceRule: RecurrenceRule?
 
     /// Priority level for habit importance and organization
-    var priority: HabitPriority = HabitPriority.none
+    var priority: Priority = Priority.none
 
     // MARK: - Relationships
 
@@ -76,7 +76,7 @@ class Habit {
     /// Skip entries for tracking when habit was skipped
     @Relationship(deleteRule: .cascade) var skips: [HabitSkip] = []
 
-    init(title: String, habitDescription: String = "", recurrenceRule: RecurrenceRule? = nil, priority: HabitPriority = .none) {
+    init(title: String, habitDescription: String = "", recurrenceRule: RecurrenceRule? = nil, priority: Priority = .none) {
         self.id = UUID()
         self.title = title
         self.habitDescriptionData = AttributedString.migrate(from: habitDescription)
@@ -333,9 +333,7 @@ class Habit {
     }
 }
 
-// MARK: - HabitPriorityProvider Conformance
+// MARK: - PriorityProvider Conformance
 
-extension Habit: HabitPriorityProvider {
-    // Already has priority property defined above
-}
+extension Habit: PriorityProvider {}
 

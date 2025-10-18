@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+@testable import DaisyDos
 import SwiftData
+@testable import DaisyDos
 
 /// Dynamic Type validation system for testing text scaling and layout adaptation
 /// Tests all Dynamic Type categories from xSmall to AX3 with visual previews

@@ -306,9 +306,10 @@ struct TaskDetailView: View {
             }
 
             if !task.taskDescription.isEmpty {
-                Text(task.taskDescriptionAttributed)
-                    .font(.body)
-                    .foregroundColor(.daisyTextSecondary)
+                ScrollableDescriptionView(
+                    text: task.taskDescriptionAttributed,
+                    maxHeight: 200
+                )
             }
 
             if let recurrenceRule = task.recurrenceRule {

@@ -21,7 +21,7 @@ struct HabitEditView: View {
     @State private var habitDescriptionAttributed: AttributedString
     @State private var recurrenceRule: RecurrenceRule?
     @State private var selectedTags: [Tag] = []
-    @State private var selectedPriority: HabitPriority
+    @State private var selectedPriority: Priority
 
     // UI State
     @State private var showingRecurrencePicker = false
@@ -230,7 +230,7 @@ struct HabitEditView: View {
                     .foregroundColor(.daisyText)
 
                 HStack(spacing: 0) {
-                    ForEach(HabitPriority.allCases, id: \.self) { priorityOption in
+                    ForEach(Priority.allCases, id: \.self) { priorityOption in
                         Button(action: {
                             selectedPriority = priorityOption
                         }) {

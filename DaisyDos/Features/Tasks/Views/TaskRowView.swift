@@ -108,7 +108,7 @@ struct TaskRowView: View {
                                 .font(.caption2)
                                 .foregroundColor(.daisyTextSecondary)
                         }
-                        Text(dueDate.formatted(date: .abbreviated, time: .omitted))
+                        Text("due \(dueDate.formatted(date: .abbreviated, time: .omitted))")
                             .font(.caption2)
                             .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyTextSecondary)
                     }
@@ -362,7 +362,7 @@ struct TaskRowView: View {
             // Due date
             if let dueDate = task.dueDate {
                 Label(
-                    dueDate.formatted(date: .abbreviated, time: .omitted),
+                    "due \(dueDate.formatted(date: .abbreviated, time: .omitted))",
                     systemImage: "calendar"
                 )
                 .font(.caption)

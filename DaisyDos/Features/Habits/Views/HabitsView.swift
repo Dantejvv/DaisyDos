@@ -311,11 +311,11 @@ struct HabitsView: View {
             return [("", habits)]
 
         case .priority:
-            let grouped = HabitPriority.group(habits)
+            let grouped = Priority.group(habits)
             var sections: [(String, [Habit])] = []
 
             // Order sections by priority (High → Medium → Low)
-            for priority in HabitPriority.sortedByPriority {
+            for priority in Priority.sortedByPriority {
                 if let habitsForPriority = grouped[priority], !habitsForPriority.isEmpty {
                     let sectionTitle = "\(priority.displayName) (\(habitsForPriority.count))"
                     sections.append((sectionTitle, habitsForPriority))
