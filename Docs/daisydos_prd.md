@@ -128,21 +128,21 @@ iOS (iPhone and iPad) - iOS 17.0+
 
 ## 6. Functional Requirements
 
-### 6.1 Core Features (MVP)
+### 6.1 Core Features (MVP) X
 
 #### 6.1.1 Task Management
 - **Requirement ID**: FR-001
 - **Description**: Complete CRUD operations for tasks
 - **Details**:
   - Create, read, update, delete tasks
-  - Support for subtasks (unlimited nesting depth)
-  - Priority levels (Low, Medium, High)
-  - Due dates and start dates
+  - Support for subtasks (no nesting just parent -> subtask relationship)
+  - Priority levels (None, Low, Medium, High)
+  - Due dates
   - Tag assignment (maximum 3 tags per task)
   - File/photo attachments
   - Recurring task options
 
-#### 6.1.2 Habit Tracking
+#### 6.1.2 Habit Tracking X
 - **Requirement ID**: FR-002
 - **Description**: Complete habit creation and tracking system
 - **Details**:
@@ -153,7 +153,7 @@ iOS (iPhone and iPad) - iOS 17.0+
   - Tag assignment (maximum 3 tags per habit)
   - Skip options with optional reason text
 
-#### 6.1.3 Today View
+#### 6.1.3 Today View 
 - **Requirement ID**: FR-003
 - **Description**: Unified dashboard for daily planning
 - **Details**:
@@ -163,7 +163,7 @@ iOS (iPhone and iPad) - iOS 17.0+
   - Progress indicators for streaks and deadlines
   - Reuse shared UI components (TaskRowView, HabitRowView)
 
-#### 6.1.4 Tag System
+#### 6.1.4 Tag System X
 - **Requirement ID**: FR-004
 - **Description**: Shared organization system
 - **Details**:
@@ -171,7 +171,6 @@ iOS (iPhone and iPad) - iOS 17.0+
   - Maximum 3 tags per item (task or habit)
   - SF Symbol icons for visual identification
   - System color options
-  - Drag and drop assignment
 
 #### 6.1.5 Search & Smart Lists
 - **Requirement ID**: FR-005
@@ -179,11 +178,10 @@ iOS (iPhone and iPad) - iOS 17.0+
 - **Details**:
   - Full-text search across tasks and habits
   - Advanced filtering options
-  - Saved searches as smart lists
   - Real-time results
   - Search history
 
-#### 6.1.6 Calendar Integration
+#### 6.1.6 Calendar Integration (post MVP)
 - **Requirement ID**: FR-006
 - **Description**: Calendar views and system integration
 - **Details**:
@@ -194,7 +192,7 @@ iOS (iPhone and iPad) - iOS 17.0+
 
 ### 6.2 Settings & Configuration
 
-#### 6.2.1 Privacy Controls
+#### 6.2.1 Privacy Controls X
 - **Requirement ID**: FR-007
 - **Description**: Comprehensive privacy options
 - **Details**:

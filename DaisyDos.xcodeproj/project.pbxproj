@@ -7,13 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		FE0D51112EA33DBC00A933C9 /* due_date_testing.md in Resources */ = {isa = PBXBuildFile; fileRef = FE0D51102EA33DBC00A933C9 /* due_date_testing.md */; };
-		FE0D51132EA342BD00A933C9 /* performance_baselines.md in Resources */ = {isa = PBXBuildFile; fileRef = FE0D51122EA342BD00A933C9 /* performance_baselines.md */; };
-		FE0D51152EA342CA00A933C9 /* due_date_validation_guide.md in Resources */ = {isa = PBXBuildFile; fileRef = FE0D51142EA342CA00A933C9 /* due_date_validation_guide.md */; };
-		FE0D51172EA342D200A933C9 /* phase_1_5_design_system_plan.md in Resources */ = {isa = PBXBuildFile; fileRef = FE0D51162EA342D200A933C9 /* phase_1_5_design_system_plan.md */; };
-		FE0D51192EA342DB00A933C9 /* accessibility_compliance.md in Resources */ = {isa = PBXBuildFile; fileRef = FE0D51182EA342DB00A933C9 /* accessibility_compliance.md */; };
 		FE0D51212EA406AC00A933C9 /* TESTING_AUDIT_REPORT.md in Resources */ = {isa = PBXBuildFile; fileRef = FE0D51202EA406AC00A933C9 /* TESTING_AUDIT_REPORT.md */; };
-		FE3537C72E8302B1007B0F25 /* daisydos_plan.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C32E8302B1007B0F25 /* daisydos_plan.md */; };
 		FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C42E8302B1007B0F25 /* daisydos_prd.md */; };
 		FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */; };
 		FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537EC2E830555007B0F25 /* CLAUDE.md */; };
@@ -37,16 +31,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		FE0D51102EA33DBC00A933C9 /* due_date_testing.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = due_date_testing.md; sourceTree = "<group>"; };
-		FE0D51122EA342BD00A933C9 /* performance_baselines.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = performance_baselines.md; sourceTree = "<group>"; };
-		FE0D51142EA342CA00A933C9 /* due_date_validation_guide.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = due_date_validation_guide.md; sourceTree = "<group>"; };
-		FE0D51162EA342D200A933C9 /* phase_1_5_design_system_plan.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = phase_1_5_design_system_plan.md; sourceTree = "<group>"; };
-		FE0D51182EA342DB00A933C9 /* accessibility_compliance.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = accessibility_compliance.md; sourceTree = "<group>"; };
 		FE0D51202EA406AC00A933C9 /* TESTING_AUDIT_REPORT.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TESTING_AUDIT_REPORT.md; sourceTree = "<group>"; };
 		FE3537942E830151007B0F25 /* DaisyDos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DaisyDos.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3537A52E830152007B0F25 /* DaisyDosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaisyDosTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3537AF2E830152007B0F25 /* DaisyDosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaisyDosUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		FE3537C32E8302B1007B0F25 /* daisydos_plan.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = daisydos_plan.md; sourceTree = "<group>"; };
 		FE3537C42E8302B1007B0F25 /* daisydos_prd.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = daisydos_prd.md; sourceTree = "<group>"; };
 		FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = implementation_roadmap.md; sourceTree = "<group>"; };
 		FE3537EC2E830555007B0F25 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
@@ -140,12 +128,6 @@
 			isa = PBXGroup;
 			children = (
 				FE0D51202EA406AC00A933C9 /* TESTING_AUDIT_REPORT.md */,
-				FE0D51182EA342DB00A933C9 /* accessibility_compliance.md */,
-				FE0D51162EA342D200A933C9 /* phase_1_5_design_system_plan.md */,
-				FE0D51142EA342CA00A933C9 /* due_date_validation_guide.md */,
-				FE0D51122EA342BD00A933C9 /* performance_baselines.md */,
-				FE0D51102EA33DBC00A933C9 /* due_date_testing.md */,
-				FE3537C32E8302B1007B0F25 /* daisydos_plan.md */,
 				FE3537C42E8302B1007B0F25 /* daisydos_prd.md */,
 				FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */,
 			);
@@ -274,15 +256,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				FE0D51212EA406AC00A933C9 /* TESTING_AUDIT_REPORT.md in Resources */,
-				FE3537C72E8302B1007B0F25 /* daisydos_plan.md in Resources */,
 				FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */,
-				FE0D51172EA342D200A933C9 /* phase_1_5_design_system_plan.md in Resources */,
 				FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */,
-				FE0D51152EA342CA00A933C9 /* due_date_validation_guide.md in Resources */,
-				FE0D51112EA33DBC00A933C9 /* due_date_testing.md in Resources */,
-				FE0D51132EA342BD00A933C9 /* performance_baselines.md in Resources */,
 				FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */,
-				FE0D51192EA342DB00A933C9 /* accessibility_compliance.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
