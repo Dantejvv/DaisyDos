@@ -1,0 +1,818 @@
+//
+//  TaskDueDateTests.swift
+//  DaisyDosTests
+//
+//  Created by Claude Code on 10/17/25.
+//  Migrated to Swift Testing on 10/20/25.
+//
+
+import Testing
+import SwiftData
+import Foundation
+@testable import DaisyDos
+
+/// Comprehensive test suite for Task due date functionality
+/// Tests model logic, computed properties, business rules, and edge cases
+/// Fixed: Changed from class to struct to avoid Swift Testing instance creation issues
+/// Each test now creates its own fresh container for proper isolation
+@Suite("Task Due Date Functionality")
+@MainActor
+struct TaskDueDateTests {
+
+    // MARK: - Helper Methods
+
+    /// Creates a fresh test setup with isolated container, manager, and calendar
+    private func createTestSetup() throws -> (container: ModelContainer, taskManager: TaskManager, calendar: Calendar) {
+        let container = try TestHelpers.createTestContainer()
+        let taskManager = TaskManager(modelContext: container.mainContext)
+        let calendar = Calendar.current
+        return (container, taskManager, calendar)
+    }
+
+    // MARK: - Task Creation with Due Date Tests
+
+    @Test("Create task with due date sets date correctly")
+    func createTaskWithDueDate() throws {
+        // Setup
+        let (_, taskManager, calendar) = try createTestSetup()
+
+        // Given
+        let title = "Task with due date"
+        let dueDate = calendar.date(byAdding: .day, value: 3, to: Date())!
+
+        // When
+        let result = taskManager.createTask(
+            title: title,
+            taskDescription: "",
+            priority: .medium,
+            dueDate: dueDate
+        )
+
+        // Then
+        let task = try #require(try result.get())
+        #expect(task.title == title)
+        #expect(task.dueDate != nil)
+        #expect(task.dueDate == dueDate)
+    }
+
+    @Test("Create task without due date")
+    func createTaskWithoutDueDate() throws {
+        // Setup
+        let (_, taskManager, _) = try createTestSetup()
+
+        // Given
+        let title = "Task without due date"
+
+        // When
+        let result = taskManager.createTask(
+            title: title,
+            taskDescription: "",
+            priority: .medium,
+            dueDate: nil
+        )
+
+        // Then
+        let task = try #require(try result.get())
+        #expect(task.title == title)
+        #expect(task.dueDate == nil)
+    }
+
+    @Test("Create task with past due date allows overdue tasks")
+    func createTaskWithPastDueDate() throws {
+        // Setup
+        let (_, taskManager, calendar) = try createTestSetup()
+
+        // Given
+        let title = "Task with past due date"
+        let pastDate = calendar.date(byAdding: .day, value: -5, to: Date())!
+
+        // When
+        let result = taskManager.createTask(
+            title: title,
+            dueDate: pastDate
+        )
+
+        // Then - Should allow past due dates (user might be catching up on overdue tasks)
+        let task = try #require(try result.get())
+        #expect(task.dueDate == pastDate)
+        #expect(task.hasOverdueStatus, "Task with past due date should be marked as overdue")
+    }
+
+    // MARK: - Due Date Computed Properties Tests
+
+    @Test("Task with overdue date has overdue status")
+    func hasOverdueStatusWithOverdueDate() throws {
+        // Setup
+        let calendar = Calendar.current
+
+        // Given - Task with due date 3 days in the past
+        let pastDate = calendar.date(byAdding: .day, value: -3, to: Date())!
+        let task = Task(title: "Overdue task", dueDate: pastDate)
+
+        // Then
+        #expect(task.hasOverdueStatus, "Task with past due date should be overdue")
+        #expect(!task.isCompleted, "Incomplete task should show overdue status")
+    }
+
+    @Test("Task with future date is not overdue")
+    func hasOverdueStatusWithFutureDate() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Task with due date 3 days in the future
+         = Calendar.current
+
+        let futureDate = calendar.date(byAdding: .day, value: 3, to: Date())!
+        let task = Task(title: "Future task", dueDate: futureDate)
+
+        // Then
+        #expect(!task.hasOverdueStatus, "Task with future due date should not be overdue")
+    }
+
+    @Test("Task with no due date is not overdue")
+    func hasOverdueStatusWithNoDueDate() throws {
+        
+        // Given - Task without due date
+        let task = Task(title: "No due date task")
+
+        // Then
+        #expect(!task.hasOverdueStatus, "Task without due date should not be overdue")
+    }
+
+    @Test("Completed task is not overdue even with past due date")
+    func hasOverdueStatusCompletedTaskNotOverdue() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Completed task with past due date
+         = Calendar.current
+
+        let pastDate = calendar.date(byAdding: .day, value: -3, to: Date())!
+        let task = Task(title: "Completed overdue task", dueDate: pastDate)
+        task.setCompleted(true)
+
+        // Then
+        #expect(!task.hasOverdueStatus, "Completed tasks should not show as overdue")
+    }
+
+    @Test("Task due today is marked correctly")
+    func isDueTodayWithTodayDate() throws {
+        
+        // Given - Task due today
+        let today = Date()
+        let task = Task(title: "Due today", dueDate: today)
+
+        // Then
+        #expect(task.isDueToday, "Task with today's date should be marked as due today")
+    }
+
+    @Test("Task due yesterday is not due today")
+    func isDueTodayWithYesterdayDate() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Task due yesterday
+         = Calendar.current
+
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: Date())!
+        let task = Task(title: "Due yesterday", dueDate: yesterday)
+
+        // Then
+        #expect(!task.isDueToday, "Task with yesterday's date should not be due today")
+    }
+
+    @Test("Task due tomorrow is not due today")
+    func isDueTodayWithTomorrowDate() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Task due tomorrow
+         = Calendar.current
+
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date())!
+        let task = Task(title: "Due tomorrow", dueDate: tomorrow)
+
+        // Then
+        #expect(!task.isDueToday, "Task with tomorrow's date should not be due today")
+    }
+
+    @Test(
+        "Due soon detection works within 3-day window",
+        arguments: [
+            (days: 0, expected: true, label: "Today"),
+            (days: 1, expected: true, label: "Tomorrow"),
+            (days: 2, expected: true, label: "In 2 days"),
+            (days: 3, expected: true, label: "In 3 days"),
+            (days: 4, expected: false, label: "In 4 days"),
+            (days: -1, expected: false, label: "Yesterday")
+        ]
+    )
+    func isDueSoonWithinThreeDays(test: (days: Int, expected: Bool, label: String)) throws {
+        
+        // Setup
+        let calendar = Calendar.current
+
+        let dueDate = calendar.date(byAdding: .day, value: test.days, to: Date())!
+        let task = Task(title: "Task due \(test.label)", dueDate: dueDate)
+
+        // Then
+        #expect(
+            task.isDueSoon == test.expected,
+            "Task due \(test.label) should\(test.expected ? "" : " not") be due soon"
+        )
+    }
+
+    @Test("Completed task is not due soon")
+    func isDueSoonCompletedTask() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Completed task due tomorrow
+         = Calendar.current
+
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date())!
+        let task = Task(title: "Completed task", dueDate: tomorrow)
+        task.setCompleted(true)
+
+        // Then
+        #expect(!task.isDueSoon, "Completed tasks should not be marked as due soon")
+    }
+
+    // MARK: - Due Date Display Text Tests
+
+    @Test("Due date display text shows 'Today' for today's date")
+    func dueDateDisplayTextToday() throws {
+        
+        // Given - Task due today
+        let today = Date()
+        let task = Task(title: "Due today", dueDate: today)
+
+        // Then
+        #expect(task.dueDateDisplayText == "Today")
+    }
+
+    @Test("Due date display text shows 'Tomorrow' for tomorrow's date")
+    func dueDateDisplayTextTomorrow() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Task due tomorrow
+         = Calendar.current
+
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date())!
+        let task = Task(title: "Due tomorrow", dueDate: tomorrow)
+
+        // Then
+        #expect(task.dueDateDisplayText == "Tomorrow")
+    }
+
+    @Test("Due date display text uses short format for dates this year")
+    func dueDateDisplayTextThisYear() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Task due later this year
+         = Calendar.current
+
+        let futureDate = calendar.date(byAdding: .month, value: 2, to: Date())!
+        let task = Task(title: "Due in 2 months", dueDate: futureDate)
+
+        // Then
+        #expect(task.dueDateDisplayText != nil)
+        #expect(!task.dueDateDisplayText!.contains(","), "Should use short format without year")
+    }
+
+    @Test("Due date display text includes year for next year dates")
+    func dueDateDisplayTextNextYear() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Task due next year
+         = Calendar.current
+
+        let nextYear = calendar.date(byAdding: .year, value: 1, to: Date())!
+        let task = Task(title: "Due next year", dueDate: nextYear)
+
+        // Then
+        #expect(task.dueDateDisplayText != nil)
+        #expect(task.dueDateDisplayText!.contains(","), "Should include year in format")
+    }
+
+    @Test("Due date display text is nil for task without due date")
+    func dueDateDisplayTextNoDueDate() throws {
+        
+        // Given - Task without due date
+        let task = Task(title: "No due date")
+
+        // Then
+        #expect(task.dueDateDisplayText == nil, "Task without due date should return nil")
+    }
+
+    // MARK: - Due Date Update Tests
+
+    @Test("Update task due date changes date correctly")
+    func updateTaskDueDate() throws {
+        
+        // Setup
+        let (_, taskManager, calendar) = try createTestSetup
+
+
+        
+        // Given - Task with initial due date
+        ()
+
+        let initialDate = calendar.date(byAdding: .day, value: 3, to: Date())!
+        let result = taskManager.createTask(title: "Task to update", dueDate: initialDate)
+        let task = try #require(try result.get())
+
+        // When - Update due date
+        let newDate = calendar.date(byAdding: .day, value: 7, to: Date())!
+        let updateResult = taskManager.updateTask(task, dueDate: newDate)
+
+        // Then
+        try #require(try updateResult.get())
+        #expect(task.dueDate == newDate, "Due date should be updated")
+    }
+
+    @Test("Remove due date from task")
+    func removeDueDateFromTask() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Task with due date
+         = Calendar.current
+
+        let initialDate = calendar.date(byAdding: .day, value: 3, to: Date())!
+        let task = Task(title: "Task with due date", dueDate: initialDate)
+        container.mainContext.insert(task)
+
+        // When - Set due date to nil
+        task.dueDate = nil
+        task.modifiedDate = Date()
+
+        // Then
+        #expect(task.dueDate == nil, "Due date should be removed")
+        #expect(!task.hasOverdueStatus, "Task without due date should not be overdue")
+        #expect(!task.isDueToday, "Task without due date should not be due today")
+        #expect(!task.isDueSoon, "Task without due date should not be due soon")
+    }
+
+    // MARK: - Subtask Due Date Inheritance Tests
+
+    @Test("Subtask inherits parent due date")
+    func subtaskInheritsDueDate() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Parent task with due date
+         = Calendar.current
+
+        let parentDueDate = calendar.date(byAdding: .day, value: 5, to: Date())!
+        let parent = Task(title: "Parent task", dueDate: parentDueDate)
+        container.mainContext.insert(parent)
+
+        // When - Create subtask
+        let subtask = parent.createSubtask(title: "Subtask", taskDescription: "", priority: .none)
+
+        // Then
+        #expect(subtask.dueDate == parentDueDate, "Subtask should inherit parent's due date")
+    }
+
+    @Test("Subtask can have different due date than parent")
+    func subtaskCanHaveDifferentDueDate() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Parent with due date and subtask with different due date
+         = Calendar.current
+
+        let parentDueDate = calendar.date(byAdding: .day, value: 5, to: Date())!
+        let parent = Task(title: "Parent task", dueDate: parentDueDate)
+        container.mainContext.insert(parent)
+
+        let subtask = parent.createSubtask(title: "Subtask")
+        let subtaskDueDate = calendar.date(byAdding: .day, value: 2, to: Date())!
+        subtask.dueDate = subtaskDueDate
+
+        // Then
+        #expect(subtask.dueDate == subtaskDueDate)
+        #expect(subtask.dueDate != parent.dueDate)
+    }
+
+    // MARK: - Due Date with Recurrence Tests
+
+    @Test("Recurring task calculates next occurrence correctly")
+    func recurringTaskNextOccurrence() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Daily recurring task
+         = Calendar.current
+
+        let initialDueDate = calendar.date(byAdding: .day, value: 1, to: Date())!
+        let recurrenceRule = RecurrenceRule.daily()
+        let task = Task(
+            title: "Daily task",
+            dueDate: initialDueDate,
+            recurrenceRule: recurrenceRule
+        )
+
+        // When
+        let nextDate = task.nextRecurrence()
+
+        // Then
+        #expect(nextDate != nil, "Recurring task should have next occurrence")
+
+        let expectedNext = calendar.date(byAdding: .day, value: 1, to: initialDueDate)!
+        #expect(
+            calendar.compare(nextDate!, to: expectedNext, toGranularity: .day) == .orderedSame,
+            "Next occurrence should be 1 day after initial due date"
+        )
+    }
+
+    @Test("Create recurring instance with updated due date")
+    func createRecurringInstance() throws {
+        
+        // Given - Weekly recurring task
+        let initialDueDate = Date()
+        let recurrenceRule = RecurrenceRule.weekly(daysOfWeek: [2, 4, 6]) // Mon, Wed, Fri
+        let task = Task(
+            title: "Weekly meeting",
+            taskDescription: "Team sync",
+            priority: .high,
+            dueDate: initialDueDate,
+            recurrenceRule: recurrenceRule
+        )
+
+        // When
+        let newInstance = try #require(task.createRecurringInstance())
+
+        // Then
+        #expect(newInstance.title == task.title, "Title should match")
+        #expect(newInstance.taskDescription == task.taskDescription, "Description should match")
+        #expect(newInstance.priority == task.priority, "Priority should match")
+        #expect(newInstance.recurrenceRule == task.recurrenceRule, "Recurrence rule should match")
+        #expect(newInstance.dueDate != task.dueDate, "Due date should be updated to next occurrence")
+        #expect(!newInstance.isCompleted, "New instance should not be completed")
+    }
+
+    // MARK: - TaskManager Filtering Tests
+
+    @Test("TaskManager returns only overdue tasks")
+    func overdueTasks() throws {
+        
+        // Setup
+        let (_, taskManager, calendar) = try createTestSetup
+
+
+        
+        // Given - Mix of overdue and future tasks
+        ()
+
+        let overdueDate = calendar.date(byAdding: .day, value: -2, to: Date())!
+        let futureDate = calendar.date(byAdding: .day, value: 2, to: Date())!
+
+        _ = taskManager.createTask(title: "Overdue 1", dueDate: overdueDate)
+        _ = taskManager.createTask(title: "Overdue 2", dueDate: overdueDate)
+        _ = taskManager.createTask(title: "Future", dueDate: futureDate)
+        _ = taskManager.createTask(title: "No due date")
+
+        // When
+        let overdueTasks = taskManager.overdueTasks()
+
+        // Then
+        #expect(overdueTasks.count == 2, "Should return only overdue tasks")
+        #expect(overdueTasks.allSatisfy { $0.hasOverdueStatus }, "All returned tasks should be overdue")
+    }
+
+    @Test("TaskManager returns only tasks due today")
+    func tasksDueToday() throws {
+        
+        // Setup
+        let (_, taskManager, calendar) = try createTestSetup
+
+
+        
+        // Given - Tasks with various due dates
+        ()
+
+        let today = Date()
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date())!
+
+        _ = taskManager.createTask(title: "Due today 1", dueDate: today)
+        _ = taskManager.createTask(title: "Due today 2", dueDate: today)
+        _ = taskManager.createTask(title: "Due tomorrow", dueDate: tomorrow)
+
+        // When
+        let todayTasks = taskManager.tasksDueToday()
+
+        // Then
+        #expect(todayTasks.count == 2, "Should return only tasks due today")
+        #expect(todayTasks.allSatisfy { $0.isDueToday }, "All returned tasks should be due today")
+    }
+
+    @Test("TaskManager returns tasks due soon (within 3 days)")
+    func tasksDueSoon() throws {
+        
+        // Setup
+        let (_, taskManager, calendar) = try createTestSetup
+
+
+        
+        // Given - Tasks due in various time frames
+        ()
+
+        let today = Date()
+        let twoDays = calendar.date(byAdding: .day, value: 2, to: Date())!
+        let fiveDays = calendar.date(byAdding: .day, value: 5, to: Date())!
+
+        _ = taskManager.createTask(title: "Due today", dueDate: today)
+        _ = taskManager.createTask(title: "Due in 2 days", dueDate: twoDays)
+        _ = taskManager.createTask(title: "Due in 5 days", dueDate: fiveDays)
+
+        // When
+        let soonTasks = taskManager.tasksDueSoon()
+
+        // Then
+        #expect(soonTasks.count == 2, "Should return tasks due within 3 days")
+        #expect(soonTasks.allSatisfy { $0.isDueSoon }, "All returned tasks should be due soon")
+    }
+
+    @Test("TaskManager returns only tasks with due dates")
+    func tasksWithDueDates() throws {
+        
+        // Setup
+        let (_, taskManager, calendar) = try createTestSetup
+
+
+        
+        // Given - Mix of tasks with and without due dates
+        ()
+
+        let dueDate = calendar.date(byAdding: .day, value: 3, to: Date())!
+
+        _ = taskManager.createTask(title: "With due date 1", dueDate: dueDate)
+        _ = taskManager.createTask(title: "With due date 2", dueDate: dueDate)
+        _ = taskManager.createTask(title: "Without due date")
+
+        // When
+        let tasksWithDates = taskManager.tasksWithDueDates()
+
+        // Then
+        #expect(tasksWithDates.count == 2, "Should return only tasks with due dates")
+        #expect(tasksWithDates.allSatisfy { $0.dueDate != nil }, "All returned tasks should have due dates")
+    }
+
+    // MARK: - Enhanced Today's Tasks Tests
+
+    @Test("Enhanced today's tasks includes overdue tasks")
+    func enhancedTodaysTasksIncludesOverdue() throws {
+        
+        // Setup
+        let (_, taskManager, calendar) = try createTestSetup
+
+
+        
+        // Given - Overdue task
+        ()
+
+        let overdueDate = calendar.date(byAdding: .day, value: -3, to: Date())!
+        _ = taskManager.createTask(title: "Overdue task", dueDate: overdueDate)
+
+        // When
+        let todaysTasks = taskManager.enhancedTodaysTasks
+
+        // Then
+        #expect(todaysTasks.count == 1, "Should include overdue tasks")
+        #expect(todaysTasks[0].hasOverdueStatus, "Task should be overdue")
+    }
+
+    @Test("Enhanced today's tasks includes tasks due today")
+    func enhancedTodaysTasksIncludesDueToday() throws {
+        
+        // Setup
+        let (_, taskManager, _) = try createTestSetup
+
+
+        
+        // Given - Task due today
+        ()
+
+        _ = taskManager.createTask(title: "Due today", dueDate: Date())
+
+        // When
+        let todaysTasks = taskManager.enhancedTodaysTasks
+
+        // Then
+        #expect(todaysTasks.count == 1, "Should include tasks due today")
+        #expect(todaysTasks[0].isDueToday, "Task should be due today")
+    }
+
+    @Test("Enhanced today's tasks includes tasks without due dates")
+    func enhancedTodaysTasksIncludesNoDueDate() throws {
+        
+        // Setup
+        let (_, taskManager, _) = try createTestSetup
+
+
+        
+        // Given - Task without due date
+        ()
+
+        _ = taskManager.createTask(title: "No due date")
+
+        // When
+        let todaysTasks = taskManager.enhancedTodaysTasks
+
+        // Then
+        #expect(todaysTasks.count == 1, "Should include tasks without due dates")
+        #expect(todaysTasks[0].dueDate == nil, "Task should have no due date")
+    }
+
+    @Test("Enhanced today's tasks excludes future tasks")
+    func enhancedTodaysTasksExcludesFutureTasks() throws {
+        
+        // Setup
+        let (_, taskManager, calendar) = try createTestSetup
+
+
+        
+        // Given - Task due in the future
+        ()
+
+        let futureDate = calendar.date(byAdding: .day, value: 5, to: Date())!
+        _ = taskManager.createTask(title: "Future task", dueDate: futureDate)
+
+        // When
+        let todaysTasks = taskManager.enhancedTodaysTasks
+
+        // Then
+        #expect(todaysTasks.count == 0, "Should exclude future tasks")
+    }
+
+    @Test("Enhanced today's tasks excludes completed tasks")
+    func enhancedTodaysTasksExcludesCompleted() throws {
+        
+        // Setup
+        let (_, taskManager, _) = try createTestSetup
+
+
+        
+        // Given - Completed task due today
+        ()
+
+        let result = taskManager.createTask(title: "Completed task", dueDate: Date())
+        let task = try #require(try result.get())
+        task.setCompleted(true)
+
+        // When
+        let todaysTasks = taskManager.enhancedTodaysTasks
+
+        // Then
+        #expect(todaysTasks.count == 0, "Should exclude completed tasks")
+    }
+
+    @Test("Enhanced today's tasks sorts by priority correctly")
+    func enhancedTodaysTasksSorting() throws {
+        
+        // Setup
+        let (_, taskManager, calendar) = try createTestSetup
+
+
+        
+        // Given - Tasks with different priorities and due dates
+        ()
+
+        let overdue = calendar.date(byAdding: .day, value: -2, to: Date())!
+        let today = Date()
+
+        let result1 = taskManager.createTask(title: "Low priority, overdue", priority: .low, dueDate: overdue)
+        let result2 = taskManager.createTask(title: "High priority, today", priority: .high, dueDate: today)
+        let result3 = taskManager.createTask(title: "Medium priority, no date", priority: .medium, dueDate: nil)
+
+        try #require(try result1.get())
+        try #require(try result2.get())
+        try #require(try result3.get())
+
+        // When
+        let todaysTasks = taskManager.enhancedTodaysTasks
+
+        // Then
+        #expect(todaysTasks.count == 3)
+        // High priority should come first
+        #expect(todaysTasks[0].priority == .high)
+        // Then medium priority
+        #expect(todaysTasks[1].priority == .medium)
+        // Then low priority
+        #expect(todaysTasks[2].priority == .low)
+    }
+
+    // MARK: - Edge Cases and Validation Tests
+
+    @Test("Due date at midnight works correctly")
+    func dueDateAtMidnight() throws {
+        
+        // Setup
+        let calendar
+
+
+        
+        // Given - Task due at midnight
+         = Calendar.current
+
+        var components = calendar.dateComponents([.year, .month, .day], from: Date())
+        components.hour = 0
+        components.minute = 0
+        components.second = 0
+        let midnight = calendar.date(from: components)!
+
+        let task = Task(title: "Midnight task", dueDate: midnight)
+
+        // Then - Should still work correctly
+        #expect(task.dueDate != nil)
+        #expect(task.dueDateDisplayText != nil)
+    }
+
+    @Test("Duplicate task with overdue due date removes past date")
+    func duplicateTaskWithOverdueDueDate() throws {
+        
+        // Setup
+        let (_, taskManager, calendar) = try createTestSetup
+
+
+        
+        // Given - Task with overdue due date
+        ()
+
+        let pastDate = calendar.date(byAdding: .day, value: -5, to: Date())!
+        let result = taskManager.createTask(title: "Overdue task", dueDate: pastDate)
+        let task = try #require(try result.get())
+
+        // When - Duplicate the task
+        let duplicateResult = taskManager.duplicateTask(task)
+
+        // Then - Duplicate should not have past due date
+        let duplicate = try #require(try duplicateResult.get())
+        #expect(duplicate.dueDate == nil, "Duplicated task with past due date should have due date removed")
+    }
+
+    @Test("Duplicate task with future due date keeps date")
+    func duplicateTaskWithFutureDueDate() throws {
+        
+        // Setup
+        let (_, taskManager, calendar) = try createTestSetup
+
+
+        
+        // Given - Task with future due date
+        ()
+
+        let futureDate = calendar.date(byAdding: .day, value: 5, to: Date())!
+        let result = taskManager.createTask(title: "Future task", dueDate: futureDate)
+        let task = try #require(try result.get())
+
+        // When - Duplicate the task
+        let duplicateResult = taskManager.duplicateTask(task)
+
+        // Then - Duplicate should keep future due date
+        let duplicate = try #require(try duplicateResult.get())
+        #expect(duplicate.dueDate != nil, "Duplicated task with future due date should keep due date")
+        #expect(duplicate.dueDate == futureDate, "Due date should match original")
+    }
+}

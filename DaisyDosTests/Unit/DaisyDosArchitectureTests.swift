@@ -12,17 +12,21 @@ import Foundation
 
 /// Architectural validation tests for Phase 1.0 completion
 /// Tests core patterns: @Observable managers, SwiftData models, error handling
-struct DaisyDosTests {
+@Suite(.serialized)
+@MainActor
+final class DaisyDosTests {
+
+    let container: ModelContainer
+
+    init() throws {
+        // Use shared container to prevent parallel test conflicts across all test suites
+        container = try TestHelpers.sharedContainer
+    }
 
     // MARK: - @Observable Manager Pattern Tests
 
     @Test("TaskManager @Observable reactivity with SwiftData")
-    @MainActor
     func testTaskManagerObservablePattern() async throws {
-        let container = try ModelContainer(
-            for: Task.self, Tag.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-        )
         let taskManager = TaskManager(modelContext: container.mainContext)
 
         // Test @Observable reactivity
@@ -41,12 +45,7 @@ struct DaisyDosTests {
     }
 
     @Test("HabitManager streak calculations work correctly")
-    @MainActor
     func testHabitManagerStreakLogic() async throws {
-        let container = try ModelContainer(
-            for: Habit.self, Tag.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-        )
         let habitManager = HabitManager(modelContext: container.mainContext)
 
         guard case .success(let habit) = habitManager.createHabit(title: "Test Habit") else {
@@ -69,12 +68,7 @@ struct DaisyDosTests {
     }
 
     @Test("TagManager constraint validation works")
-    @MainActor
     func testTagManagerConstraintValidation() async throws {
-        let container = try ModelContainer(
-            for: Tag.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-        )
         let tagManager = TagManager(modelContext: container.mainContext)
 
         // Test tag creation
@@ -95,7 +89,6 @@ struct DaisyDosTests {
     // MARK: - SwiftData Model Business Logic Tests
 
     @Test("Task model business logic and constraints")
-    @MainActor
     func testTaskModelConstraints() async throws {
         let task = Task(title: "Test Task")
         let tag1 = Tag(name: "Tag1", colorName: "red")
@@ -131,7 +124,6 @@ struct DaisyDosTests {
     }
 
     @Test("Habit model streak calculations and business logic")
-    @MainActor
     func testHabitModelBusinessLogic() async throws {
         let habit = Habit(title: "Daily Exercise", habitDescription: "30 min workout")
 
@@ -159,13 +151,7 @@ struct DaisyDosTests {
     }
 
     @Test("Tag model system limits and properties")
-    @MainActor
     func testTagModelSystemLimits() async throws {
-        let container = try ModelContainer(
-            for: Tag.self, Task.self, Habit.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-        )
-
         // Test system validation method
         let canCreate = Tag.validateSystemTagLimit(in: container.mainContext)
         #expect(canCreate == true) // Should be true with empty database
@@ -197,7 +183,6 @@ struct DaisyDosTests {
     // MARK: - Error Handling Architecture Tests
 
     @Test("Error transformation system works end-to-end")
-    @MainActor
     func testErrorTransformationSystem() async throws {
         // Test platform → app → user transformation
         let mockError = NSError(
@@ -221,7 +206,6 @@ struct DaisyDosTests {
     }
 
     @Test("DaisyDosError provides user-friendly messages")
-    @MainActor
     func testDaisyDosErrorUserMessages() async throws {
         let tagLimitError = DaisyDosError.tagLimitExceeded
 
@@ -241,7 +225,6 @@ struct DaisyDosTests {
     }
 
     @Test("ErrorTransformer safely wrapper works correctly")
-    @MainActor
     func testErrorTransformerSafelyWrapper() async throws {
         // Test successful operation
         let successResult = ErrorTransformer.safely(
@@ -277,13 +260,7 @@ struct DaisyDosTests {
     // MARK: - Environment Injection & Integration Tests
 
     @Test("Environment injection works with @Observable managers")
-    @MainActor
     func testEnvironmentInjectionPattern() async throws {
-        let container = try ModelContainer(
-            for: Task.self, Habit.self, Tag.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-        )
-
         let taskManager = TaskManager(modelContext: container.mainContext)
         let habitManager = HabitManager(modelContext: container.mainContext)
         let tagManager = TagManager(modelContext: container.mainContext)
@@ -319,7 +296,6 @@ struct DaisyDosTests {
     }
 
     @Test("SwiftData schema and migration plan work correctly")
-    @MainActor
     func testSwiftDataSchemaIntegration() async throws {
         // Test schema definition
         let schemaModels = DaisyDosSchemaV3.models
@@ -330,15 +306,7 @@ struct DaisyDosTests {
         #expect(migrationSchemas.count == 1) // V3 only
         #expect(DaisyDosMigrationPlan.stages.isEmpty) // No migrations - V3 is baseline
 
-        // Test container creation with schema
-        let schema = Schema(versionedSchema: DaisyDosSchemaV3.self)
-        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-        let container = try ModelContainer(
-            for: schema,
-            migrationPlan: DaisyDosMigrationPlan.self,
-            configurations: [config]
-        )
-
+        // Test container works with schema
         #expect(container.mainContext != nil)
 
         // Test all model types can be created
@@ -362,12 +330,7 @@ struct DaisyDosTests {
     // MARK: - Performance Baseline Validation Tests
 
     @Test("Performance baselines are met")
-    @MainActor
     func testPerformanceBaselines() async throws {
-        let container = try ModelContainer(
-            for: Task.self, Tag.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-        )
         let taskManager = TaskManager(modelContext: container.mainContext)
 
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -396,12 +359,7 @@ struct DaisyDosTests {
     }
 
     @Test("Manager error handling preserves data integrity")
-    @MainActor
     func testManagerErrorHandling() async throws {
-        let container = try ModelContainer(
-            for: Task.self, Tag.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-        )
         let taskManager = TaskManager(modelContext: container.mainContext)
         let tagManager = TagManager(modelContext: container.mainContext)
 

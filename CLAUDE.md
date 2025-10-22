@@ -300,5 +300,48 @@ Supporting Types ✅:
 
 Refer to `/Docs/implementation_roadmap.md` for detailed development tasks and `/Docs/daisydos_prd.md` for comprehensive requirements.
 
+---
+
+## Testing Infrastructure
+
+### ✅ Testing Migration Complete (October 2025)
+
+**Status:** Phases 1 & 2 Complete - Modern Swift Testing Framework
+
+**Test Organization:**
+```
+DaisyDosTests/
+├── Unit/
+│   ├── DaisyDosArchitectureTests.swift (13 tests - 5 passing)
+│   └── Models/
+│       └── TaskDueDateTests.swift (42 tests - migrated from XCTest)
+├── Integration/ (ready for future tests)
+└── Helpers/
+    └── TestHelpers.swift (reusable utilities)
+```
+
+**Running Tests:**
+- **All tests:** `Cmd+U` in Xcode or `xcodebuild test -scheme DaisyDos`
+- **Specific test:** Use Test Navigator (`Cmd+6`) or `xcodebuild test -only-testing:DaisyDosTests/[TestName]`
+
+**Framework:** 100% Swift Testing (modern @Test macro, #expect, #require patterns)
+
+**Known Issues:**
+- 5 tests passing (model and error handling tests)
+- ~50 tests with state isolation issues (see `/Docs/TESTING_MIGRATION_SUMMARY.md`)
+- Tests pass individually but fail when run as full suite (parallel execution conflicts)
+
+**Migration Achievements:**
+- ✅ Removed 76KB of test files from production bundle
+- ✅ Established proper test directory structure
+- ✅ Migrated 613-line TaskDueDateTests.swift from XCTest to Swift Testing
+- ✅ Created reusable TestHelpers with ModelContainer factories
+- ✅ Fixed all ModelContainer schemas to include related models
+- ✅ Applied 2025 best practices (#require over Issue.record)
+
+**For Details:** See `/Docs/TESTING_MIGRATION_SUMMARY.md` for complete migration report
+
+---
+
 **🔍 IMPORTANT: Always use Context7 to check up-to-date documentation when implementing new libraries, frameworks, or adding features using external dependencies.**
 

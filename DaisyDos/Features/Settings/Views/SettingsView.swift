@@ -175,7 +175,6 @@ private struct DeveloperToolsView: View {
     @State private var showingHousekeepingAlert = false
     @State private var housekeepingResult = ""
     @State private var testDataResult = ""
-    @State private var testSuite: LogbookTestSuite?
     @State private var showingTestResults = false
 
     var body: some View {
@@ -186,43 +185,10 @@ private struct DeveloperToolsView: View {
                         .font(.largeTitle.bold())
                         .padding(.bottom, Spacing.small)
 
-                    // MARK: - Feature Testing
+                    // MARK: - Logbook Testing
                     VStack(alignment: .leading, spacing: Spacing.medium) {
-                        Text("Feature Testing")
-                            .font(.title2.bold())
-
-                        Text("Run automated test suites to validate core functionality.")
-                            .font(.body)
-                            .foregroundColor(.daisyTextSecondary)
-
-                        // Due Date Testing
-                        NavigationLink {
-                            DueDateTestView()
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Label("Due Date Test Suite", systemImage: "calendar.badge.clock")
-                                        .font(.headline)
-                                        .foregroundColor(.daisyTask)
-
-                                    Text("20 automated tests for due date functionality")
-                                        .font(.caption)
-                                        .foregroundColor(.daisyTextSecondary)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(.daisyTextSecondary)
-                            }
-                            .padding()
-                            .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
-                        }
-                        .buttonStyle(.plain)
-
-                        // Logbook Testing
                         Text("Logbook Testing")
-                            .font(.title3.bold())
-                            .padding(.top, Spacing.medium)
+                            .font(.title2.bold())
 
                         Text("Test the automatic archival system without waiting 90 days.")
                             .font(.body)
@@ -230,21 +196,6 @@ private struct DeveloperToolsView: View {
 
                         CardView {
                             VStack(spacing: Spacing.medium) {
-                                DaisyButton(
-                                    title: "Run Automated Test Suite",
-                                    style: .primary,
-                                    icon: "play.circle.fill",
-                                    isLoading: testSuite?.isRunning ?? false,
-                                    action: runTestSuite
-                                )
-
-                                Text("Runs 12 automated tests covering all housekeeping scenarios. Check Xcode console for detailed output.")
-                                    .font(.caption)
-                                    .foregroundColor(.daisyTextSecondary)
-                                    .multilineTextAlignment(.center)
-
-                                Divider()
-
                                 DaisyButton(
                                     title: "Create Test Tasks",
                                     style: .secondary,
@@ -307,49 +258,29 @@ private struct DeveloperToolsView: View {
                             }
                         }
 
-                        if let suite = testSuite, !suite.testResults.isEmpty {
-                            TestResultsCard(results: suite.testResults)
-                        }
                     }
 
                     VStack(alignment: .leading, spacing: Spacing.medium) {
-                        Text("Interactive Test Views")
+                        Text("Testing Information")
                             .font(.title2.bold())
 
-                        Text("Interactive test views have been moved to the test target for better code organization and reduced bundle size. They are available when running tests.")
+                        Text("DaisyDos uses automated unit and integration tests powered by Swift Testing. All tests are located in the DaisyDosTests target and can be run via Xcode's Test Navigator (Cmd+6) or by pressing Cmd+U.")
                             .font(.body)
                             .foregroundColor(.daisyTextSecondary)
 
                         CardView {
                             VStack(alignment: .leading, spacing: Spacing.small) {
-                                Text("Available Test Views")
+                                Text("Test Organization")
                                     .font(.headline)
 
                                 VStack(alignment: .leading, spacing: 4) {
-                                    TestViewItem(name: "ModelTestView", description: "Test SwiftData models and relationships")
-                                    TestViewItem(name: "ManagerTestView", description: "Test @Observable manager patterns")
-                                    TestViewItem(name: "ErrorHandlingTestView", description: "Test error transformation system")
-                                    TestViewItem(name: "DesignSystemTestView", description: "Test design system components")
-                                    TestViewItem(name: "ComponentTestView", description: "Test reusable UI components")
-                                    TestViewItem(name: "AccessibilityTestView", description: "Test accessibility compliance")
-                                    TestViewItem(name: "PerformanceTestView", description: "Test performance monitoring")
-                                    TestViewItem(name: "DynamicTypeTestView", description: "Test Dynamic Type scaling")
+                                    TestViewItem(name: "Unit/Models/", description: "Model business logic and validation tests")
+                                    TestViewItem(name: "Unit/Managers/", description: "@Observable manager pattern tests")
+                                    TestViewItem(name: "Integration/", description: "Cross-feature integration tests")
+                                    TestViewItem(name: "Helpers/", description: "Reusable test utilities and fixtures")
                                 }
                             }
                         }
-
-                        Text("Location")
-                            .font(.title2.bold())
-
-                        Text("Test views are now located in:")
-                            .font(.body)
-
-                        Text("DaisyDosTests/InteractiveTestViews/")
-                            .font(.system(.body, design: .monospaced))
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .background(Colors.Primary.backgroundTertiary)
-                            .cornerRadius(8)
                     }
                 }
                 .padding()
@@ -505,108 +436,9 @@ private struct DeveloperToolsView: View {
         }
     }
 
-    private func runTestSuite() {
-        testSuite = LogbookTestSuite(modelContext: modelContext, logbookManager: logbookManager)
-        testSuite?.runAllTests()
-    }
 }
 
-// MARK: - Test Results Card
-
-private struct TestResultsCard: View {
-    let results: [LogbookTestSuite.TestResult]
-
-    private var passed: Int {
-        results.filter { $0.passed }.count
-    }
-
-    private var failed: Int {
-        results.count - passed
-    }
-
-    var body: some View {
-        CardView {
-            VStack(alignment: .leading, spacing: Spacing.medium) {
-                headerView
-                Divider()
-                resultsListView
-                footerView
-            }
-        }
-    }
-
-    private var headerView: some View {
-        HStack {
-            Image(systemName: failed == 0 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                .foregroundColor(failed == 0 ? .daisySuccess : .daisyError)
-            Text("Test Results")
-                .font(.headline)
-            Spacer()
-            statsView
-        }
-    }
-
-    private var statsView: some View {
-        HStack(spacing: Spacing.small) {
-            Label("\(passed)", systemImage: "checkmark.circle")
-                .font(.caption)
-                .foregroundColor(.daisySuccess)
-            Label("\(failed)", systemImage: "xmark.circle")
-                .font(.caption)
-                .foregroundColor(.daisyError)
-        }
-    }
-
-    private var resultsListView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.small) {
-                ForEach(Array(results.enumerated()), id: \.offset) { index, result in
-                    TestResultRow(result: result)
-                    if index < results.count - 1 {
-                        Divider()
-                    }
-                }
-            }
-        }
-        .frame(maxHeight: 300)
-    }
-
-    private var footerView: some View {
-        Text("Check Xcode console for detailed test output")
-            .font(.caption2)
-            .foregroundColor(.daisyTextSecondary)
-    }
-}
-
-private struct TestResultRow: View {
-    let result: LogbookTestSuite.TestResult
-
-    var body: some View {
-        HStack(alignment: .top, spacing: Spacing.small) {
-            Image(systemName: result.passed ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .foregroundColor(result.passed ? .daisySuccess : .daisyError)
-                .font(.caption)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Test \(result.testNumber)")
-                    .font(.caption)
-                    .fontWeight(.bold)
-
-                Text(result.message)
-                    .font(.caption2)
-                    .foregroundColor(.daisyTextSecondary)
-
-                Text("\(String(format: "%.3f", result.duration))s")
-                    .font(.caption2)
-                    .foregroundColor(.daisyTextSecondary)
-                    .opacity(0.7)
-            }
-
-            Spacer()
-        }
-        .padding(.vertical, 2)
-    }
-}
+// MARK: - Test View Item
 
 private struct TestViewItem: View {
     let name: String
