@@ -19,7 +19,7 @@ struct AllTests {
 
 extension AllTests {
     /// Test suite validating TaskDataActor provides thread-safe, isolated data operations
-    /// Pattern: Struct + Local Container for perfect test isolation
+    /// Pattern: Shared container across all tests for stability
     @Suite("Task Data Actor - CRUD Operations", .serialized)
     struct TaskActorTests {
 
@@ -27,8 +27,8 @@ extension AllTests {
 
     @Test("Create task with actor isolation")
     func createTaskWithActor() async throws {
-        // Given - Create isolated container
-        let container = try TestHelpers.createActorTestContainer()
+        // Given - Use shared container
+        let container = try TestHelpers.sharedContainer
         let actor = TaskDataActor(modelContainer: container)
 
         // When - Actor operations are naturally async
@@ -50,7 +50,7 @@ extension AllTests {
 
     @Test("Create task with due date through actor")
     func createTaskWithDueDate() async throws {
-        let container = try TestHelpers.createActorTestContainer()
+        let container = try TestHelpers.sharedContainer
         let actor = TaskDataActor(modelContainer: container)
 
         let dueDate = Calendar.current.date(byAdding: .day, value: 3, to: Date())!
@@ -66,7 +66,7 @@ extension AllTests {
 
     @Test("Create task validation - empty title throws error")
     func createTaskValidation() async throws {
-        let container = try TestHelpers.createActorTestContainer()
+        let container = try TestHelpers.sharedContainer
         let actor = TaskDataActor(modelContainer: container)
 
         // Verify empty title is rejected
@@ -83,7 +83,7 @@ extension AllTests {
 
     @Test("Update task through actor")
     func updateTaskWithActor() async throws {
-        let container = try TestHelpers.createActorTestContainer()
+        let container = try TestHelpers.sharedContainer
         let actor = TaskDataActor(modelContainer: container)
 
         // Create task
@@ -105,7 +105,7 @@ extension AllTests {
 
     @Test("Update task with due date")
     func updateTaskDueDate() async throws {
-        let container = try TestHelpers.createActorTestContainer()
+        let container = try TestHelpers.sharedContainer
         let actor = TaskDataActor(modelContainer: container)
 
         let task = try await actor.createTask(title: "Task")
@@ -122,7 +122,7 @@ extension AllTests {
 
     @Test("Delete task through actor")
     func deleteTaskWithActor() async throws {
-        let container = try TestHelpers.createActorTestContainer()
+        let container = try TestHelpers.sharedContainer
         let actor = TaskDataActor(modelContainer: container)
 
         let task = try await actor.createTask(title: "To Delete")
@@ -139,7 +139,7 @@ extension AllTests {
 
     @Test("Toggle task completion through actor")
     func toggleCompletion() async throws {
-        let container = try TestHelpers.createActorTestContainer()
+        let container = try TestHelpers.sharedContainer
         let actor = TaskDataActor(modelContainer: container)
 
         let task = try await actor.createTask(title: "Task to complete")
@@ -156,7 +156,7 @@ extension AllTests {
 
     @Test("Fetch all tasks through actor")
     func fetchAllTasks() async throws {
-        let container = try TestHelpers.createActorTestContainer()
+        let container = try TestHelpers.sharedContainer
         let actor = TaskDataActor(modelContainer: container)
 
         // Create multiple tasks
@@ -170,7 +170,7 @@ extension AllTests {
 
     @Test("Fetch pending tasks through actor")
     func fetchPendingTasks() async throws {
-        let container = try TestHelpers.createActorTestContainer()
+        let container = try TestHelpers.sharedContainer
         let actor = TaskDataActor(modelContainer: container)
 
         let task1 = try await actor.createTask(title: "Pending 1")
@@ -188,7 +188,7 @@ extension AllTests {
 
     @Test("Fetch overdue tasks through actor")
     func fetchOverdueTasks() async throws {
-        let container = try TestHelpers.createActorTestContainer()
+        let container = try TestHelpers.sharedContainer
         let actor = TaskDataActor(modelContainer: container)
 
         let pastDate = Calendar.current.date(byAdding: .day, value: -3, to: Date())!
@@ -207,7 +207,7 @@ extension AllTests {
 
     @Test("Parallel task creation is thread-safe")
     func parallelTaskCreation() async throws {
-        let container = try TestHelpers.createActorTestContainer()
+        let container = try TestHelpers.sharedContainer
         let actor = TaskDataActor(modelContainer: container)
 
         // Create 10 tasks in parallel - this would CRASH without actor isolation!
@@ -233,7 +233,7 @@ extension AllTests {
 
     @Test("Duplicate task through actor")
     func duplicateTask() async throws {
-        let container = try TestHelpers.createActorTestContainer()
+        let container = try TestHelpers.sharedContainer
         let actor = TaskDataActor(modelContainer: container)
 
         let futureDueDate = Calendar.current.date(byAdding: .day, value: 5, to: Date())!

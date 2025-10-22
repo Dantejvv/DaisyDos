@@ -14,12 +14,13 @@ enum TestHelpers {
 
     // MARK: - Shared Test Container (Singleton for Thread Safety)
 
-    /// Shared in-memory container to prevent parallel test conflicts
-    /// This ensures all tests use the same ModelContext, preventing mainActor threading issues
+    /// Shared in-memory container to prevent rapid container creation issues
+    /// SwiftData has issues creating multiple containers rapidly in tests
+    /// This singleton approach trades test isolation for stability
     private static var _sharedContainer: ModelContainer?
 
     /// Returns the shared ModelContainer for all tests
-    /// Using a shared container with `.serialized` suites prevents parallel execution conflicts
+    /// Creates once on first access, reused for all subsequent tests
     static var sharedContainer: ModelContainer {
         get throws {
             if let existing = _sharedContainer {
@@ -29,6 +30,27 @@ enum TestHelpers {
             _sharedContainer = container
             return container
         }
+    }
+
+    /// Cleans all data from the shared container without recreating it
+    /// Call this between tests to maintain isolation while avoiding container recreation
+    @MainActor
+    static func cleanSharedContainer() throws {
+        guard let container = _sharedContainer else { return }
+
+        let context = container.mainContext
+
+        // Delete all instances of each model type
+        try context.delete(model: Task.self)
+        try context.delete(model: Tag.self)
+        try context.delete(model: TaskAttachment.self)
+        try context.delete(model: Habit.self)
+        try context.delete(model: HabitCompletion.self)
+        try context.delete(model: HabitStreak.self)
+        try context.delete(model: HabitSkip.self)
+        try context.delete(model: TaskLogEntry.self)
+
+        try context.save()
     }
 
     /// Resets the shared container (call between test suites if needed)
@@ -42,18 +64,11 @@ enum TestHelpers {
     /// - Returns: Configured ModelContainer for testing
     /// - Throws: ModelContainer initialization errors
     private static func createNewContainer() throws -> ModelContainer {
-        let schema = Schema([
-            Task.self,
-            Tag.self,
-            TaskAttachment.self,
-            Habit.self,
-            HabitCompletion.self,
-            HabitStreak.self,
-            HabitSkip.self,
-            TaskLogEntry.self
-        ])
-        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(for: schema, configurations: configuration)
+        return try ModelContainer(
+            for: Task.self, Tag.self, TaskAttachment.self, Habit.self,
+            HabitCompletion.self, HabitStreak.self, HabitSkip.self, TaskLogEntry.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
     }
 
     /// Creates an in-memory ModelContainer for testing with all DaisyDos models
