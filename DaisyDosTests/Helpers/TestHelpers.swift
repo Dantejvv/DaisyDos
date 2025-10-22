@@ -10,7 +10,6 @@ import SwiftData
 @testable import DaisyDos
 
 /// Reusable test utilities and helpers for DaisyDos test suite
-@MainActor
 enum TestHelpers {
 
     // MARK: - Shared Test Container (Singleton for Thread Safety)
@@ -200,6 +199,7 @@ enum TestHelpers {
     /// - Parameter container: ModelContainer to use (creates new if nil)
     /// - Returns: Tuple of (TaskManager, ModelContainer)
     /// - Throws: Container creation errors
+    @MainActor
     static func makeTaskManager(
         container: ModelContainer? = nil
     ) throws -> (manager: TaskManager, container: ModelContainer) {
@@ -212,6 +212,7 @@ enum TestHelpers {
     /// - Parameter container: ModelContainer to use (creates new if nil)
     /// - Returns: Tuple of (HabitManager, ModelContainer)
     /// - Throws: Container creation errors
+    @MainActor
     static func makeHabitManager(
         container: ModelContainer? = nil
     ) throws -> (manager: HabitManager, container: ModelContainer) {
@@ -230,6 +231,7 @@ enum TestHelpers {
     /// - Parameter container: ModelContainer to use (creates new if nil)
     /// - Returns: Tuple of (TagManager, ModelContainer)
     /// - Throws: Container creation errors
+    @MainActor
     static func makeTagManager(
         container: ModelContainer? = nil
     ) throws -> (manager: TagManager, container: ModelContainer) {

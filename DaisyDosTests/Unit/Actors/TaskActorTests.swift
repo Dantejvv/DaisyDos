@@ -12,24 +12,16 @@ import Foundation
 @testable import DaisyDos
 
 /// Test suite validating TaskDataActor provides thread-safe, isolated data operations
-/// Testing: Class with stored container and .serialized
+/// Pattern: Struct + Local Container for perfect test isolation
 @Suite("Task Data Actor - CRUD Operations", .serialized)
-@MainActor
-final class TaskActorTests {
-
-    // Store container as instance property to keep it alive
-    private var container: ModelContainer!
-
-    init() throws {
-        // Create container in init and store it
-        container = try TestHelpers.createActorTestContainer()
-    }
+struct TaskActorTests {
 
     // MARK: - Create Operations
 
     @Test("Create task with actor isolation")
     func createTaskWithActor() async throws {
-        // Given - Use class instance container
+        // Given - Create isolated container
+        let container = try TestHelpers.createActorTestContainer()
         let actor = TaskDataActor(modelContainer: container)
 
         // When - Actor operations are naturally async

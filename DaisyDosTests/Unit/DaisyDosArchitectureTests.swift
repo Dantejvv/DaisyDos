@@ -12,22 +12,16 @@ import Foundation
 
 /// Architectural validation tests for Phase 1.0 completion
 /// Tests core patterns: @Observable managers, SwiftData models, error handling
+/// Pattern: Struct + Local Container for perfect test isolation
 @Suite(.serialized)
-@MainActor
-final class DaisyDosTests {
-
-    let container: ModelContainer
-
-    init() throws {
-        // Use shared container to prevent parallel test conflicts across all test suites
-        container = try TestHelpers.sharedContainer
-    }
+struct DaisyDosTests {
 
     // MARK: - @Observable Manager Pattern Tests
 
     @Test("TaskManager @Observable reactivity with SwiftData")
     func testTaskManagerObservablePattern() async throws {
-        let taskManager = TaskManager(modelContext: container.mainContext)
+        let container = try TestHelpers.createActorTestContainer()
+        let taskManager = TaskManager(modelContext: ModelContext(container))
 
         // Test @Observable reactivity
         let initialCount = taskManager.taskCount
@@ -46,7 +40,8 @@ final class DaisyDosTests {
 
     @Test("HabitManager streak calculations work correctly")
     func testHabitManagerStreakLogic() async throws {
-        let habitManager = HabitManager(modelContext: container.mainContext)
+        let container = try TestHelpers.createActorTestContainer()
+        let habitManager = HabitManager(modelContext: ModelContext(container))
 
         guard case .success(let habit) = habitManager.createHabit(title: "Test Habit") else {
             throw DaisyDosError.persistenceFailed("Failed to create habit")
@@ -69,7 +64,8 @@ final class DaisyDosTests {
 
     @Test("TagManager constraint validation works")
     func testTagManagerConstraintValidation() async throws {
-        let tagManager = TagManager(modelContext: container.mainContext)
+        let container = try TestHelpers.createActorTestContainer()
+        let tagManager = TagManager(modelContext: ModelContext(container))
 
         // Test tag creation
         let tag1 = tagManager.createTag(name: "Work", colorName: "blue")
@@ -90,6 +86,7 @@ final class DaisyDosTests {
 
     @Test("Task model business logic and constraints")
     func testTaskModelConstraints() async throws {
+        let container = try TestHelpers.createActorTestContainer()
         let task = Task(title: "Test Task")
         let tag1 = Tag(name: "Tag1", colorName: "red")
         let tag2 = Tag(name: "Tag2", colorName: "green")
@@ -125,6 +122,7 @@ final class DaisyDosTests {
 
     @Test("Habit model streak calculations and business logic")
     func testHabitModelBusinessLogic() async throws {
+        let container = try TestHelpers.createActorTestContainer()
         let habit = Habit(title: "Daily Exercise", habitDescription: "30 min workout")
 
         // Test initial state
@@ -152,11 +150,12 @@ final class DaisyDosTests {
 
     @Test("Tag model system limits and properties")
     func testTagModelSystemLimits() async throws {
+        let container = try TestHelpers.createActorTestContainer()
         // Test system validation method
-        let canCreate = Tag.validateSystemTagLimit(in: container.mainContext)
+        let canCreate = Tag.validateSystemTagLimit(in: ModelContext(container))
         #expect(canCreate == true) // Should be true with empty database
 
-        let canCreateMethod = Tag.canCreateNewTag(in: container.mainContext)
+        let canCreateMethod = Tag.canCreateNewTag(in: ModelContext(container))
         #expect(canCreateMethod == true)
 
         // Test tag properties
@@ -184,6 +183,7 @@ final class DaisyDosTests {
 
     @Test("Error transformation system works end-to-end")
     func testErrorTransformationSystem() async throws {
+        let container = try TestHelpers.createActorTestContainer()
         // Test platform → app → user transformation
         let mockError = NSError(
             domain: "TestDomain",
@@ -207,6 +207,7 @@ final class DaisyDosTests {
 
     @Test("DaisyDosError provides user-friendly messages")
     func testDaisyDosErrorUserMessages() async throws {
+        let container = try TestHelpers.createActorTestContainer()
         let tagLimitError = DaisyDosError.tagLimitExceeded
 
         #expect(tagLimitError.userMessage == "Too many tags")
@@ -226,6 +227,7 @@ final class DaisyDosTests {
 
     @Test("ErrorTransformer safely wrapper works correctly")
     func testErrorTransformerSafelyWrapper() async throws {
+        let container = try TestHelpers.createActorTestContainer()
         // Test successful operation
         let successResult = ErrorTransformer.safely(
             operation: "test operation",
@@ -261,9 +263,10 @@ final class DaisyDosTests {
 
     @Test("Environment injection works with @Observable managers")
     func testEnvironmentInjectionPattern() async throws {
-        let taskManager = TaskManager(modelContext: container.mainContext)
-        let habitManager = HabitManager(modelContext: container.mainContext)
-        let tagManager = TagManager(modelContext: container.mainContext)
+        let container = try TestHelpers.createActorTestContainer()
+        let taskManager = TaskManager(modelContext: ModelContext(container))
+        let habitManager = HabitManager(modelContext: ModelContext(container))
+        let tagManager = TagManager(modelContext: ModelContext(container))
 
         // Verify managers can be created and used
         #expect(taskManager.taskCount == 0)
@@ -297,6 +300,7 @@ final class DaisyDosTests {
 
     @Test("SwiftData schema and migration plan work correctly")
     func testSwiftDataSchemaIntegration() async throws {
+        let container = try TestHelpers.createActorTestContainer()
         // Test schema definition
         let schemaModels = DaisyDosSchemaV3.models
         #expect(schemaModels.count == 7) // Task, Habit, Tag, TaskAttachment, HabitCompletion, HabitStreak, HabitSkip
@@ -307,22 +311,22 @@ final class DaisyDosTests {
         #expect(DaisyDosMigrationPlan.stages.isEmpty) // No migrations - V3 is baseline
 
         // Test container works with schema
-        #expect(container.mainContext != nil)
+        #expect(ModelContext(container) != nil)
 
         // Test all model types can be created
         let task = Task(title: "Schema Test Task")
         let habit = Habit(title: "Schema Test Habit")
         let tag = Tag(name: "Schema Test Tag")
 
-        container.mainContext.insert(task)
-        container.mainContext.insert(habit)
-        container.mainContext.insert(tag)
+        ModelContext(container).insert(task)
+        ModelContext(container).insert(habit)
+        ModelContext(container).insert(tag)
 
-        try container.mainContext.save()
+        try ModelContext(container).save()
 
         // Verify persistence worked
         let taskDescriptor = FetchDescriptor<Task>()
-        let fetchedTasks = try container.mainContext.fetch(taskDescriptor)
+        let fetchedTasks = try ModelContext(container).fetch(taskDescriptor)
         #expect(fetchedTasks.count == 1)
         #expect(fetchedTasks.first?.title == "Schema Test Task")
     }
@@ -331,7 +335,8 @@ final class DaisyDosTests {
 
     @Test("Performance baselines are met")
     func testPerformanceBaselines() async throws {
-        let taskManager = TaskManager(modelContext: container.mainContext)
+        let container = try TestHelpers.createActorTestContainer()
+        let taskManager = TaskManager(modelContext: ModelContext(container))
 
         let startTime = CFAbsoluteTimeGetCurrent()
 
@@ -360,8 +365,9 @@ final class DaisyDosTests {
 
     @Test("Manager error handling preserves data integrity")
     func testManagerErrorHandling() async throws {
-        let taskManager = TaskManager(modelContext: container.mainContext)
-        let tagManager = TagManager(modelContext: container.mainContext)
+        let container = try TestHelpers.createActorTestContainer()
+        let taskManager = TaskManager(modelContext: ModelContext(container))
+        let tagManager = TagManager(modelContext: ModelContext(container))
 
         // Test validation error doesn't corrupt state
         let initialCount = taskManager.taskCount
