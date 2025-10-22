@@ -11,10 +11,17 @@ import SwiftData
 import Foundation
 @testable import DaisyDos
 
-/// Test suite validating TaskDataActor provides thread-safe, isolated data operations
-/// Pattern: Struct + Local Container for perfect test isolation
-@Suite("Task Data Actor - CRUD Operations", .serialized)
-struct TaskActorTests {
+/// Parent suite to ensure all test suites run serially (not in parallel)
+/// This prevents multiple ModelContainers from being created simultaneously
+@Suite(.serialized)
+struct AllTests {
+}
+
+extension AllTests {
+    /// Test suite validating TaskDataActor provides thread-safe, isolated data operations
+    /// Pattern: Struct + Local Container for perfect test isolation
+    @Suite("Task Data Actor - CRUD Operations", .serialized)
+    struct TaskActorTests {
 
     // MARK: - Create Operations
 
@@ -249,4 +256,5 @@ struct TaskActorTests {
         let count = try await actor.taskCount()
         #expect(count == 2)
     }
+}
 }

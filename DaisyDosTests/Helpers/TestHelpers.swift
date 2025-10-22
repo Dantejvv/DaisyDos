@@ -70,18 +70,12 @@ enum TestHelpers {
     /// - Returns: Fresh in-memory ModelContainer with all models
     /// - Throws: ModelContainer initialization errors
     static func createActorTestContainer() throws -> ModelContainer {
-        let schema = Schema([
-            Task.self,
-            Tag.self,
-            TaskAttachment.self,
-            Habit.self,
-            HabitCompletion.self,
-            HabitStreak.self,
-            HabitSkip.self,
-            TaskLogEntry.self
-        ])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(for: schema, configurations: config)
+        // Use the simpler ModelContainer initializer that takes model types directly
+        return try ModelContainer(
+            for: Task.self, Tag.self, TaskAttachment.self, Habit.self,
+            HabitCompletion.self, HabitStreak.self, HabitSkip.self, TaskLogEntry.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
     }
 
     /// Creates an in-memory ModelContainer with specific models

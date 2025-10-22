@@ -10,11 +10,12 @@ import SwiftData
 import Foundation
 @testable import DaisyDos
 
-/// Architectural validation tests for Phase 1.0 completion
-/// Tests core patterns: @Observable managers, SwiftData models, error handling
-/// Pattern: Struct + Local Container for perfect test isolation
-@Suite(.serialized)
-struct DaisyDosTests {
+extension AllTests {
+    /// Architectural validation tests for Phase 1.0 completion
+    /// Tests core patterns: @Observable managers, SwiftData models, error handling
+    /// Pattern: Struct + Local Container for perfect test isolation
+    @Suite(.serialized)
+    struct DaisyDosArchitectureTests {
 
     // MARK: - @Observable Manager Pattern Tests
 
@@ -416,4 +417,5 @@ struct DaisyDosTests {
             #expect(Bool(false), "Valid task creation should succeed")
         }
     }
+}
 }
