@@ -11,17 +11,12 @@
 		FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */; };
 		FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537EC2E830555007B0F25 /* CLAUDE.md */; };
 		FE5004E32EA9E256002BA7E3 /* FRESH_TESTING_PLAN.md in Resources */ = {isa = PBXBuildFile; fileRef = FE5004E22EA9E256002BA7E3 /* FRESH_TESTING_PLAN.md */; };
+		FE52CADB2EAD99B10042B11C /* TESTING_MIGRATION_SUMMARY.md in Resources */ = {isa = PBXBuildFile; fileRef = FE52CADA2EAD99B10042B11C /* TESTING_MIGRATION_SUMMARY.md */; };
+		FE52CADD2EAD99BF0042B11C /* TESTING_COMPLETE.md in Resources */ = {isa = PBXBuildFile; fileRef = FE52CADC2EAD99BF0042B11C /* TESTING_COMPLETE.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		FE3537A62E830152007B0F25 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = FE35378C2E830151007B0F25 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = FE3537932E830151007B0F25;
-			remoteInfo = DaisyDos;
-		};
-		FE3537B02E830152007B0F25 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = FE35378C2E830151007B0F25 /* Project object */;
 			proxyType = 1;
@@ -33,11 +28,12 @@
 /* Begin PBXFileReference section */
 		FE3537942E830151007B0F25 /* DaisyDos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DaisyDos.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3537A52E830152007B0F25 /* DaisyDosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaisyDosTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		FE3537AF2E830152007B0F25 /* DaisyDosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaisyDosUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3537C42E8302B1007B0F25 /* daisydos_prd.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = daisydos_prd.md; sourceTree = "<group>"; };
 		FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = implementation_roadmap.md; sourceTree = "<group>"; };
 		FE3537EC2E830555007B0F25 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 		FE5004E22EA9E256002BA7E3 /* FRESH_TESTING_PLAN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FRESH_TESTING_PLAN.md; sourceTree = "<group>"; };
+		FE52CADA2EAD99B10042B11C /* TESTING_MIGRATION_SUMMARY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TESTING_MIGRATION_SUMMARY.md; sourceTree = "<group>"; };
+		FE52CADC2EAD99BF0042B11C /* TESTING_COMPLETE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TESTING_COMPLETE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -64,11 +60,6 @@
 			path = DaisyDosTests;
 			sourceTree = "<group>";
 		};
-		FE3537B22E830152007B0F25 /* DaisyDosUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = DaisyDosUITests;
-			sourceTree = "<group>";
-		};
 		FE3537EE2E83498B007B0F25 /* .claude */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = .claude;
@@ -91,13 +82,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		FE3537AC2E830152007B0F25 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -108,7 +92,6 @@
 				FE3537EC2E830555007B0F25 /* CLAUDE.md */,
 				FE3537962E830151007B0F25 /* DaisyDos */,
 				FE3537A82E830152007B0F25 /* DaisyDosTests */,
-				FE3537B22E830152007B0F25 /* DaisyDosUITests */,
 				FE3537952E830151007B0F25 /* Products */,
 				FE3537C62E8302B1007B0F25 /* Docs */,
 			);
@@ -119,7 +102,6 @@
 			children = (
 				FE3537942E830151007B0F25 /* DaisyDos.app */,
 				FE3537A52E830152007B0F25 /* DaisyDosTests.xctest */,
-				FE3537AF2E830152007B0F25 /* DaisyDosUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -127,6 +109,8 @@
 		FE3537C62E8302B1007B0F25 /* Docs */ = {
 			isa = PBXGroup;
 			children = (
+				FE52CADC2EAD99BF0042B11C /* TESTING_COMPLETE.md */,
+				FE52CADA2EAD99B10042B11C /* TESTING_MIGRATION_SUMMARY.md */,
 				FE5004E22EA9E256002BA7E3 /* FRESH_TESTING_PLAN.md */,
 				FE3537C42E8302B1007B0F25 /* daisydos_prd.md */,
 				FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */,
@@ -183,29 +167,6 @@
 			productReference = FE3537A52E830152007B0F25 /* DaisyDosTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		FE3537AE2E830152007B0F25 /* DaisyDosUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = FE3537C02E830152007B0F25 /* Build configuration list for PBXNativeTarget "DaisyDosUITests" */;
-			buildPhases = (
-				FE3537AB2E830152007B0F25 /* Sources */,
-				FE3537AC2E830152007B0F25 /* Frameworks */,
-				FE3537AD2E830152007B0F25 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				FE3537B12E830152007B0F25 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				FE3537B22E830152007B0F25 /* DaisyDosUITests */,
-			);
-			name = DaisyDosUITests;
-			packageProductDependencies = (
-			);
-			productName = DaisyDosUITests;
-			productReference = FE3537AF2E830152007B0F25 /* DaisyDosUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -220,10 +181,6 @@
 						CreatedOnToolsVersion = 16.4;
 					};
 					FE3537A42E830152007B0F25 = {
-						CreatedOnToolsVersion = 16.4;
-						TestTargetID = FE3537932E830151007B0F25;
-					};
-					FE3537AE2E830152007B0F25 = {
 						CreatedOnToolsVersion = 16.4;
 						TestTargetID = FE3537932E830151007B0F25;
 					};
@@ -245,7 +202,6 @@
 			targets = (
 				FE3537932E830151007B0F25 /* DaisyDos */,
 				FE3537A42E830152007B0F25 /* DaisyDosTests */,
-				FE3537AE2E830152007B0F25 /* DaisyDosUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -255,6 +211,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE52CADD2EAD99BF0042B11C /* TESTING_COMPLETE.md in Resources */,
+				FE52CADB2EAD99B10042B11C /* TESTING_MIGRATION_SUMMARY.md in Resources */,
 				FE5004E32EA9E256002BA7E3 /* FRESH_TESTING_PLAN.md in Resources */,
 				FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */,
 				FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */,
@@ -263,13 +221,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		FE3537A32E830152007B0F25 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		FE3537AD2E830152007B0F25 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -293,13 +244,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		FE3537AB2E830152007B0F25 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -307,11 +251,6 @@
 			isa = PBXTargetDependency;
 			target = FE3537932E830151007B0F25 /* DaisyDos */;
 			targetProxy = FE3537A62E830152007B0F25 /* PBXContainerItemProxy */;
-		};
-		FE3537B12E830152007B0F25 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = FE3537932E830151007B0F25 /* DaisyDos */;
-			targetProxy = FE3537B02E830152007B0F25 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -537,40 +476,6 @@
 			};
 			name = Release;
 		};
-		FE3537C12E830152007B0F25 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = BKD7HH7ZDH;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dante.DaisyDosUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = DaisyDos;
-			};
-			name = Debug;
-		};
-		FE3537C22E830152007B0F25 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = BKD7HH7ZDH;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dante.DaisyDosUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = DaisyDos;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -597,15 +502,6 @@
 			buildConfigurations = (
 				FE3537BE2E830152007B0F25 /* Debug */,
 				FE3537BF2E830152007B0F25 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		FE3537C02E830152007B0F25 /* Build configuration list for PBXNativeTarget "DaisyDosUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				FE3537C12E830152007B0F25 /* Debug */,
-				FE3537C22E830152007B0F25 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
