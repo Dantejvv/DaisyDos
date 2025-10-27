@@ -244,14 +244,12 @@ class HabitManager {
             return allHabits
         }
 
-        let descriptor = FetchDescriptor<Habit>(
-            predicate: #Predicate<Habit> { habit in
-                habit.title.localizedStandardContains(query) ||
-                habit.habitDescription.localizedStandardContains(query)
-            },
-            sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
-        )
-        return (try? modelContext.fetch(descriptor)) ?? []
+        // Manual filtering because habitDescription is a computed property
+        // and can't be used in #Predicate
+        return allHabits.filter { habit in
+            habit.title.localizedStandardContains(query) ||
+            habit.habitDescription.localizedStandardContains(query)
+        }
     }
 
     func habitsWithTag(_ tag: Tag) -> [Habit] {

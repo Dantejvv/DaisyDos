@@ -308,49 +308,30 @@ Refer to `/Docs/implementation_roadmap.md` for detailed development tasks and `/
 
 **Status:** ✅ **COMPLETE** - 118 tests, 100% pass rate, 0.226s execution time
 
-**Test Organization:**
-```
-DaisyDosTests/
-├── Helpers/
-│   └── TestHelpers.swift (Production-ready helpers with DaisyDosSchemaV4)
-├── Unit/
-│   ├── InfrastructureTests.swift (4 tests - container validation)
-│   ├── Models/
-│   │   ├── RecurrenceRuleTests.swift (35 tests - date calculations)
-│   │   ├── HabitModelTests.swift (20 tests - streak logic)
-│   │   ├── HabitSkipTests.swift (15 tests - impact analysis)
-│   │   └── TaskModelTests.swift (24 tests - completion cascading)
-│   └── Services/
-│       └── TaskManagerTests.swift (20 tests - CRUD operations)
-└── Documentation/
-    └── TestingGuide.md (Comprehensive testing guide)
-```
-
-**Running Tests:**
-- **All tests:** `Cmd+U` in Xcode or `xcodebuild test -scheme DaisyDos -destination 'platform=iOS Simulator,name=iPhone 16'`
-- **Specific suite:** `xcodebuild test -scheme DaisyDos -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:DaisyDosTests/RecurrenceRuleTests`
-- **Test Navigator:** `Cmd+6` in Xcode
-
-**Framework:** 100% Swift Testing (modern @Test macro, #expect, pattern matching)
+**Framework:** Swift Testing (modern @Test macro, #expect assertions)
 
 **Test Coverage:**
-- ✅ **118 tests** covering critical business logic
-- ✅ **RecurrenceRule (35 tests):** Daily/weekly/monthly/yearly patterns, leap years, boundaries
-- ✅ **Habit Model (20 tests):** Streak calculations, completion tracking, tag management
-- ✅ **Task Model (24 tests):** Parent-child completion cascading, subtask relationships
-- ✅ **TaskManager (20 tests):** CRUD operations, filtering, search, tag management
-- ✅ **HabitSkip (15 tests):** Impact calculation (6 severity levels), frequency analysis
-- ✅ **Infrastructure (4 tests):** Container creation, test isolation verification
+- RecurrenceRule: 35 tests (date calculations, leap years, boundaries)
+- Habit Model: 20 tests (streak logic, completion tracking)
+- Task Model: 24 tests (completion cascading, relationships)
+- TaskManager: 20 tests (CRUD operations, filtering)
+- HabitSkip: 15 tests (impact analysis)
+- Infrastructure: 4 tests (container validation, isolation)
 
-**Performance:**
-- ⚡ **0.226 seconds** for all 118 tests (~1.9ms per test)
-- 🚀 **Perfect isolation** - Fresh in-memory container per test
-- 🔄 **Parallel execution** - Tests run concurrently by default
-- 💯 **100% reliability** - No flaky tests
+**Running Tests:**
+```bash
+# All tests
+xcodebuild test -scheme DaisyDos -destination 'platform=iOS Simulator,name=iPhone 16'
 
-**Key Patterns:**
+# Specific suite
+xcodebuild test -scheme DaisyDos -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:DaisyDosTests/RecurrenceRuleTests
+
+# In Xcode: Cmd+U (all tests) or Cmd+6 (Test Navigator)
+```
+
+**Key Testing Pattern:**
 ```swift
-// Modern Swift Testing pattern
 @Suite("Feature Tests")
 struct FeatureTests {
     @Test("Test description")
@@ -359,45 +340,31 @@ struct FeatureTests {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
 
-        // Test logic
-        let manager = TaskManager(modelContext: context)
-        let result = manager.createTask(title: "Test")
+        let manager = FeatureManager(modelContext: context)
+        let result = manager.performOperation()
 
         // Pattern matching for Result types
-        guard case .success(let task) = result else {
-            Issue.record("Failed to create task")
+        guard case .success(let value) = result else {
+            Issue.record("Failed to perform operation")
             return
         }
 
-        #expect(task.title == "Test")
+        #expect(value.isValid)
     }
 }
 ```
 
-**Critical Edge Cases Tested:**
-- ✅ Feb 29 (leap) → Feb 28 (non-leap) transitions
-- ✅ Month boundaries (Jan 31 → Feb 28/29)
-- ✅ Year boundaries (Dec 31 → Jan 1)
-- ✅ Parent→Subtask completion cascading (bidirectional)
-- ✅ Multiple completions same day
-- ✅ Out-of-order completion entries
-- ✅ Tag limit enforcement (3 tags max)
-- ✅ Skip impact calculation (6 severity levels)
+**Best Practices:**
+- ✅ Struct-based test suites (value semantics, isolation)
+- ✅ Fresh container per test (no shared state)
+- ✅ Pattern match Result types (`guard case .success`)
+- ✅ Use #expect assertions (not XCTAssert)
+- ❌ Don't store containers in properties
+- ❌ Don't share state between tests
 
-**Documentation:**
-- 📚 `/Docs/TESTING_MIGRATION_SUMMARY.md` - Complete migration report
-- 📚 `/Docs/FRESH_TESTING_PLAN.md` - Testing strategy and patterns
-- 📚 `/DaisyDosTests/Documentation/TestingGuide.md` - How to write tests
+**Performance:** 0.226s for 118 tests (~1.9ms per test), perfect isolation, zero flaky tests
 
-**Best Practices Established:**
-- ✅ Struct-based test suites (value semantics)
-- ✅ Local container creation per test (no shared state)
-- ✅ Pattern matching for Result types (`guard case .success`)
-- ✅ CloudKit explicitly disabled (`.none`) for testing
-- ✅ DaisyDosSchemaV4 integration (same as production)
-- ✅ Parameterized tests for edge cases
-- ✅ Clear test names (self-documenting)
-- ✅ Issue.record() for descriptive failures
+**Documentation:** See `/DaisyDosTests/Documentation/TestingGuide.md` for comprehensive patterns, examples, and how-to guides
 
 ---
 

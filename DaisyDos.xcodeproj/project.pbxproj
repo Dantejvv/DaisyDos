@@ -10,9 +10,6 @@
 		FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C42E8302B1007B0F25 /* daisydos_prd.md */; };
 		FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */; };
 		FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537EC2E830555007B0F25 /* CLAUDE.md */; };
-		FE5004E32EA9E256002BA7E3 /* FRESH_TESTING_PLAN.md in Resources */ = {isa = PBXBuildFile; fileRef = FE5004E22EA9E256002BA7E3 /* FRESH_TESTING_PLAN.md */; };
-		FE52CADB2EAD99B10042B11C /* TESTING_MIGRATION_SUMMARY.md in Resources */ = {isa = PBXBuildFile; fileRef = FE52CADA2EAD99B10042B11C /* TESTING_MIGRATION_SUMMARY.md */; };
-		FE52CADD2EAD99BF0042B11C /* TESTING_COMPLETE.md in Resources */ = {isa = PBXBuildFile; fileRef = FE52CADC2EAD99BF0042B11C /* TESTING_COMPLETE.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,9 +28,6 @@
 		FE3537C42E8302B1007B0F25 /* daisydos_prd.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = daisydos_prd.md; sourceTree = "<group>"; };
 		FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = implementation_roadmap.md; sourceTree = "<group>"; };
 		FE3537EC2E830555007B0F25 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
-		FE5004E22EA9E256002BA7E3 /* FRESH_TESTING_PLAN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FRESH_TESTING_PLAN.md; sourceTree = "<group>"; };
-		FE52CADA2EAD99B10042B11C /* TESTING_MIGRATION_SUMMARY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TESTING_MIGRATION_SUMMARY.md; sourceTree = "<group>"; };
-		FE52CADC2EAD99BF0042B11C /* TESTING_COMPLETE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TESTING_COMPLETE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -109,9 +103,6 @@
 		FE3537C62E8302B1007B0F25 /* Docs */ = {
 			isa = PBXGroup;
 			children = (
-				FE52CADC2EAD99BF0042B11C /* TESTING_COMPLETE.md */,
-				FE52CADA2EAD99B10042B11C /* TESTING_MIGRATION_SUMMARY.md */,
-				FE5004E22EA9E256002BA7E3 /* FRESH_TESTING_PLAN.md */,
 				FE3537C42E8302B1007B0F25 /* daisydos_prd.md */,
 				FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */,
 			);
@@ -211,9 +202,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FE52CADD2EAD99BF0042B11C /* TESTING_COMPLETE.md in Resources */,
-				FE52CADB2EAD99B10042B11C /* TESTING_MIGRATION_SUMMARY.md in Resources */,
-				FE5004E32EA9E256002BA7E3 /* FRESH_TESTING_PLAN.md in Resources */,
 				FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */,
 				FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */,
 				FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */,

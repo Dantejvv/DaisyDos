@@ -1171,15 +1171,18 @@ func scheduleTaskReminder(for task: Task, at date: Date) {
 - [X] **Advanced Features**: HabitSkip impact analysis (15 tests)
 - [X] **Infrastructure Validation**: Container creation, test isolation (4 tests)
 - [X] **Edge Case Coverage**: Leap years, month/year boundaries, completion cascading
-- [X] **Documentation**: TESTING_MIGRATION_SUMMARY.md, TestingGuide.md, FRESH_TESTING_PLAN.md
+- [X] **Documentation**: Comprehensive TestingGuide.md with patterns and examples
+- [X] **Best Practices**: Struct-based suites, fresh containers per test, pattern matching
 
 **Future Testing Enhancements:**
-- [ ] **Phase 2.0**: Fix TaskManager search/duplicate tests (2 disabled tests)
-- [ ] **Phase 3.0**: HabitManager tests (~25-30 tests) for analytics and streak management
-- [ ] **Phase 4.0**: TagManager tests (~15-20 tests) for validation and usage analytics
-- [ ] **Phase 5.0**: TaskLogEntry tests (~8-10 tests) for archival and housekeeping
-- [ ] **Phase 6.0**: Integration tests for complex workflows (Today View, multi-feature)
-- [ ] **Ongoing**: UI tests for critical flows, performance benchmarks, snapshot testing
+- [ ] Fix TaskManager search/duplicate tests (2 disabled tests)
+- [ ] Add HabitManager tests (~25-30 tests) for analytics and streak management
+- [ ] Add TagManager tests (~15-20 tests) for validation and usage analytics
+- [ ] Add TaskLogEntry tests (~8-10 tests) for archival and housekeeping
+- [ ] Integration tests for complex workflows (Today View, multi-feature)
+- [ ] UI tests for critical flows, performance benchmarks, snapshot testing
+
+**Reference:** See `/DaisyDosTests/Documentation/TestingGuide.md` for complete testing guide
 
 ### Cross-Phase Dependencies & Blockers
 

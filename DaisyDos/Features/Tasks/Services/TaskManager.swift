@@ -284,16 +284,12 @@ class TaskManager {
                 return allTasks
             }
 
-            let descriptor = FetchDescriptor<Task>(
-                predicate: #Predicate<Task> { task in
-                    task.parentTask == nil && (
-                        task.title.localizedStandardContains(trimmedQuery) ||
-                        task.taskDescription.localizedStandardContains(trimmedQuery)
-                    )
-                },
-                sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
-            )
-            return try modelContext.fetch(descriptor)
+            // Manual filtering because taskDescription is a computed property
+            // and can't be used in #Predicate
+            return allTasks.filter { task in
+                task.title.localizedStandardContains(trimmedQuery) ||
+                task.taskDescription.localizedStandardContains(trimmedQuery)
+            }
         }
     }
 
