@@ -3,201 +3,26 @@
 //  DaisyDos
 //
 //  Created by Claude Code on 9/29/25.
+//  Habit-specific undo toast - now uses generic CompletionUndoToast component
 //
 
 import SwiftUI
 import SwiftData
 
-struct HabitCompletionUndoToast: View {
-    // MARK: - Properties
+// MARK: - Type Aliases (for backwards compatibility)
 
-    let habit: Habit
-    let onUndo: () -> Void
-    @Binding var isVisible: Bool
+/// Type alias for HabitCompletionUndoToast using the generic component
+typealias HabitCompletionUndoToast = CompletionUndoToast<Habit>
 
-    @State private var timeRemaining: Double = 5.0
-    @State private var timer: Timer?
+/// Type alias for HabitCompletionToastManager using the generic component
+/// Already defined in CompletionUndoToast.swift
 
-    // MARK: - Body
-
-    var body: some View {
-        HStack(spacing: 12) {
-            // Success Icon
-            Image(systemName: "checkmark.circle.fill")
-                .font(.title2)
-                .foregroundColor(.daisySuccess)
-
-            // Message
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Habit Completed!")
-                    .font(.headline)
-                    .foregroundColor(.daisyText)
-
-                Text(habit.title)
-                    .font(.caption)
-                    .foregroundColor(.daisyTextSecondary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            // Progress Ring
-            ZStack {
-                Circle()
-                    .stroke(Color.daisyTextSecondary.opacity(0.3), lineWidth: 2)
-
-                Circle()
-                    .trim(from: 0, to: timeRemaining / 5.0)
-                    .stroke(Color.daisySuccess, lineWidth: 2)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 0.1), value: timeRemaining)
-
-                Text("\(Int(timeRemaining) + 1)")
-                    .font(.caption2.weight(.medium))
-                    .foregroundColor(.daisyTextSecondary)
-            }
-            .frame(width: 24, height: 24)
-
-            // Undo Button
-            Button(action: {
-                performUndo()
-            }) {
-                Text("Undo")
-                    .font(.caption.weight(.medium))
-                    .foregroundColor(.daisyHabit)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(
-                        Color.daisyHabit.opacity(0.1),
-                        in: RoundedRectangle(cornerRadius: 6)
-                    )
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            Color.daisySurface,
-            in: RoundedRectangle(cornerRadius: 12)
-        )
-        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-        .offset(y: isVisible ? 0 : 100)
-        .opacity(isVisible ? 1 : 0)
-        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isVisible)
-        .onAppear {
-            startTimer()
-        }
-        .onDisappear {
-            stopTimer()
-        }
-    }
-
-    // MARK: - Methods
-
-    private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            timeRemaining -= 0.1
-            if timeRemaining <= 0 {
-                hideToast()
-            }
-        }
-    }
-
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-    }
-
-    private func performUndo() {
-        stopTimer()
-        onUndo()
-        hideToast()
-    }
-
-    private func hideToast() {
-        withAnimation(.easeOut(duration: 0.3)) {
-            isVisible = false
-        }
-    }
-}
-
-// MARK: - Toast Manager
-
-@Observable
-class HabitCompletionToastManager {
-    private(set) var activeToast: ToastItem?
-    private var autoHideWorkItem: DispatchWorkItem?
-
-    struct ToastItem: Identifiable {
-        let id = UUID()
-        let habit: Habit
-        let onUndo: () -> Void
-    }
-
-    func showCompletionToast(for habit: Habit, onUndo: @escaping () -> Void) {
-        // Cancel any existing auto-hide timer
-        autoHideWorkItem?.cancel()
-
-        activeToast = ToastItem(habit: habit, onUndo: onUndo)
-
-        // Create new auto-hide timer
-        autoHideWorkItem = DispatchWorkItem { [weak self] in
-            self?.hideToast()
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: autoHideWorkItem!)
-    }
-
-    func hideToast() {
-        // Cancel the auto-hide timer
-        autoHideWorkItem?.cancel()
-        autoHideWorkItem = nil
-
-        activeToast = nil
-    }
-}
-
-// MARK: - Toast Container View
-
-struct HabitCompletionToastContainer<Content: View>: View {
-    @State private var toastManager = HabitCompletionToastManager()
-    private let content: () -> Content
-
-    init(@ViewBuilder content: @escaping () -> Content) {
-        self.content = content
-    }
-
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            content()
-                .environment(toastManager)
-
-            if let toast = toastManager.activeToast {
-                VStack {
-                    Spacer()
-
-                    HabitCompletionUndoToast(
-                        habit: toast.habit,
-                        onUndo: {
-                            toast.onUndo()
-                            toastManager.hideToast()
-                        },
-                        isVisible: .constant(true)
-                    )
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 100) // Account for tab bar
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .zIndex(1000)
-            }
-        }
-        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: toastManager.activeToast?.id)
-    }
-}
+/// Type alias for HabitCompletionToastContainer using the generic component
+/// Already defined in CompletionUndoToast.swift
 
 // MARK: - Preview
 
-#Preview("Undo Toast") {
+#Preview("Habit Undo Toast") {
     struct PreviewWrapper: View {
         var body: some View {
             let container = try! ModelContainer(
@@ -209,14 +34,16 @@ struct HabitCompletionToastContainer<Content: View>: View {
             let habit = Habit(
                 title: "Morning Exercise",
                 habitDescription: "30 minutes of cardio",
+                recurrenceRule: RecurrenceRule(frequency: .daily, interval: 1)
             )
             context.insert(habit)
 
             return VStack {
                 Spacer()
 
-                HabitCompletionUndoToast(
-                    habit: habit,
+                CompletionUndoToast(
+                    entity: habit,
+                    config: .habit(),
                     onUndo: {
                         print("Undo tapped")
                     },
@@ -234,8 +61,8 @@ struct HabitCompletionToastContainer<Content: View>: View {
     return PreviewWrapper()
 }
 
-#Preview("Toast Container") {
-    HabitCompletionToastContainer {
+#Preview("Habit Toast Container") {
+    CompletionToastContainer(config: .habit()) {
         VStack {
             Text("Main Content")
                 .font(.title)

@@ -72,9 +72,6 @@ class Task {
     @Relationship(inverse: \Task.subtasks)
     var parentTask: Task?
 
-    @Relationship(deleteRule: .cascade)
-    var attachments: [TaskAttachment] = []
-
     // MARK: - Initializers
 
     init(
@@ -327,42 +324,6 @@ class Task {
         _ = addSubtask(subtask)
         return subtask
     }
-
-    // MARK: - Attachment Management
-
-    var attachmentCount: Int {
-        attachments.count
-    }
-
-    var totalAttachmentSize: Int64 {
-        attachments.reduce(0) { $0 + $1.fileSizeBytes }
-    }
-
-    var canAddAttachment: Bool {
-        return totalAttachmentSize < TaskAttachment.maxTotalSizePerTask
-    }
-
-    func addAttachment(_ attachment: TaskAttachment) -> Bool {
-        guard canAddAttachment,
-              totalAttachmentSize + attachment.fileSizeBytes <= TaskAttachment.maxTotalSizePerTask else {
-            return false
-        }
-
-        attachments.append(attachment)
-        attachment.task = self
-        modifiedDate = Date()
-        return true
-    }
-
-    func removeAttachment(_ attachment: TaskAttachment) {
-        attachments.removeAll { $0.id == attachment.id }
-        attachment.task = nil
-        modifiedDate = Date()
-
-        // Clean up the physical file
-        _ = attachment.deleteFile()
-    }
-
 
     // MARK: - Recurrence Management
 

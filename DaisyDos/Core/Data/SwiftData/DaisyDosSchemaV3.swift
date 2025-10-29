@@ -14,7 +14,7 @@ enum DaisyDosSchemaV3: VersionedSchema {
     static var versionIdentifier = Schema.Version(3, 0, 0)
 
     static var models: [any PersistentModel.Type] {
-        [Task.self, Habit.self, Tag.self, TaskAttachment.self, HabitCompletion.self, HabitStreak.self, HabitSkip.self]
+        [Task.self, Habit.self, Tag.self, HabitCompletion.self, HabitStreak.self, HabitSkip.self]
     }
 
 }

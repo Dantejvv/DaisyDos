@@ -34,9 +34,6 @@ struct TaskShareSheet: View {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         textSummarySection
-                        if task.attachmentCount > 0 {
-                            attachmentsSection
-                        }
                         shareOptionsSection
                     }
                     .padding()
@@ -178,76 +175,6 @@ struct TaskShareSheet: View {
         .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
     }
 
-    // MARK: - Attachments Section
-
-    @ViewBuilder
-    private var attachmentsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Attachments")
-                    .font(.headline)
-                    .foregroundColor(.daisyText)
-
-                Spacer()
-
-                Text("\(task.attachmentCount)")
-                    .font(.caption)
-                    .foregroundColor(.daisyTextSecondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(.regularMaterial, in: Capsule())
-            }
-
-            if includeAttachments {
-                VStack(spacing: 8) {
-                    ForEach(Array(task.attachments.prefix(3)), id: \.id) { attachment in
-                        HStack {
-                            attachment.displayIcon
-                                .font(.title3)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(attachment.displayName)
-                                    .font(.subheadline)
-                                    .foregroundColor(.daisyText)
-                                    .lineLimit(1)
-
-                                Text("\(attachment.attachmentType.displayName) • \(attachment.formattedFileSize)")
-                                    .font(.caption)
-                                    .foregroundColor(.daisyTextSecondary)
-                            }
-
-                            Spacer()
-
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.subheadline)
-                                .foregroundColor(.daisySuccess)
-                        }
-                    }
-
-                    if task.attachmentCount > 3 {
-                        Text("+ \(task.attachmentCount - 3) more files will be included")
-                            .font(.caption)
-                            .foregroundColor(.daisyTextSecondary)
-                    }
-                }
-            } else {
-                HStack {
-                    Image(systemName: "paperclip")
-                        .font(.title3)
-                        .foregroundColor(.daisyTextSecondary)
-
-                    Text("Attachments will not be included in text share")
-                        .font(.subheadline)
-                        .foregroundColor(.daisyTextSecondary)
-
-                    Spacer()
-                }
-            }
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
-    }
-
     // MARK: - Share Options Section
 
     @ViewBuilder
@@ -266,7 +193,7 @@ struct TaskShareSheet: View {
                     isSelected: !includeAttachments
                 )
 
-                if task.attachmentCount > 0 {
+                if 0 > 0 {
                     ShareOptionCard(
                         title: "With Attachments",
                         subtitle: "Include all files and documents",
@@ -352,15 +279,10 @@ struct TaskShareSheet: View {
             let textSummary = generateTextSummary()
             items.append(textSummary)
 
-            // Add attachments if requested
-            if includeAttachments {
-                for attachment in task.attachments {
-                    if let fileURL = attachment.fullFilePath,
-                       FileManager.default.fileExists(atPath: fileURL.path) {
-                        items.append(fileURL)
-                    }
-                }
-            }
+            // Attachments removed in MVP simplification
+            // if includeAttachments {
+            //     // Attachment sharing would go here
+            // }
 
             await MainActor.run {
                 shareItems = items
@@ -411,8 +333,8 @@ struct TaskShareSheet: View {
         }
 
         // Attachments
-        if task.attachmentCount > 0 {
-            summary += "\n📎 \(task.attachmentCount) attachment\(task.attachmentCount == 1 ? "" : "s")"
+        if 0 > 0 {
+            summary += "\n📎 \(0) attachment\(0 == 1 ? "" : "s")"
             if !includeAttachments {
                 summary += " (not included in this share)"
             }
@@ -587,8 +509,8 @@ struct TaskShareData: Transferable {
             summary += "\n🏷️ Tags: \(task.tags.map { $0.name }.joined(separator: ", "))\n"
         }
 
-        if task.attachmentCount > 0 {
-            summary += "\n📎 \(task.attachmentCount) attachment\(task.attachmentCount == 1 ? "" : "s")"
+        if 0 > 0 {
+            summary += "\n📎 \(0) attachment\(0 == 1 ? "" : "s")"
             if !includeAttachments {
                 summary += " (not included in this share)"
             }
@@ -623,19 +545,3 @@ struct TaskShareData: Transferable {
         .modelContainer(container)
 }
 
-#Preview("With Attachments") {
-    let container = try! ModelContainer(
-        for: Task.self, Tag.self, TaskAttachment.self,
-        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-    )
-
-    let task = Task(title: "Project Documentation")
-    _ = task.addAttachment(.sampleDocument)
-    _ = task.addAttachment(.sampleImage)
-
-    container.mainContext.insert(task)
-    try! container.mainContext.save()
-
-    return TaskShareSheet(task: task, includeAttachments: true)
-        .modelContainer(container)
-}

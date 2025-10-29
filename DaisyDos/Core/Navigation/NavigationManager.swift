@@ -22,7 +22,6 @@ class NavigationManager {
     var tasksPath = NavigationPath()
     var habitsPath = NavigationPath()
     var logbookPath = NavigationPath()
-    var tagsPath = NavigationPath()
     var settingsPath = NavigationPath()
 
     // MARK: - Initialization
@@ -45,8 +44,6 @@ class NavigationManager {
             return habitsPath
         case .logbook:
             return logbookPath
-        case .tags:
-            return tagsPath
         case .settings:
             return settingsPath
         }
@@ -74,11 +71,6 @@ class NavigationManager {
             return Binding(
                 get: { self.logbookPath },
                 set: { self.logbookPath = $0 }
-            )
-        case .tags:
-            return Binding(
-                get: { self.tagsPath },
-                set: { self.tagsPath = $0 }
             )
         case .settings:
             return Binding(
@@ -111,8 +103,6 @@ class NavigationManager {
             habitsPath = NavigationPath()
         case .logbook:
             logbookPath = NavigationPath()
-        case .tags:
-            tagsPath = NavigationPath()
         case .settings:
             settingsPath = NavigationPath()
         }

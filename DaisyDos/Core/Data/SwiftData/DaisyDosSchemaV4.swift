@@ -19,7 +19,6 @@ enum DaisyDosSchemaV4: VersionedSchema {
             Task.self,
             Habit.self,
             Tag.self,
-            TaskAttachment.self,
             HabitCompletion.self,
             HabitStreak.self,
             HabitSkip.self,

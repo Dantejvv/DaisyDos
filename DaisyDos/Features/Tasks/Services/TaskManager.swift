@@ -419,39 +419,6 @@ class TaskManager {
 
     // MARK: - Helper Methods
 
-    // MARK: - Attachment Management
-
-    func addAttachment(
-        _ attachment: TaskAttachment,
-        to task: Task
-    ) -> Result<Void, AnyRecoverableError> {
-        return ErrorTransformer.safely(
-            operation: "add attachment",
-            entityType: "task"
-        ) {
-            guard task.addAttachment(attachment) else {
-                throw DaisyDosError.attachmentLimitExceeded
-            }
-
-            modelContext.insert(attachment)
-            try modelContext.save()
-        }
-    }
-
-    func removeAttachment(
-        _ attachment: TaskAttachment,
-        from task: Task
-    ) -> Result<Void, AnyRecoverableError> {
-        return ErrorTransformer.safely(
-            operation: "remove attachment",
-            entityType: "task"
-        ) {
-            task.removeAttachment(attachment)
-            modelContext.delete(attachment)
-            try modelContext.save()
-        }
-    }
-
     // MARK: - Recurrence Management
 
     func processRecurringTasks() -> Result<[Task], AnyRecoverableError> {

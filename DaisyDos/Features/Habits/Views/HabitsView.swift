@@ -112,8 +112,8 @@ struct HabitsView: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
-                        if !isMultiSelectMode && !allHabits.isEmpty {
-                            // Sort picker button
+                        if !isMultiSelectMode {
+                            // Sort picker button - ALWAYS visible
                             Menu {
                                 Text("Sort Habits By")
                                     .font(.headline)
@@ -135,7 +135,7 @@ struct HabitsView: View {
                                     .foregroundColor(.daisyToolbar)
                             }
 
-                            // Section picker button
+                            // Section picker button - ALWAYS visible
                             Menu {
                                 Text("Group Habits By")
                                     .font(.headline)
@@ -459,9 +459,6 @@ struct HabitsView: View {
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .refreshable {
-                // Refresh is handled automatically by @Query
-            }
         }
     }
 
@@ -604,40 +601,29 @@ struct HabitsView: View {
                         habitToDetail = habit
                     }
                 }
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    if !isMultiSelectMode {
-                        Button(role: .destructive, action: {
-                            var transaction = Transaction()
-                            transaction.disablesAnimations = true
-                            withTransaction(transaction) {
-                                habitToDelete = habit
-                            }
-                            // Delay showing confirmation to let overlay render first
-                            DispatchQueue.main.async {
-                                showingDeleteConfirmation = true
-                            }
-                        }) {
-                            Label("Delete", systemImage: "trash")
+                .standardRowSwipeActions(
+                    isMultiSelectMode: isMultiSelectMode,
+                    accentColor: .daisyHabit,
+                    onDelete: {
+                        var transaction = Transaction()
+                        transaction.disablesAnimations = true
+                        withTransaction(transaction) {
+                            habitToDelete = habit
                         }
-
-                        Button(action: {
-                            habitToEdit = habit
-                        }) {
-                            Label("Edit", systemImage: "pencil")
+                        // Delay showing confirmation to let overlay render first
+                        DispatchQueue.main.async {
+                            showingDeleteConfirmation = true
                         }
-                        .tint(.daisyHabit)
-                    }
-                }
-                .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                    if !isMultiSelectMode {
-                        Button(action: {
+                    },
+                    onEdit: {
+                        habitToEdit = habit
+                    },
+                    leadingAction: {
+                        SkipSwipeAction {
                             habitToSkip = habit
-                        }) {
-                            Label("Skip", systemImage: "forward")
                         }
-                        .tint(.orange)
                     }
-                }
+                )
         }
     }
 
@@ -676,58 +662,43 @@ struct HabitsView: View {
 
     @ViewBuilder
     private var bulkActionToolbar: some View {
-        HStack {
-            Text("\(selectedHabits.count) selected")
-                .font(.subheadline)
-                .foregroundColor(.daisyTextSecondary)
-
-            Spacer()
-
-            HStack(spacing: 20) {
-                // Bulk completion
-                Button(action: {
-                    bulkMarkComplete()
-                }) {
-                    Label("Mark Complete", systemImage: "checkmark.circle")
-                        .labelStyle(.iconOnly)
-                        .font(.title3)
-                }
-                .foregroundColor(.daisySuccess)
-
-                // Bulk skip
-                Button(action: {
-                    bulkSkip()
-                }) {
-                    Label("Skip", systemImage: "forward")
-                        .labelStyle(.iconOnly)
-                        .font(.title3)
-                }
-                .foregroundColor(.daisyWarning)
-
-                // Bulk delete
-                Button(action: {
-                    showingBulkDeleteConfirmation = true
-                }) {
-                    Label("Delete", systemImage: "trash")
-                        .labelStyle(.iconOnly)
-                        .font(.title3)
-                }
-                .foregroundColor(.daisyError)
+        BulkActionToolbar(selectedCount: selectedHabits.count) {
+            // Bulk completion
+            Button(action: {
+                bulkMarkComplete()
+            }) {
+                Label("Mark Complete", systemImage: "checkmark.circle")
+                    .labelStyle(.iconOnly)
+                    .font(.title3)
             }
+            .foregroundColor(.daisySuccess)
+
+            // Bulk skip
+            Button(action: {
+                bulkSkip()
+            }) {
+                Label("Skip", systemImage: "forward")
+                    .labelStyle(.iconOnly)
+                    .font(.title3)
+            }
+            .foregroundColor(.daisyWarning)
+
+            // Bulk delete
+            Button(action: {
+                showingBulkDeleteConfirmation = true
+            }) {
+                Label("Delete", systemImage: "trash")
+                    .labelStyle(.iconOnly)
+                    .font(.title3)
+            }
+            .foregroundColor(.daisyError)
         }
-        .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .padding()
     }
 
     // MARK: - Helper Methods
 
     private func toggleHabitSelection(_ habit: Habit) {
-        if selectedHabits.contains(habit.id) {
-            selectedHabits.remove(habit.id)
-        } else {
-            selectedHabits.insert(habit.id)
-        }
+        selectedHabits.toggleMembership(habit.id)
     }
 
     private func bulkMarkComplete() {

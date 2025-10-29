@@ -21,8 +21,6 @@ struct TaskDetailView: View {
     @State private var showingTagAssignment = false
     @State private var showingDeleteConfirmation = false
     @State private var showingSubtaskCreation = false
-    @State private var showingAttachmentPicker = false
-    @State private var showingAttachmentDetail: TaskAttachment?
     @State private var showingTaskShare = false
     @State private var showingRecurrencePicker = false
     @State private var showingRecoverConfirmation = false
@@ -38,13 +36,11 @@ struct TaskDetailView: View {
     enum DetailTab: String, CaseIterable {
         case overview = "Overview"
         case subtasks = "Subtasks"
-        case attachments = "Attachments"
 
         var icon: String {
             switch self {
             case .overview: return "info.circle"
             case .subtasks: return "checklist"
-            case .attachments: return "paperclip"
             }
         }
     }
@@ -64,9 +60,6 @@ struct TaskDetailView: View {
 
                     subtasksTab
                         .tag(DetailTab.subtasks)
-
-                    attachmentsTab
-                        .tag(DetailTab.attachments)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
@@ -151,23 +144,6 @@ struct TaskDetailView: View {
         }
         .sheet(isPresented: $showingSubtaskCreation) {
             SubtaskCreationView(parentTask: task)
-        }
-        .sheet(isPresented: $showingAttachmentPicker) {
-            AttachmentPickerSheet(task: task) { _ in
-                // Refresh UI when attachment is added
-            }
-        }
-        .sheet(item: $showingAttachmentDetail) { attachment in
-            AttachmentDetailSheet(
-                attachment: attachment,
-                onDelete: {
-                    deleteAttachment(attachment)
-                    showingAttachmentDetail = nil
-                },
-                onShare: {
-                    shareAttachment(attachment)
-                }
-            )
         }
         .sheet(isPresented: $showingTaskShare) {
             TaskShareSheet(task: task, includeAttachments: false)
@@ -386,24 +362,6 @@ struct TaskDetailView: View {
                             .foregroundColor(.daisyTextSecondary)
                     }
                 }
-
-                if task.attachments.count > 0 {
-                    Divider()
-                        .frame(height: 40)
-
-                    // Attachments count
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Attachments")
-                            .font(.caption)
-                            .foregroundColor(.daisyTextSecondary)
-                        HStack(spacing: 6) {
-                            Image(systemName: "paperclip")
-                                .foregroundColor(.daisyTask)
-                            Text("\(task.attachments.count)")
-                                .font(.subheadline.weight(.medium))
-                        }
-                    }
-                }
             }
         }
         .padding()
@@ -585,94 +543,6 @@ struct TaskDetailView: View {
         }
     }
 
-    // MARK: - Attachments Tab
-
-    @ViewBuilder
-    private var attachmentsTab: some View {
-        ScrollView {
-            LazyVStack(spacing: 20) {
-                // Info banner when restricted
-                if !canModify && task.isCompleted {
-                    HStack(spacing: 8) {
-                        Image(systemName: "info.circle")
-                            .foregroundColor(.daisyTask)
-                        Text("Completed tasks in Logbook cannot have new attachments added")
-                            .font(.caption)
-                            .foregroundColor(.daisyTextSecondary)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color.daisyTask.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
-                }
-
-                // Storage Info Card
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Storage")
-                        .font(.headline)
-
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Total Size")
-                                .font(.caption)
-                                .foregroundColor(.daisyTextSecondary)
-                            Text(task.totalAttachmentSize.formatted(.byteCount(style: .file)))
-                                .font(.subheadline.weight(.medium))
-                        }
-
-                        Spacer()
-
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("Attachments")
-                                .font(.caption)
-                                .foregroundColor(.daisyTextSecondary)
-                            Text("\(task.attachments.count)")
-                                .font(.subheadline.weight(.medium))
-                        }
-                    }
-
-                    // Progress bar for storage limit
-                    let storagePercent = min(Double(task.totalAttachmentSize) / Double(200 * 1024 * 1024), 1.0)
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.daisyBackground)
-                                .frame(height: 8)
-
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(storagePercent > 0.8 ? Color.daisyError : Color.daisyTask)
-                                .frame(width: geometry.size.width * storagePercent, height: 8)
-                        }
-                    }
-                    .frame(height: 8)
-
-                    HStack {
-                        Text("\(Int(storagePercent * 100))% of 200MB limit")
-                            .font(.caption2)
-                            .foregroundColor(.daisyTextSecondary)
-                        Spacer()
-                    }
-                }
-                .padding()
-                .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
-
-                // Attachments Gallery
-                AttachmentGalleryView(
-                    task: task,
-                    onAttachmentTap: { attachment in
-                        showingAttachmentDetail = attachment
-                    },
-                    onAddAttachment: canModify ? {
-                        showingAttachmentPicker = true
-                    } : nil,  // Disable add when !canModify
-                    onShareAttachment: { attachment in
-                        shareAttachment(attachment)
-                    }
-                )
-            }
-            .padding()
-        }
-    }
-
     // MARK: - Initializer
 
     init(task: Task, isLogbookMode: Bool = false) {
@@ -716,34 +586,6 @@ struct TaskDetailView: View {
         }
     }
 
-    private func deleteAttachment(_ attachment: TaskAttachment) {
-        _ = taskManager.removeAttachmentSafely(attachment, from: task)
-    }
-
-    private func shareAttachment(_ attachment: TaskAttachment) {
-        guard let fileURL = attachment.fullFilePath,
-              FileManager.default.fileExists(atPath: fileURL.path) else {
-            return
-        }
-
-        let activityVC = UIActivityViewController(
-            activityItems: [fileURL],
-            applicationActivities: nil
-        )
-
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first,
-           let rootVC = window.rootViewController {
-            activityVC.popoverPresentationController?.sourceView = window
-            activityVC.popoverPresentationController?.sourceRect = CGRect(
-                x: window.bounds.midX,
-                y: window.bounds.midY,
-                width: 0,
-                height: 0
-            )
-            rootVC.present(activityVC, animated: true)
-        }
-    }
 }
 
 #Preview {

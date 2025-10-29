@@ -33,13 +33,11 @@ struct HabitDetailView: View {
 
     enum DetailTab: String, CaseIterable {
         case overview = "Overview"
-        case analytics = "Analytics"
         case history = "History"
 
         var icon: String {
             switch self {
             case .overview: return "info.circle"
-            case .analytics: return "chart.bar"
             case .history: return "calendar"
             }
         }
@@ -57,9 +55,6 @@ struct HabitDetailView: View {
                 TabView(selection: $selectedTab) {
                     overviewTab
                         .tag(DetailTab.overview)
-
-                    analyticsTab
-                        .tag(DetailTab.analytics)
 
                     historyTab
                         .tag(DetailTab.history)
@@ -241,47 +236,12 @@ struct HabitDetailView: View {
         }
     }
 
-    // MARK: - Analytics Tab
-
-    @ViewBuilder
-    private var analyticsTab: some View {
-        ScrollView {
-            LazyVStack(spacing: 20) {
-                // Progress Chart
-                HabitProgressChart(
-                    habit: habit,
-                    timeframe: .month,
-                    habitManager: habitManager
-                )
-
-                // Streak Visualization
-                StreakVisualizationView(
-                    habit: habit,
-                    habitManager: habitManager
-                )
-
-            }
-            .padding()
-        }
-        .background(Color.daisyBackground)
-    }
-
     // MARK: - History Tab
 
     @ViewBuilder
     private var historyTab: some View {
         ScrollView {
             LazyVStack(spacing: 20) {
-                // Heatmap
-                let endDate = Date()
-                let startDate = Calendar.current.date(byAdding: .month, value: -6, to: endDate) ?? endDate
-
-                HabitHeatmapView(
-                    habit: habit,
-                    habitManager: habitManager,
-                    dateRange: startDate...endDate
-                )
-
                 // Completion History List
                 completionHistoryCard
             }

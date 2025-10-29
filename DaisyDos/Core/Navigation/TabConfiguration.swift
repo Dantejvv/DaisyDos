@@ -13,7 +13,6 @@ enum TabType: String, CaseIterable, Identifiable {
     case tasks = "tasks"
     case habits = "habits"
     case logbook = "logbook"
-    case tags = "tags"
     case settings = "settings"
 
     var id: String { rawValue }
@@ -31,8 +30,6 @@ enum TabType: String, CaseIterable, Identifiable {
             return "Habits"
         case .logbook:
             return "Logbook"
-        case .tags:
-            return "Tags"
         case .settings:
             return "Settings"
         }
@@ -49,8 +46,6 @@ enum TabType: String, CaseIterable, Identifiable {
             return "repeat.circle"
         case .logbook:
             return "book.closed"
-        case .tags:
-            return "tag"
         case .settings:
             return "gearshape"
         }
@@ -74,8 +69,6 @@ enum TabType: String, CaseIterable, Identifiable {
             return "Track your habits and streaks"
         case .logbook:
             return "View completed task history"
-        case .tags:
-            return "Organize with tags and labels"
         case .settings:
             return "App settings and preferences"
         }
@@ -102,7 +95,6 @@ struct TabConfiguration {
         .tasks,
         .habits,
         .logbook,
-        .tags,
         .settings
     ]
 

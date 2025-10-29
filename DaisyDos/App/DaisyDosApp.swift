@@ -19,11 +19,6 @@ struct DaisyDosApp: App {
     let localOnlyModeManager = LocalOnlyModeManager()
     let navigationManager = NavigationManager()
 
-    // Performance monitoring
-    init() {
-        PerformanceMonitor.shared.markAppLaunchStart()
-    }
-
     var sharedModelContainer: ModelContainer = {
         let schema = Schema(versionedSchema: DaisyDosSchemaV4.self)
         // Explicitly disable CloudKit for local-only mode
@@ -46,9 +41,7 @@ struct DaisyDosApp: App {
         #endif
 
         do {
-
             let container = try ModelContainer(for: schema, migrationPlan: DaisyDosMigrationPlan.self, configurations: [modelConfiguration])
-            PerformanceMonitor.shared.markModelContainerInitComplete()
             return container
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
@@ -66,7 +59,6 @@ struct DaisyDosApp: App {
         .modelContainer(sharedModelContainer)
         .environment(navigationManager)
         .environment(localOnlyModeManager)
-        .environment(PerformanceMonitor.shared)
         .environment(TaskManager(modelContext: sharedModelContainer.mainContext))
         .environment(HabitManager(modelContext: sharedModelContainer.mainContext))
         .environment(TagManager(modelContext: sharedModelContainer.mainContext))

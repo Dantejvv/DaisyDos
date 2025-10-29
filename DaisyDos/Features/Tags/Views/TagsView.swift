@@ -16,61 +16,47 @@ struct TagsView: View {
     @State private var selectedTag: Tag?
     @State private var showingEditTag = false
     @State private var searchText = ""
+    @State private var isSearchPresented = false
     @State private var tagToDelete: Tag?
     @State private var showingDeleteConfirmation = false
     @State private var showingUndoToast = false
     @State private var deletedTag: Tag?
     @State private var undoTimer: Timer?
+    @State private var isMultiSelectMode = false
+    @State private var selectedTags: Set<Tag.ID> = []
+    @State private var showingBulkDeleteConfirmation = false
 
     var body: some View {
         NavigationStack {
             VStack {
-                // Header stats
-                VStack(alignment: .leading) {
-                    Text("Total Tags")
-                        .font(.headline)
-                    Text("\(allTags.count) of 30")
-                        .font(.title2.bold())
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal)
-
                 if allTags.isEmpty {
                     // Empty state
                     Spacer()
                     VStack(spacing: 20) {
                         Image(systemName: "tag.circle")
                             .font(.system(size: 64))
-                            .foregroundColor(.daisyTextSecondary)
+                            .foregroundColor(.secondary)
 
                         Text("No Tags Yet")
                             .font(.title2.bold())
 
                         Text("Create tags to organize your tasks and habits. Use colors and icons to make them visually distinctive!")
-                            .foregroundColor(.daisyTextSecondary)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
 
-                        Text("Tag creation will be available in future updates.")
+                        Text("Tap the + button to create your first tag!")
                             .font(.caption)
                             .foregroundColor(.daisyTextSecondary)
                             .padding(.horizontal)
                     }
                     Spacer()
 
-                } else {
-                    // Search bar
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.daisyTextSecondary)
-                        TextField("Search tags...", text: $searchText)
-                    }
-                    .padding()
-                    .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 10))
-                    .padding(.horizontal)
+                } else if filteredTags.isEmpty && !searchText.isEmpty {
+                    // No search results state
+                    SearchEmptyStateView(searchText: searchText)
 
+                } else {
                     // Tag grid
                     ScrollView {
                         LazyVGrid(columns: [
@@ -78,13 +64,31 @@ struct TagsView: View {
                             GridItem(.flexible())
                         ], spacing: 16) {
                             ForEach(filteredTags) { tag in
-                                TagCardView(tag: tag, onEdit: {
-                                    selectedTag = tag
-                                    showingEditTag = true
-                                }, onDelete: {
-                                    tagToDelete = tag
-                                    showingDeleteConfirmation = true
-                                })
+                                TagCardView(
+                                    tag: tag,
+                                    isSelected: selectedTags.contains(tag.id),
+                                    isMultiSelectMode: isMultiSelectMode,
+                                    onTap: {
+                                        if isMultiSelectMode {
+                                            toggleTagSelection(tag)
+                                        } else {
+                                            selectedTag = tag
+                                            showingEditTag = true
+                                        }
+                                    },
+                                    onEdit: {
+                                        if !isMultiSelectMode {
+                                            selectedTag = tag
+                                            showingEditTag = true
+                                        }
+                                    },
+                                    onDelete: {
+                                        if !isMultiSelectMode {
+                                            tagToDelete = tag
+                                            showingDeleteConfirmation = true
+                                        }
+                                    }
+                                )
                             }
                         }
                         .padding(.horizontal)
@@ -92,6 +96,7 @@ struct TagsView: View {
                 }
             }
             .navigationTitle("Tags")
+            .searchable(text: $searchText, isPresented: $isSearchPresented, prompt: "Search tags...")
             .sheet(isPresented: $showingCreateTag) {
                 TagCreationView()
             }
@@ -122,13 +127,57 @@ struct TagsView: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showingCreateTag = true
-                    }) {
-                        Image(systemName: "plus")
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if !allTags.isEmpty {
+                        Button(isMultiSelectMode ? "Done" : "Select") {
+                            withAnimation {
+                                isMultiSelectMode.toggle()
+                                if !isMultiSelectMode {
+                                    selectedTags.removeAll()
+                                }
+                            }
+                        }
                     }
-                    .disabled(allTags.count >= 30)
+                }
+
+                ToolbarItem(placement: .principal) {
+                    if !allTags.isEmpty && !isMultiSelectMode {
+                        Text("\(allTags.count) of 30 tags")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack {
+                        if isMultiSelectMode {
+                            Menu {
+                                Button("Select All") {
+                                    selectedTags = Set(allTags.map(\.id))
+                                }
+                                .disabled(selectedTags.count == allTags.count)
+
+                                Button("Select None") {
+                                    selectedTags.removeAll()
+                                }
+                                .disabled(selectedTags.isEmpty)
+                            } label: {
+                                Image(systemName: "ellipsis")
+                            }
+                        } else {
+                            Button(action: {
+                                showingCreateTag = true
+                            }) {
+                                Image(systemName: "plus")
+                            }
+                            .disabled(allTags.count >= 30)
+                        }
+                    }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if isMultiSelectMode && !selectedTags.isEmpty {
+                    bulkActionToolbar
                 }
             }
             .overlay(alignment: .bottom) {
@@ -138,6 +187,17 @@ struct TagsView: View {
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
+            }
+            .alert(
+                "Delete \(selectedTags.count) Tags",
+                isPresented: $showingBulkDeleteConfirmation
+            ) {
+                Button("Delete \(selectedTags.count) Tags", role: .destructive) {
+                    bulkDelete()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Are you sure you want to delete \(selectedTags.count) selected tags? This will remove them from all tasks and habits.")
             }
         }
     }
@@ -150,6 +210,38 @@ struct TagsView: View {
                 tag.name.localizedCaseInsensitiveContains(searchText)
             }
         }
+    }
+
+    // MARK: - Bulk Action Toolbar
+
+    @ViewBuilder
+    private var bulkActionToolbar: some View {
+        BulkActionToolbar(selectedCount: selectedTags.count) {
+            // Bulk delete
+            Button(action: {
+                showingBulkDeleteConfirmation = true
+            }) {
+                Label("Delete", systemImage: "trash")
+                    .labelStyle(.iconOnly)
+                    .font(.title3)
+            }
+            .foregroundColor(.daisyError)
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func toggleTagSelection(_ tag: Tag) {
+        selectedTags.toggleMembership(tag.id)
+    }
+
+    private func bulkDelete() {
+        let tagsToDelete = allTags.filter { selectedTags.contains($0.id) }
+        for tag in tagsToDelete {
+            tagManager.forceDeleteTag(tag)
+        }
+        selectedTags.removeAll()
+        isMultiSelectMode = false
     }
 
     // MARK: - Tag Deletion Methods
@@ -196,65 +288,71 @@ struct TagsView: View {
 
 private struct TagCardView: View {
     let tag: Tag
+    let isSelected: Bool
+    let isMultiSelectMode: Bool
+    let onTap: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Tag header
-            HStack {
-                HStack(spacing: 8) {
-                    Image(systemName: tag.sfSymbolName)
-                        .font(.title2)
-                        .foregroundColor(tag.color)
+            HStack(spacing: 8) {
+                Image(systemName: tag.sfSymbolName)
+                    .font(.title2)
+                    .foregroundColor(tag.color)
 
-                    Text(tag.name)
-                        .font(.headline)
-                        .lineLimit(1)
-                }
+                Text(tag.name)
+                    .font(.headline)
+                    .lineLimit(1)
 
                 Spacer()
             }
-
-            // Usage stats placeholder
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Image(systemName: "list.bullet")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
-                    Text("Tasks: \(tag.tasks.count)")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
-                }
-
-                HStack {
-                    Image(systemName: "repeat.circle")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
-                    Text("Habits: \(tag.habits.count)")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
-                }
-            }
         }
         .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+        .background(
+            Group {
+                if isMultiSelectMode && isSelected {
+                    HStack(spacing: 0) {
+                        // Left border accent
+                        Rectangle()
+                            .fill(Color.daisyTag)
+                            .frame(width: 6)
+
+                        // Background tint
+                        Color.daisyTag.opacity(0.15)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    Color.daisySurface
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(isMultiSelectMode && isSelected ? Color.daisyTag : Color.clear, lineWidth: 2)
+        )
         .contentShape(Rectangle())
         .onTapGesture {
-            onEdit()
+            onTap()
         }
         .contextMenu {
-            Button(action: onEdit) {
-                Label("Edit", systemImage: "pencil")
-            }
+            if !isMultiSelectMode {
+                Button(action: onEdit) {
+                    Label("Edit", systemImage: "pencil")
+                }
 
-            Button(action: onDelete) {
-                Label("Delete", systemImage: "trash")
+                Button(action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
+                .foregroundColor(.daisyError)
             }
-            .foregroundColor(.daisyError)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button("Delete", role: .destructive, action: onDelete)
+            if !isMultiSelectMode {
+                Button("Delete", role: .destructive, action: onDelete)
+            }
         }
     }
 }

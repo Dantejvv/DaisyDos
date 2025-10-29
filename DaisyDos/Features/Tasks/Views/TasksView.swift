@@ -12,6 +12,7 @@ struct TasksView: View {
     @Environment(TaskManager.self) private var taskManager
     @Environment(TagManager.self) private var tagManager
     @Environment(TaskCompletionToastManager.self) private var toastManager
+    @Environment(NavigationManager.self) private var navigationManager
     @Query(
         filter: #Predicate<Task> { task in
             task.parentTask == nil && !task.isCompleted
@@ -19,7 +20,18 @@ struct TasksView: View {
         sort: \Task.createdDate,
         order: .reverse
     ) private var rootTasks: [Task]
+
+    // Query for tasks completed today (for progress indicator)
+    @Query(
+        filter: #Predicate<Task> { task in
+            task.parentTask == nil && task.isCompleted
+        },
+        sort: \Task.completedDate,
+        order: .reverse
+    ) private var completedTasks: [Task]
+
     @State private var searchText = ""
+    @State private var isSearchPresented = false
     @State private var showingAddTask = false
     @State private var taskToEdit: Task?
     @State private var taskToDelete: Task?
@@ -49,80 +61,29 @@ struct TasksView: View {
 
     var body: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: 0) {
+                // Content area
                 if rootTasks.isEmpty {
-                    // Empty state when no tasks exist at all
-                    Spacer()
-                    VStack(spacing: 20) {
-                        Image(systemName: "list.bullet.circle")
-                            .font(.system(size: 64))
-                            .foregroundColor(.secondary)
-
-                        Text("No Tasks Yet")
-                            .font(.title2.bold())
-
-                        Text("Start organizing your work by creating your first task.")
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-                    Spacer()
-
+                    // Empty state
+                    emptyStateView
+                } else if sortedTasks.isEmpty && !searchText.isEmpty {
+                    // No search results state
+                    noSearchResultsView
                 } else {
-                    // Show search bar and tasks when we have tasks
-                    // Search bar
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
-                        TextField("Search tasks...", text: $searchText)
-                            .autocorrectionDisabled(true)
-                    }
-                    .padding()
-                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
-                    .padding(.horizontal)
-
-                    // Task list or search results
-                    if sortedTasks.isEmpty && !searchText.isEmpty {
-                        // Show "no search results" state
-                        VStack(spacing: 16) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 48))
-                                .foregroundColor(.secondary)
-
-                            Text("No results for '\(searchText)'")
-                                .font(.title2.bold())
-
-                            Text("Try adjusting your search terms")
-                                .foregroundColor(.secondary)
-                        }
-                        .padding()
-                        Spacer()
-                    } else {
-                        // Show sectioned task list
-                        List {
-                            ForEach(sectionedTasks, id: \.0) { section in
-                                if sectionType == .none || sectionedTasks.count == 1 {
-                                    // No sectioning - show tasks directly
-                                    ForEach(section.1) { task in
-                                        taskRow(for: task)
-                                    }
-                                } else {
-                                    // Show sections with headers
-                                    Section {
-                                        ForEach(section.1) { task in
-                                            taskRow(for: task)
-                                        }
-                                    } header: {
-                                        sectionType.sectionHeader(title: section.0, count: section.1.count)
-                                    }
-                                }
-                            }
-                        }
-                        .listStyle(PlainListStyle())
-                    }
+                    // Task list
+                    taskListView
                 }
             }
             .navigationTitle("Tasks")
+            .searchable(text: $searchText, isPresented: $isSearchPresented, prompt: "Search tasks...")
+            .navigationTabCleanup(
+                navigationManager: navigationManager,
+                currentTab: .tasks,
+                searchText: $searchText,
+                isSearchPresented: $isSearchPresented,
+                isMultiSelectMode: $isMultiSelectMode,
+                selectedItems: $selectedTasks
+            )
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !rootTasks.isEmpty {
@@ -139,8 +100,8 @@ struct TasksView: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
-                        if !isMultiSelectMode && !rootTasks.isEmpty {
-                            // Sort picker button
+                        if !isMultiSelectMode {
+                            // Sort picker button - ALWAYS visible
                             Menu {
                                 Text("Sort Tasks By")
                                     .font(.headline)
@@ -162,7 +123,7 @@ struct TasksView: View {
                                     .foregroundColor(.daisyToolbar)
                             }
 
-                            // Section picker button
+                            // Section picker button - ALWAYS visible
                             Menu {
                                 Text("Group Tasks By")
                                     .font(.headline)
@@ -202,6 +163,7 @@ struct TasksView: View {
                                 Image(systemName: "ellipsis")
                             }
                         } else {
+                            // Add button - ALWAYS visible
                             Button(action: {
                                 showingAddTask = true
                             }) {
@@ -263,13 +225,6 @@ struct TasksView: View {
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("Are you sure you want to delete \(selectedTasks.count) selected tasks? This action cannot be undone.")
-            }
-            .onDisappear {
-                // Deactivate multi-select mode when navigating away
-                if isMultiSelectMode {
-                    isMultiSelectMode = false
-                    selectedTasks.removeAll()
-                }
             }
         }
     }
@@ -380,40 +335,29 @@ struct TasksView: View {
                 taskToDetail = task
             }
         }
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            if !isMultiSelectMode {
-                Button(role: .destructive, action: {
-                    var transaction = Transaction()
-                    transaction.disablesAnimations = true
-                    withTransaction(transaction) {
-                        taskToDelete = task
-                    }
-                    // Delay showing confirmation to let overlay render first
-                    DispatchQueue.main.async {
-                        showingDeleteConfirmation = true
-                    }
-                }) {
-                    Label("Delete", systemImage: "trash")
+        .standardRowSwipeActions(
+            isMultiSelectMode: isMultiSelectMode,
+            accentColor: .daisyTask,
+            onDelete: {
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    taskToDelete = task
                 }
-
-                Button(action: {
-                    taskToEdit = task
-                }) {
-                    Label("Edit", systemImage: "pencil")
+                // Delay showing confirmation to let overlay render first
+                DispatchQueue.main.async {
+                    showingDeleteConfirmation = true
                 }
-                .tint(.daisyTask)
-            }
-        }
-        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-            if !isMultiSelectMode {
-                Button(action: {
+            },
+            onEdit: {
+                taskToEdit = task
+            },
+            leadingAction: {
+                DuplicateSwipeAction {
                     _ = taskManager.duplicateTaskSafely(task)
-                }) {
-                    Label("Duplicate", systemImage: "plus.square.on.square")
                 }
-                .tint(.blue)
             }
-        }
+        )
     }
 
 
@@ -421,38 +365,27 @@ struct TasksView: View {
 
     @ViewBuilder
     private var bulkActionToolbar: some View {
-        HStack {
-            Text("\(selectedTasks.count) selected")
-                .font(.subheadline)
-                .foregroundColor(.daisyTextSecondary)
-
-            Spacer()
-
-            HStack(spacing: 20) {
-                // Bulk completion toggle
-                Button(action: {
-                    bulkToggleCompletion()
-                }) {
-                    Label("Toggle Complete", systemImage: "checkmark.circle")
-                        .labelStyle(.iconOnly)
-                        .font(.title3)
-                }
-                .foregroundColor(.daisySuccess)
-
-                // Bulk delete
-                Button(action: {
-                    showingBulkDeleteConfirmation = true
-                }) {
-                    Label("Delete", systemImage: "trash")
-                        .labelStyle(.iconOnly)
-                        .font(.title3)
-                }
-                .foregroundColor(.daisyError)
+        BulkActionToolbar(selectedCount: selectedTasks.count) {
+            // Bulk completion toggle
+            Button(action: {
+                bulkToggleCompletion()
+            }) {
+                Label("Toggle Complete", systemImage: "checkmark.circle")
+                    .labelStyle(.iconOnly)
+                    .font(.title3)
             }
+            .foregroundColor(.daisySuccess)
+
+            // Bulk delete
+            Button(action: {
+                showingBulkDeleteConfirmation = true
+            }) {
+                Label("Delete", systemImage: "trash")
+                    .labelStyle(.iconOnly)
+                    .font(.title3)
+            }
+            .foregroundColor(.daisyError)
         }
-        .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .padding()
     }
 
 
@@ -472,11 +405,7 @@ struct TasksView: View {
     }
 
     private func toggleTaskSelection(_ task: Task) {
-        if selectedTasks.contains(task.id) {
-            selectedTasks.remove(task.id)
-        } else {
-            selectedTasks.insert(task.id)
-        }
+        selectedTasks.toggleMembership(task.id)
     }
 
     private func bulkToggleCompletion() {
@@ -500,6 +429,106 @@ struct TasksView: View {
 
     private func deleteTask(_ task: Task) {
         _ = taskManager.deleteTaskSafely(task)
+    }
+
+    // MARK: - View Components
+
+    private var emptyStateView: some View {
+        VStack {
+            Spacer()
+            VStack(spacing: 20) {
+                Image(systemName: "list.bullet.circle")
+                    .font(.system(size: 64))
+                    .foregroundColor(.secondary)
+
+                Text("No Tasks Yet")
+                    .font(.title2.bold())
+
+                Text("Start organizing your work by creating your first task.")
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                Text("Tap the + button to create your first task!")
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+                    .padding(.horizontal)
+            }
+            Spacer()
+        }
+    }
+
+    private var noSearchResultsView: some View {
+        SearchEmptyStateView(searchText: searchText)
+    }
+
+    private var taskListView: some View {
+        VStack(spacing: 0) {
+            // Overall progress indicator when not sectioned
+            if !rootTasks.isEmpty {
+                overallProgressIndicator
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(Color.daisySurface)
+            }
+
+            List {
+                ForEach(sectionedTasks, id: \.0) { section in
+                    if sectionType == .none || sectionedTasks.count == 1 {
+                        // No sectioning - show tasks directly
+                        ForEach(section.1) { task in
+                            taskRow(for: task)
+                        }
+                    } else {
+                        // Show sections with headers
+                        Section {
+                            ForEach(section.1) { task in
+                                taskRow(for: task)
+                            }
+                        } header: {
+                            sectionType.sectionHeader(title: section.0, count: section.1.count)
+                        }
+                    }
+                }
+            }
+            .listStyle(PlainListStyle())
+        }
+    }
+
+    private var overallProgressIndicator: some View {
+        // Count tasks completed today
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let completedToday = completedTasks.filter { task in
+            guard let completedDate = task.completedDate else { return false }
+            return completedDate >= startOfToday
+        }.count
+
+        return HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Tasks Completed Today")
+                    .font(.caption.weight(.medium))
+                    .foregroundColor(.daisyText)
+
+                HStack(spacing: 8) {
+                    // Checkmark icon
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.daisySuccess)
+
+                    // Completion count
+                    Text("\(completedToday)")
+                        .font(.title2.weight(.bold))
+                        .foregroundColor(.daisyText)
+                        .monospacedDigit()
+
+                    Text(completedToday == 1 ? "task" : "tasks")
+                        .font(.subheadline)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+            }
+
+            Spacer()
+        }
     }
 }
 

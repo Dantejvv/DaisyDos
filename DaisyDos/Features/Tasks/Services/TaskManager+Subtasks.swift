@@ -233,11 +233,6 @@ extension TaskManager {
             return false
         }
 
-        // Don't auto-complete if parent has attachments
-        if !parent.attachments.isEmpty {
-            return false
-        }
-
         // Auto-complete if parent seems to be just a container
         return parent.subtaskCount > 0
     }

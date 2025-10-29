@@ -11,6 +11,7 @@ import SwiftData
 
 struct LogbookView: View {
     @Environment(LogbookManager.self) private var logbookManager
+    @Environment(NavigationManager.self) private var navigationManager
 
     // Direct SwiftData query for real-time updates
     // Only show root tasks (no subtasks) to keep logbook organized
@@ -25,6 +26,7 @@ struct LogbookView: View {
 
     @State private var selectedPeriod: LogPeriod = .last30Days
     @State private var searchText = ""
+    @State private var isSearchPresented = false
 
     // MARK: - Period Enum
 
@@ -69,7 +71,13 @@ struct LogbookView: View {
             mainContent(manager: logbookManager)
                 .navigationTitle("Logbook")
                 .navigationBarTitleDisplayMode(.large)
-                .searchable(text: $searchText, prompt: "Search completions")
+                .searchable(text: $searchText, isPresented: $isSearchPresented, prompt: "Search completions...")
+                .navigationTabCleanup(
+                    navigationManager: navigationManager,
+                    currentTab: .logbook,
+                    searchText: $searchText,
+                    isSearchPresented: $isSearchPresented
+                )
         }
     }
 
@@ -97,6 +105,11 @@ struct LogbookView: View {
             Spacer()
 
             Menu {
+                Text("Filter by Period")
+                    .font(.headline)
+
+                Divider()
+
                 ForEach(LogPeriod.allCases) { period in
                     Button(action: {
                         selectedPeriod = period
@@ -129,7 +142,10 @@ struct LogbookView: View {
     private func completionsList(manager: LogbookManager) -> some View {
         let completions = getCompletions(manager: manager)
 
-        if completions.isEmpty {
+        if completions.isEmpty && !searchText.isEmpty {
+            // No search results state
+            SearchEmptyStateView(searchText: searchText)
+        } else if completions.isEmpty {
             emptyState
         } else {
             ScrollView {
@@ -230,22 +246,23 @@ struct LogbookView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle")
-                .font(.system(size: 60))
-                .foregroundColor(Colors.Primary.textTertiary)
+        VStack {
+            Spacer()
+            VStack(spacing: 20) {
+                Image(systemName: "checkmark.circle")
+                    .font(.system(size: 64))
+                    .foregroundColor(.secondary)
 
-            Text("No Completed Tasks")
-                .font(.headline)
-                .foregroundColor(.daisyText)
+                Text("No Completed Tasks")
+                    .font(.title2.bold())
 
-            Text("Complete tasks to see them here")
-                .font(.subheadline)
-                .foregroundColor(.daisyTextSecondary)
-                .multilineTextAlignment(.center)
+                Text("Complete tasks to see them here")
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+            Spacer()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.top, 100)
     }
 
     // MARK: - Helper Methods

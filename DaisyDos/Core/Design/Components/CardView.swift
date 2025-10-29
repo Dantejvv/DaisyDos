@@ -280,28 +280,6 @@ extension CardView {
     }
 }
 
-// MARK: - Performance Considerations
-
-extension View {
-
-    /// Wraps view in an optimized card for list performance
-    func asListOptimizedCard() -> CardView<Self> {
-        CardView(
-            elevation: .none, // Reduced shadows for performance
-            interactive: false,
-            padding: EdgeInsets(
-                top: Spacing.small,
-                leading: Spacing.medium,
-                bottom: Spacing.small,
-                trailing: Spacing.medium
-            ),
-            cornerRadius: 12 // Smaller radius for performance
-        ) {
-            self
-        }
-    }
-}
-
 // MARK: - Preview Helpers
 
 #if DEBUG
