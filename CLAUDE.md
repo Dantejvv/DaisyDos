@@ -68,12 +68,11 @@ This is a standard Xcode project. Use Xcode to build and run:
 
 ### Foundation & Core Architecture
 **Navigation & Infrastructure:**
-- Complete tab-based navigation (Today, Tasks, Habits, Logbook, Tags, Settings)
+- Complete tab-based navigation (Today, Tasks, Habits, Logbook, Settings)
 - Privacy-first local-only data storage (CloudKit configured but disabled by default)
 - WCAG AA accessibility compliance throughout
 - Professional UI with liquid glass design aesthetic
-- Performance monitoring infrastructure
-- 6-tab navigation with independent NavigationStack per tab
+- 5-tab navigation with independent NavigationStack per tab
 
 ### Task Management System
 **Core Task Features:**
@@ -263,7 +262,6 @@ DaisyDos/
 - Build Status: Builds cleanly with only minor warnings
 - Performance: Handles 100+ tasks/habits efficiently with optimized queries
 - Accessibility: Full VoiceOver support with proper labels and 44pt touch targets
-- Testing: 118 tests, 100% pass rate, 0.226s execution time
 
 **Known Patterns:**
 - @Observable models with business logic (no ViewModels)
@@ -291,18 +289,6 @@ Refer to `/Docs/implementation_roadmap.md` for detailed feature planning.
 - TaskManager: 20 tests (CRUD operations, filtering)
 - HabitSkip: 15 tests (impact analysis)
 - Infrastructure: 4 tests (container validation, isolation)
-
-**Running Tests:**
-```bash
-# All tests
-xcodebuild test -scheme DaisyDos -destination 'platform=iOS Simulator,name=iPhone 16'
-
-# Specific suite
-xcodebuild test -scheme DaisyDos -destination 'platform=iOS Simulator,name=iPhone 16' \
-  -only-testing:DaisyDosTests/RecurrenceRuleTests
-
-# In Xcode: Cmd+U (all tests) or Cmd+6 (Test Navigator)
-```
 
 **Key Testing Pattern:**
 ```swift
@@ -335,8 +321,6 @@ struct FeatureTests {
 - ✅ Use #expect assertions (not XCTAssert)
 - ❌ Don't store containers in properties
 - ❌ Don't share state between tests
-
-**Performance:** 0.226s for 118 tests (~1.9ms per test), perfect isolation, zero flaky tests
 
 **Documentation:** See `/DaisyDosTests/Documentation/TestingGuide.md` for comprehensive patterns, examples, and how-to guides
 
