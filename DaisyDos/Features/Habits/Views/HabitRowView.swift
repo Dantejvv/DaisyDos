@@ -3,18 +3,11 @@
 //  DaisyDos
 //
 //  Created by Claude Code on 9/29/25.
+//  Refactored on 1/2/25 - Removed unused display modes, extracted shared components
 //
 
 import SwiftUI
 import SwiftData
-
-// MARK: - HabitRowDisplayMode
-
-enum HabitRowDisplayMode {
-    case compact    // Minimal info for dense lists
-    case detailed   // Full information display
-    case today      // Today-specific optimizations
-}
 
 // MARK: - HabitRowView
 
@@ -28,7 +21,6 @@ struct HabitRowView: View {
     let onSkip: () -> Void
     let onTagAssignment: (() -> Void)?
 
-    let displayMode: HabitRowDisplayMode
     let showsStreak: Bool
     let showsTagButton: Bool
 
@@ -41,7 +33,6 @@ struct HabitRowView: View {
         onDelete: @escaping () -> Void,
         onSkip: @escaping () -> Void,
         onTagAssignment: (() -> Void)? = nil,
-        displayMode: HabitRowDisplayMode = .detailed,
         showsStreak: Bool = true,
         showsTagButton: Bool = true
     ) {
@@ -51,7 +42,6 @@ struct HabitRowView: View {
         self.onDelete = onDelete
         self.onSkip = onSkip
         self.onTagAssignment = onTagAssignment
-        self.displayMode = displayMode
         self.showsStreak = showsStreak
         self.showsTagButton = showsTagButton
     }
@@ -59,20 +49,6 @@ struct HabitRowView: View {
     // MARK: - Body
 
     var body: some View {
-        switch displayMode {
-        case .compact:
-            compactView
-        case .detailed:
-            detailedView
-        case .today:
-            todayView
-        }
-    }
-
-    // MARK: - Display Mode Views
-
-    @ViewBuilder
-    private var compactView: some View {
         HStack(spacing: 12) {
             // Completion toggle
             completionToggle
@@ -145,145 +121,6 @@ struct HabitRowView: View {
         .accessibilityAddTraits(habit.isCompletedToday ? [.updatesFrequently] : [])
     }
 
-    @ViewBuilder
-    private var detailedView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Habit header
-            HStack {
-                completionToggle
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(habit.title)
-                        .font(.headline)
-                        .strikethrough(habit.isCompletedToday)
-                        .foregroundColor(
-                            habit.isCompletedToday ? .daisyTextSecondary :
-                            habit.isSkippedToday ? .orange.opacity(0.8) :
-                            .daisyText
-                        )
-
-                    if !habit.habitDescription.isEmpty {
-                        Text(habit.habitDescriptionAttributed)
-                            .font(.caption)
-                            .foregroundColor(.daisyTextSecondary)
-                            .lineLimit(2)
-                    }
-                }
-
-                Spacer()
-
-                // Indicators
-                VStack(spacing: 4) {
-                    // Priority indicator (only when not medium)
-                    if habit.priority != .medium {
-                        habit.priority.indicatorView()
-                            .font(.caption)
-                    }
-
-                    // Recurrence indicator
-                    if let recurrenceRule = habit.recurrenceRule {
-                        Image(systemName: "repeat.circle.fill")
-                            .foregroundColor(.daisyHabit)
-                            .font(.caption)
-                            .accessibilityLabel("Recurring habit: \(recurrenceRule.displayDescription)")
-                    }
-
-                }
-            }
-
-            // Tags section
-            if !habit.tags.isEmpty {
-                tagsSection
-            }
-
-            // Metadata footer
-            metadataFooter
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(accessibilityHint)
-    }
-
-    @ViewBuilder
-    private var todayView: some View {
-        HStack(spacing: 12) {
-            // Completion toggle
-            completionToggle
-
-            // Content optimized for today view
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(habit.title)
-                        .font(.body.weight(.medium))
-                        .strikethrough(habit.isCompletedToday)
-                        .foregroundColor(
-                            habit.isCompletedToday ? .daisyTextSecondary :
-                            habit.isSkippedToday ? .orange.opacity(0.8) :
-                            .daisyText
-                        )
-                        .lineLimit(1)
-
-                    Spacer()
-
-                    // Today-specific indicators
-                    HStack(spacing: 4) {
-                        // Priority indicator (only when not medium)
-                        if habit.priority != .medium {
-                            habit.priority.indicatorView()
-                                .font(.caption)
-                        }
-
-                        // Recurrence indicator
-                        if habit.isDueOn(date: Date()) {
-                            Image(systemName: "repeat.circle.fill")
-                                .foregroundColor(.daisyHabit)
-                                .font(.caption)
-                                .accessibilityLabel("Due today")
-                        }
-
-                    }
-                }
-
-                // Streak display for today view
-                if showsStreak {
-                    HStack(spacing: 4) {
-                        streakIndicator
-                            .font(.caption)
-
-                        // Next milestone teaser
-                        if let nextMilestone = nextMilestoneText {
-                            Text("• \(nextMilestone)")
-                                .font(.caption)
-                                .foregroundColor(.daisyTextSecondary)
-                        }
-                    }
-                }
-
-                // Tags for today view (more compact)
-                if !habit.tags.isEmpty {
-                    HStack(spacing: 4) {
-                        ForEach(habit.tags.prefix(3), id: \.id) { tag in
-                            IconOnlyTagChipView(tag: tag)
-                        }
-                        if habit.tags.count > 3 {
-                            Text("+\(habit.tags.count - 3)")
-                                .font(.caption2)
-                                .foregroundColor(.daisyTextSecondary)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 10))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(accessibilityHint)
-    }
-
     // MARK: - Reusable Components
 
     private var completionToggle: some View {
@@ -329,106 +166,6 @@ struct HabitRowView: View {
         .accessibilityLabel("Current streak: \(habit.currentStreak) days")
     }
 
-    @ViewBuilder
-    private var tagsSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(habit.tags, id: \.id) { tag in
-                    IconOnlyTagChipView(tag: tag)
-                }
-            }
-            .padding(.horizontal, 4)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Tags: " + habit.tags.map(\.name).joined(separator: ", "))
-    }
-
-    @ViewBuilder
-    private var metadataFooter: some View {
-        HStack {
-            // Streak details
-            if showsStreak {
-                VStack(alignment: .leading, spacing: 2) {
-                    streakIndicator
-
-                    if habit.longestStreak > habit.currentStreak {
-                        Text("Best: \(habit.longestStreak) days")
-                            .font(.caption2)
-                            .foregroundColor(.daisyTextSecondary)
-                    }
-                }
-            }
-
-            // Recurrence info
-            if let recurrenceRule = habit.recurrenceRule {
-                Label(
-                    recurrenceRule.displayDescription,
-                    systemImage: "repeat"
-                )
-                .font(.caption)
-                .foregroundColor(.daisyTextSecondary)
-                .accessibilityLabel("Recurrence: \(recurrenceRule.displayDescription)")
-            }
-
-            Spacer()
-
-            // Action buttons
-            HStack(spacing: 8) {
-                // Skip button
-                Button(action: onSkip) {
-                    Image(systemName: "forward.end")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Skip habit")
-                .frame(minWidth: 44, minHeight: 44)
-
-                if showsTagButton, let onTagAssignment = onTagAssignment {
-                    Button(action: onTagAssignment) {
-                        Image(systemName: "tag")
-                            .font(.caption)
-                            .foregroundColor(.daisyTag)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Assign tags")
-                    .frame(minWidth: 44, minHeight: 44)
-                }
-
-                Button(action: onEdit) {
-                    Image(systemName: "pencil")
-                        .font(.caption)
-                        .foregroundColor(.daisyHabit)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Edit habit")
-                .frame(minWidth: 44, minHeight: 44)
-
-                Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .font(.caption)
-                        .foregroundColor(.daisyError)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Delete habit")
-                .frame(minWidth: 44, minHeight: 44)
-            }
-        }
-    }
-
-    // MARK: - Helper Properties
-
-    private var nextMilestoneText: String? {
-        let milestones = [7, 14, 21, 30, 50, 75, 100]
-        for milestone in milestones {
-            if habit.currentStreak < milestone {
-                let remaining = milestone - habit.currentStreak
-                return "Next: \(remaining) to \(milestone)"
-            }
-        }
-        return nil
-    }
-
     // MARK: - Accessibility Helpers
 
     private var accessibilityLabel: String {
@@ -466,30 +203,16 @@ struct HabitRowView: View {
 
 // MARK: - Preview Providers
 
-#Preview("Detailed Mode") {
-    HabitRowViewPreview(displayMode: .detailed)
-}
-
-#Preview("Compact Mode") {
-    HabitRowViewPreview(displayMode: .compact)
-}
-
-#Preview("Today Mode") {
-    HabitRowViewPreview(displayMode: .today)
+#Preview("Habit Row View") {
+    HabitRowViewPreview()
 }
 
 #Preview("Accessibility") {
-    HabitRowViewPreview(displayMode: .detailed)
+    HabitRowViewPreview()
         .environment(\.sizeCategory, .accessibilityExtraExtraExtraLarge)
 }
 
 struct HabitRowViewPreview: View {
-    let displayMode: HabitRowDisplayMode
-
-    init(displayMode: HabitRowDisplayMode = .detailed) {
-        self.displayMode = displayMode
-    }
-
     var body: some View {
         let container = try! ModelContainer(
             for: Habit.self, Tag.self,
@@ -538,8 +261,7 @@ struct HabitRowViewPreview: View {
                 onEdit: {},
                 onDelete: {},
                 onSkip: {},
-                onTagAssignment: {},
-                displayMode: displayMode
+                onTagAssignment: {}
             )
 
             // Show completed version
@@ -550,8 +272,7 @@ struct HabitRowViewPreview: View {
                 },
                 onEdit: {},
                 onDelete: {},
-                onSkip: {},
-                displayMode: displayMode
+                onSkip: {}
             )
 
         }

@@ -300,7 +300,6 @@ struct TasksView: View {
                 }
             },
             onTagAssignment: nil, // Removed tag button from TasksView
-            displayMode: .compact,
             showsTagButton: false // Disable tag button
         )
         .overlay {

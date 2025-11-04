@@ -3,18 +3,11 @@
 //  DaisyDos
 //
 //  Created by Claude Code on 9/26/25.
+//  Refactored on 1/2/25 - Removed unused display modes, extracted shared components
 //
 
 import SwiftUI
 import SwiftData
-
-// MARK: - TaskRowDisplayMode
-
-enum TaskRowDisplayMode {
-    case compact    // Minimal info for dense lists
-    case detailed   // Full information display
-    case today      // Today-specific optimizations
-}
 
 // MARK: - TaskRowView
 
@@ -27,7 +20,6 @@ struct TaskRowView: View {
     let onDelete: () -> Void
     let onTagAssignment: (() -> Void)?
 
-    let displayMode: TaskRowDisplayMode
     let showsSubtasks: Bool
     let showsTagButton: Bool
 
@@ -43,7 +35,6 @@ struct TaskRowView: View {
         onEdit: @escaping () -> Void,
         onDelete: @escaping () -> Void,
         onTagAssignment: (() -> Void)? = nil,
-        displayMode: TaskRowDisplayMode = .detailed,
         showsSubtasks: Bool = true,
         showsTagButton: Bool = true
     ) {
@@ -52,7 +43,6 @@ struct TaskRowView: View {
         self.onEdit = onEdit
         self.onDelete = onDelete
         self.onTagAssignment = onTagAssignment
-        self.displayMode = displayMode
         self.showsSubtasks = showsSubtasks
         self.showsTagButton = showsTagButton
     }
@@ -60,20 +50,6 @@ struct TaskRowView: View {
     // MARK: - Body
 
     var body: some View {
-        switch displayMode {
-        case .compact:
-            compactView
-        case .detailed:
-            detailedView
-        case .today:
-            todayView
-        }
-    }
-
-    // MARK: - Display Mode Views
-
-    @ViewBuilder
-    private var compactView: some View {
         HStack(spacing: 12) {
             // Completion toggle
             completionToggle
@@ -152,151 +128,6 @@ struct TaskRowView: View {
         .accessibilityAddTraits(task.isCompleted ? [.updatesFrequently] : [])
     }
 
-    @ViewBuilder
-    private var detailedView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Task header
-            HStack {
-                completionToggle
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(task.title)
-                        .font(.headline)
-                        .strikethrough(task.isCompleted)
-                        .foregroundColor(task.isCompleted ? .daisyTextSecondary : .daisyText)
-
-                    if !task.taskDescription.isEmpty {
-                        Text(task.taskDescriptionAttributed)
-                            .font(.caption)
-                            .foregroundColor(.daisyTextSecondary)
-                            .lineLimit(2)
-                    }
-                }
-
-                Spacer()
-
-                // Indicators
-                VStack(spacing: 4) {
-                    // Recurrence indicator
-                    if task.hasRecurrence {
-                        Image(systemName: "repeat.circle.fill")
-                            .foregroundColor(.daisyTask)
-                            .font(.caption)
-                            .accessibilityLabel("Recurring task")
-                    }
-
-                    // Priority indicator
-                    if task.priority != .medium {
-                        task.priority.indicatorView()
-                            .font(.caption)
-                    }
-                }
-            }
-
-            // Tags section
-            if !task.tags.isEmpty {
-                tagsSection
-            }
-
-            // Metadata footer
-            metadataFooter
-        }
-        .padding()
-        .background(
-            ZStack {
-                // Base background
-                Color.daisySurface
-
-                // Success highlight (only during animation)
-                if isAnimatingCompletion {
-                    Color.daisySuccess.opacity(0.2)
-                }
-            }
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(accessibilityHint)
-    }
-
-    @ViewBuilder
-    private var todayView: some View {
-        HStack(spacing: 12) {
-            // Completion toggle
-            completionToggle
-
-            // Content optimized for today view
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(task.title)
-                        .font(.body.weight(.medium))
-                        .strikethrough(task.isCompleted)
-                        .foregroundColor(task.isCompleted ? .daisyTextSecondary : .daisyText)
-                        .lineLimit(1)
-
-                    Spacer()
-
-                    // Indicators for today view
-                    HStack(spacing: 4) {
-                        // Recurrence indicator
-                        if task.hasRecurrence {
-                            Image(systemName: "repeat.circle.fill")
-                                .foregroundColor(.daisyTask)
-                                .font(.caption)
-                                .accessibilityLabel("Recurring task")
-                        }
-
-                        // Priority indicator
-                        if task.priority != .medium {
-                            task.priority.indicatorView()
-                                .font(.caption)
-                        }
-                    }
-
-                    if task.hasOverdueStatus {
-                        Text("Overdue")
-                            .font(.caption2.weight(.medium))
-                            .foregroundColor(.daisyError)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Colors.Accent.errorBackground, in: Capsule())
-                    }
-                }
-
-                // Tags for today view (more compact)
-                if !task.tags.isEmpty {
-                    HStack(spacing: 4) {
-                        ForEach(task.tags.prefix(3), id: \.id) { tag in
-                            IconOnlyTagChipView(tag: tag)
-                        }
-                        if task.tags.count > 3 {
-                            Text("+\(task.tags.count - 3)")
-                                .font(.caption2)
-                                .foregroundColor(.daisyTextSecondary)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            ZStack {
-                // Base background
-                Color.daisySurface
-
-                // Success highlight (only during animation)
-                if isAnimatingCompletion {
-                    Color.daisySuccess.opacity(0.2)
-                }
-            }
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(accessibilityHint)
-    }
-
     // MARK: - Reusable Components
 
     @ViewBuilder
@@ -342,78 +173,6 @@ struct TaskRowView: View {
         .frame(minWidth: 44, minHeight: 44) // Ensure 44pt touch target
     }
 
-    @ViewBuilder
-    private var tagsSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(task.tags, id: \.id) { tag in
-                    IconOnlyTagChipView(tag: tag)
-                }
-            }
-            .padding(.horizontal, 4)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Tags: " + task.tags.map(\.name).joined(separator: ", "))
-    }
-
-    @ViewBuilder
-    private var metadataFooter: some View {
-        HStack {
-            // Due date
-            if let dueDate = task.dueDate {
-                Label(
-                    "due \(dueDate.formatted(date: .abbreviated, time: .omitted))",
-                    systemImage: "calendar"
-                )
-                .font(.caption)
-                .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyTextSecondary)
-                .accessibilityLabel("Due " + dueDate.formatted(date: .complete, time: .omitted))
-            }
-
-            // Subtasks progress
-            if showsSubtasks && task.hasSubtasks {
-                Label("\(task.completedSubtaskCount)/\(task.subtaskCount)", systemImage: "checklist")
-                    .font(.caption)
-                    .foregroundColor(.daisyTextSecondary)
-                    .accessibilityLabel("\(task.completedSubtaskCount) of \(task.subtaskCount) subtasks completed")
-            }
-
-            Spacer()
-
-            // Action buttons
-            HStack(spacing: 8) {
-                if showsTagButton, let onTagAssignment = onTagAssignment {
-                    Button(action: onTagAssignment) {
-                        Image(systemName: "tag")
-                            .font(.caption)
-                            .foregroundColor(.daisyTag)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Assign tags")
-                    .frame(minWidth: 44, minHeight: 44)
-                }
-
-                Button(action: onEdit) {
-                    Image(systemName: "pencil")
-                        .font(.caption)
-                        .foregroundColor(.daisyTask)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Edit task")
-                .frame(minWidth: 44, minHeight: 44)
-
-                Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .font(.caption)
-                        .foregroundColor(.daisyError)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Delete task")
-                .frame(minWidth: 44, minHeight: 44)
-            }
-        }
-    }
-
     // MARK: - Accessibility Helpers
 
     private var accessibilityLabel: String {
@@ -451,30 +210,16 @@ struct TaskRowView: View {
 
 // MARK: - Preview Providers
 
-#Preview("Detailed Mode") {
-    TaskRowViewPreview(displayMode: .detailed)
-}
-
-#Preview("Compact Mode") {
-    TaskRowViewPreview(displayMode: .compact)
-}
-
-#Preview("Today Mode") {
-    TaskRowViewPreview(displayMode: .today)
+#Preview("Task Row View") {
+    TaskRowViewPreview()
 }
 
 #Preview("Accessibility") {
-    TaskRowViewPreview(displayMode: .detailed)
+    TaskRowViewPreview()
         .environment(\.sizeCategory, .accessibilityExtraExtraExtraLarge)
 }
 
 struct TaskRowViewPreview: View {
-    let displayMode: TaskRowDisplayMode
-
-    init(displayMode: TaskRowDisplayMode = .detailed) {
-        self.displayMode = displayMode
-    }
-
     var body: some View {
         let container = try! ModelContainer(
             for: Task.self, Tag.self,
@@ -521,8 +266,7 @@ struct TaskRowViewPreview: View {
                 },
                 onTagAssignment: {
                     print("Tag assignment tapped")
-                },
-                displayMode: displayMode
+                }
             )
 
             // Show completed version
@@ -535,8 +279,7 @@ struct TaskRowViewPreview: View {
                 }(),
                 onToggleCompletion: {},
                 onEdit: {},
-                onDelete: {},
-                displayMode: displayMode
+                onDelete: {}
             )
 
             // Show overdue task
@@ -552,8 +295,7 @@ struct TaskRowViewPreview: View {
                 }(),
                 onToggleCompletion: {},
                 onEdit: {},
-                onDelete: {},
-                displayMode: displayMode
+                onDelete: {}
             )
         }
         .modelContainer(container)

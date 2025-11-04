@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C42E8302B1007B0F25 /* daisydos_prd.md */; };
 		FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */; };
 		FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537EC2E830555007B0F25 /* CLAUDE.md */; };
 /* End PBXBuildFile section */
@@ -25,7 +24,6 @@
 /* Begin PBXFileReference section */
 		FE3537942E830151007B0F25 /* DaisyDos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DaisyDos.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3537A52E830152007B0F25 /* DaisyDosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaisyDosTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		FE3537C42E8302B1007B0F25 /* daisydos_prd.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = daisydos_prd.md; sourceTree = "<group>"; };
 		FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = implementation_roadmap.md; sourceTree = "<group>"; };
 		FE3537EC2E830555007B0F25 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -103,7 +101,6 @@
 		FE3537C62E8302B1007B0F25 /* Docs */ = {
 			isa = PBXGroup;
 			children = (
-				FE3537C42E8302B1007B0F25 /* daisydos_prd.md */,
 				FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */,
 			);
 			path = Docs;
@@ -202,7 +199,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FE3537C82E8302B1007B0F25 /* daisydos_prd.md in Resources */,
 				FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */,
 				FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */,
 			);
