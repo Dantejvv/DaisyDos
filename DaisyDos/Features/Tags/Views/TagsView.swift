@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct TagsView: View {
+    @Environment(\.dismiss) private var dismiss
     @Environment(TagManager.self) private var tagManager
     @Query(sort: [SortDescriptor(\Tag.name)]) private var allTags: [Tag]
 
@@ -22,9 +23,6 @@ struct TagsView: View {
     @State private var showingUndoToast = false
     @State private var deletedTag: Tag?
     @State private var undoTimer: Timer?
-    @State private var isMultiSelectMode = false
-    @State private var selectedTags: Set<Tag.ID> = []
-    @State private var showingBulkDeleteConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -57,41 +55,48 @@ struct TagsView: View {
                     SearchEmptyStateView(searchText: searchText)
 
                 } else {
-                    // Tag grid
+                    // Tag grid with section header
                     ScrollView {
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 16) {
-                            ForEach(filteredTags) { tag in
-                                TagCardView(
-                                    tag: tag,
-                                    isSelected: selectedTags.contains(tag.id),
-                                    isMultiSelectMode: isMultiSelectMode,
-                                    onTap: {
-                                        if isMultiSelectMode {
-                                            toggleTagSelection(tag)
-                                        } else {
+                        VStack(alignment: .leading, spacing: 12) {
+                            // Section header with counter
+                            HStack {
+                                Text("Your Tags")
+                                    .font(.headline)
+                                    .foregroundColor(.daisyText)
+
+                                Text("(\(filteredTags.count) of 30)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.daisyTextSecondary)
+
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: 16) {
+                                ForEach(filteredTags) { tag in
+                                    TagCardView(
+                                        tag: tag,
+                                        onTap: {
                                             selectedTag = tag
                                             showingEditTag = true
-                                        }
-                                    },
-                                    onEdit: {
-                                        if !isMultiSelectMode {
+                                        },
+                                        onEdit: {
                                             selectedTag = tag
                                             showingEditTag = true
-                                        }
-                                    },
-                                    onDelete: {
-                                        if !isMultiSelectMode {
+                                        },
+                                        onDelete: {
                                             tagToDelete = tag
                                             showingDeleteConfirmation = true
                                         }
-                                    }
-                                )
+                                    )
+                                }
                             }
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
                     }
                 }
             }
@@ -128,56 +133,18 @@ struct TagsView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if !allTags.isEmpty {
-                        Button(isMultiSelectMode ? "Done" : "Select") {
-                            withAnimation {
-                                isMultiSelectMode.toggle()
-                                if !isMultiSelectMode {
-                                    selectedTags.removeAll()
-                                }
-                            }
-                        }
-                    }
-                }
-
-                ToolbarItem(placement: .principal) {
-                    if !allTags.isEmpty && !isMultiSelectMode {
-                        Text("\(allTags.count) of 30 tags")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                    Button("Cancel") {
+                        dismiss()
                     }
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack {
-                        if isMultiSelectMode {
-                            Menu {
-                                Button("Select All") {
-                                    selectedTags = Set(allTags.map(\.id))
-                                }
-                                .disabled(selectedTags.count == allTags.count)
-
-                                Button("Select None") {
-                                    selectedTags.removeAll()
-                                }
-                                .disabled(selectedTags.isEmpty)
-                            } label: {
-                                Image(systemName: "ellipsis")
-                            }
-                        } else {
-                            Button(action: {
-                                showingCreateTag = true
-                            }) {
-                                Image(systemName: "plus")
-                            }
-                            .disabled(allTags.count >= 30)
-                        }
+                    Button(action: {
+                        showingCreateTag = true
+                    }) {
+                        Image(systemName: "plus")
                     }
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                if isMultiSelectMode && !selectedTags.isEmpty {
-                    bulkActionToolbar
+                    .disabled(allTags.count >= 30)
                 }
             }
             .overlay(alignment: .bottom) {
@@ -188,17 +155,10 @@ struct TagsView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .alert(
-                "Delete \(selectedTags.count) Tags",
-                isPresented: $showingBulkDeleteConfirmation
-            ) {
-                Button("Delete \(selectedTags.count) Tags", role: .destructive) {
-                    bulkDelete()
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("Are you sure you want to delete \(selectedTags.count) selected tags? This will remove them from all tasks and habits.")
-            }
+            .errorAlert(error: Binding(
+                get: { tagManager.lastError },
+                set: { tagManager.lastError = $0 }
+            ))
         }
     }
 
@@ -210,38 +170,6 @@ struct TagsView: View {
                 tag.name.localizedCaseInsensitiveContains(searchText)
             }
         }
-    }
-
-    // MARK: - Bulk Action Toolbar
-
-    @ViewBuilder
-    private var bulkActionToolbar: some View {
-        BulkActionToolbar(selectedCount: selectedTags.count) {
-            // Bulk delete
-            Button(action: {
-                showingBulkDeleteConfirmation = true
-            }) {
-                Label("Delete", systemImage: "trash")
-                    .labelStyle(.iconOnly)
-                    .font(.title3)
-            }
-            .foregroundColor(.daisyError)
-        }
-    }
-
-    // MARK: - Helper Methods
-
-    private func toggleTagSelection(_ tag: Tag) {
-        selectedTags.toggleMembership(tag.id)
-    }
-
-    private func bulkDelete() {
-        let tagsToDelete = allTags.filter { selectedTags.contains($0.id) }
-        for tag in tagsToDelete {
-            tagManager.forceDeleteTag(tag)
-        }
-        selectedTags.removeAll()
-        isMultiSelectMode = false
     }
 
     // MARK: - Tag Deletion Methods
@@ -288,71 +216,84 @@ struct TagsView: View {
 
 private struct TagCardView: View {
     let tag: Tag
-    let isSelected: Bool
-    let isMultiSelectMode: Bool
     let onTap: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Tag header
-            HStack(spacing: 8) {
-                Image(systemName: tag.sfSymbolName)
-                    .font(.title2)
-                    .foregroundColor(tag.color)
+        VStack(alignment: .leading, spacing: 10) {
+            // Tag header with icon and name
+            HStack(spacing: 10) {
+                // Icon with color background
+                ZStack {
+                    Circle()
+                        .fill(tag.color.opacity(0.15))
+                        .frame(width: 36, height: 36)
+
+                    Image(systemName: tag.sfSymbolName)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(tag.color)
+                }
 
                 Text(tag.name)
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.daisyText)
                     .lineLimit(1)
 
                 Spacer()
             }
-        }
-        .padding()
-        .background(
-            Group {
-                if isMultiSelectMode && isSelected {
-                    HStack(spacing: 0) {
-                        // Left border accent
-                        Rectangle()
-                            .fill(Color.daisyTag)
-                            .frame(width: 6)
 
-                        // Background tint
-                        Color.daisyTag.opacity(0.15)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else {
-                    Color.daisySurface
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
+            // Usage count
+            HStack(spacing: 4) {
+                Image(systemName: "number")
+                    .font(.caption2)
+                    .foregroundColor(.daisyTextSecondary)
+
+                Text("\(tag.totalItemCount) items")
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
             }
+
+            // Description preview (if exists)
+            if !tag.descriptionText.isEmpty {
+                Text(tag.descriptionText)
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+
+            // Color indicator bar at bottom
+            Rectangle()
+                .fill(tag.color)
+                .frame(height: 3)
+                .frame(maxWidth: .infinity)
+        }
+        .padding(12)
+        .background(
+            Color.daisySurface
+                .clipShape(RoundedRectangle(cornerRadius: 12))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(isMultiSelectMode && isSelected ? Color.daisyTag : Color.clear, lineWidth: 2)
+                .strokeBorder(Color.daisyTextSecondary.opacity(0.1), lineWidth: 1)
         )
         .contentShape(Rectangle())
         .onTapGesture {
             onTap()
         }
         .contextMenu {
-            if !isMultiSelectMode {
-                Button(action: onEdit) {
-                    Label("Edit", systemImage: "pencil")
-                }
-
-                Button(action: onDelete) {
-                    Label("Delete", systemImage: "trash")
-                }
-                .foregroundColor(.daisyError)
+            Button(action: onEdit) {
+                Label("Edit", systemImage: "pencil")
             }
+
+            Button(action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+            .foregroundColor(.daisyError)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            if !isMultiSelectMode {
-                Button("Delete", role: .destructive, action: onDelete)
-            }
+            Button("Delete", role: .destructive, action: onDelete)
         }
     }
 }

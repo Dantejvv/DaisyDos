@@ -399,10 +399,10 @@ struct RecurrenceRuleTests {
     @Test("Display description - monthly")
     func testDisplayDescriptionMonthly() {
         let rule1 = RecurrenceRule.monthly(dayOfMonth: 15)
-        #expect(rule1.displayDescription == "Monthly on day 15")
+        #expect(rule1.displayDescription == "Monthly on the 15th")
 
         let rule2 = RecurrenceRule.monthly(dayOfMonth: 15, interval: 3)
-        #expect(rule2.displayDescription == "Every 3 months on day 15")
+        #expect(rule2.displayDescription == "Every 3 months on the 15th")
     }
 
     @Test("Display description - yearly")

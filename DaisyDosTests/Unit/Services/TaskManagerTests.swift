@@ -207,7 +207,7 @@ struct TaskManagerTests {
         #expect(!task.tags.contains(tag))
     }
 
-    @Test("Enforce 3-tag limit")
+    @Test("Enforce 5-tag limit")
     func testTagLimitEnforcement() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
@@ -218,34 +218,40 @@ struct TaskManagerTests {
             return
         }
 
-        // Add 3 tags
+        // Add 5 tags
         let tag1 = Tag(name: "Tag1", sfSymbolName: "star", colorName: "blue")
         let tag2 = Tag(name: "Tag2", sfSymbolName: "heart", colorName: "red")
         let tag3 = Tag(name: "Tag3", sfSymbolName: "leaf", colorName: "green")
+        let tag4 = Tag(name: "Tag4", sfSymbolName: "sun.max", colorName: "yellow")
+        let tag5 = Tag(name: "Tag5", sfSymbolName: "moon", colorName: "purple")
         context.insert(tag1)
         context.insert(tag2)
         context.insert(tag3)
+        context.insert(tag4)
+        context.insert(tag5)
 
         _ = manager.addTag(tag1, to: task)
         _ = manager.addTag(tag2, to: task)
         _ = manager.addTag(tag3, to: task)
+        _ = manager.addTag(tag4, to: task)
+        _ = manager.addTag(tag5, to: task)
 
-        #expect(task.tags.count == 3)
+        #expect(task.tags.count == 5)
 
-        // Try to add 4th tag
-        let tag4 = Tag(name: "Tag4", sfSymbolName: "sun.max", colorName: "yellow")
-        context.insert(tag4)
+        // Try to add 6th tag
+        let tag6 = Tag(name: "Tag6", sfSymbolName: "cloud", colorName: "gray")
+        context.insert(tag6)
 
-        let result = manager.addTag(tag4, to: task)
+        let result = manager.addTag(tag6, to: task)
 
         // Should fail - verify it's a failure
         if case .failure = result {
             // Expected failure
         } else {
-            Issue.record("Should have failed to add 4th tag")
+            Issue.record("Should have failed to add 6th tag")
         }
 
-        #expect(task.tags.count == 3)
+        #expect(task.tags.count == 5)
     }
 
     // MARK: - Search and Filter Tests

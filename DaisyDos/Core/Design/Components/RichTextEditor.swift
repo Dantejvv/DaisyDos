@@ -40,7 +40,7 @@ struct RichTextEditor: View {
     init(
         attributedText: Binding<AttributedString>,
         placeholder: String = "",
-        maxLength: Int = DesignSystem.inputValidation.CharacterLimits.description
+        maxLength: Int = Int.max
     ) {
         self._attributedText = attributedText
         self.placeholder = placeholder
@@ -52,10 +52,7 @@ struct RichTextEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Text Editor
-            textEditorView
-
-            // Formatting Toolbar
+            // Formatting Toolbar - at top like Word
             if showToolbar {
                 FormattingToolbar(
                     nsAttributedText: $nsAttributedText,
@@ -65,11 +62,11 @@ struct RichTextEditor: View {
                         }
                     }
                 )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            // Character Count
-            characterCountView
+            // Text Editor
+            textEditorView
         }
         .animation(.easeInOut(duration: DesignSystem.Tokens.Animation.fast), value: showToolbar)
         .onChange(of: isEditing) { _, newValue in
@@ -97,13 +94,6 @@ struct RichTextEditor: View {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Colors.Semantic.inputBackground)
                         .opacity(0.9)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(
-                            isEditing ? Colors.Semantic.inputBorderFocused : Colors.Semantic.inputBorder,
-                            lineWidth: isEditing ? 2 : 1
-                        )
                 )
 
             VStack(alignment: .leading, spacing: 0) {
@@ -322,52 +312,52 @@ private struct FormattingToolbar: View {
     @State private var updateTrigger: Int = 0
 
     var body: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: 8) {
             boldButton
-                .frame(width: 44, height: 44)
+                .frame(width: 32, height: 32)
                 .background(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 6)
                         .fill(isBoldActive ? Color.daisyTask.opacity(0.3) : Color.clear)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(isBoldActive ? Color.daisyTask : Color.clear, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isBoldActive ? Color.daisyTask : Color.clear, lineWidth: 1.5)
                 )
 
             italicButton
-                .frame(width: 44, height: 44)
+                .frame(width: 32, height: 32)
                 .background(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 6)
                         .fill(isItalicActive ? Color.daisyTask.opacity(0.3) : Color.clear)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(isItalicActive ? Color.daisyTask : Color.clear, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isItalicActive ? Color.daisyTask : Color.clear, lineWidth: 1.5)
                 )
 
             underlineButton
-                .frame(width: 44, height: 44)
+                .frame(width: 32, height: 32)
                 .background(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 6)
                         .fill(isUnderlineActive ? Color.daisyTask.opacity(0.3) : Color.clear)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(isUnderlineActive ? Color.daisyTask : Color.clear, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isUnderlineActive ? Color.daisyTask : Color.clear, lineWidth: 1.5)
                 )
 
             Divider()
-                .frame(height: 24)
+                .frame(height: 20)
 
             bulletButton
-                .frame(width: 44, height: 44)
+                .frame(width: 32, height: 32)
 
             Spacer()
         }
-        .padding(.horizontal, Spacing.medium)
-        .padding(.vertical, Spacing.small)
+        .padding(.horizontal, Spacing.small)
+        .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 8)
                 .fill(.ultraThinMaterial)
                 .shadow(color: .black.opacity(0.1), radius: 4, y: -2)
         )

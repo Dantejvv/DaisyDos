@@ -81,7 +81,7 @@ struct TagCreationView: View {
                         RichTextEditor(
                             attributedText: $tagDescriptionAttributed,
                             placeholder: "Add tag description with formatting...",
-                            maxLength: DesignSystem.inputValidation.CharacterLimits.description
+                            maxLength: Int.max
                         )
                     }
                 }

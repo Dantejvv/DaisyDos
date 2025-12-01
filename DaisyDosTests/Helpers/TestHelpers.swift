@@ -8,7 +8,7 @@ enum TestHelpers {
     /// - Throws: If the container cannot be created (schema issues, etc.)
     static func createTestContainer() throws -> ModelContainer {
         // Use the same versioned schema as the main app
-        let schema = Schema(versionedSchema: DaisyDosSchemaV4.self)
+        let schema = Schema(versionedSchema: DaisyDosSchemaV7.self)
 
         // Configure for in-memory testing with CloudKit explicitly disabled
         let configuration = ModelConfiguration(

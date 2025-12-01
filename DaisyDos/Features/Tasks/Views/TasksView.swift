@@ -21,15 +21,6 @@ struct TasksView: View {
         order: .reverse
     ) private var rootTasks: [Task]
 
-    // Query for tasks completed today (for progress indicator)
-    @Query(
-        filter: #Predicate<Task> { task in
-            task.parentTask == nil && task.isCompleted
-        },
-        sort: \Task.completedDate,
-        order: .reverse
-    ) private var completedTasks: [Task]
-
     @State private var searchText = ""
     @State private var isSearchPresented = false
     @State private var showingAddTask = false
@@ -40,21 +31,20 @@ struct TasksView: View {
     @State private var taskToDetail: Task?
     @State private var isMultiSelectMode = false
     @State private var selectedTasks: Set<Task.ID> = []
-    @State private var sectionType: TaskSectionType = .none
-    @State private var sortOption: TaskSortOption = .creationDate
+    @State private var sortOption: TaskSortOption = .title
 
     enum TaskSortOption: String, CaseIterable {
+        case title = "Title"
+        case priority = "Priority"
         case creationDate = "Creation Date"
         case dueDate = "Due Date"
-        case priority = "Priority"
-        case title = "Title"
 
         var systemImage: String {
             switch self {
+            case .title: return "textformat.abc"
+            case .priority: return "exclamationmark.triangle"
             case .creationDate: return "calendar"
             case .dueDate: return "calendar.badge.clock"
-            case .priority: return "exclamationmark.triangle"
-            case .title: return "textformat.abc"
             }
         }
     }
@@ -120,31 +110,6 @@ struct TasksView: View {
                                 }
                             } label: {
                                 Image(systemName: sortOption.systemImage)
-                                    .foregroundColor(.daisyToolbar)
-                            }
-
-                            // Section picker button - ALWAYS visible
-                            Menu {
-                                Text("Group Tasks By")
-                                    .font(.headline)
-
-                                Divider()
-
-                                ForEach(TaskSectionType.allCases, id: \.self) { option in
-                                    Button(action: {
-                                        withAnimation {
-                                            sectionType = option
-                                        }
-                                    }) {
-                                        Label(option.displayName, systemImage: option.sfSymbol)
-                                        if sectionType == option {
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                            } label: {
-                                Image(systemName: sectionType.sfSymbol)
-                                    .foregroundColor(.daisyToolbar)
                             }
                         }
 
@@ -226,6 +191,10 @@ struct TasksView: View {
             } message: {
                 Text("Are you sure you want to delete \(selectedTasks.count) selected tasks? This action cannot be undone.")
             }
+            .errorAlert(error: Binding(
+                get: { taskManager.lastError },
+                set: { taskManager.lastError = $0 }
+            ))
         }
     }
 
@@ -266,9 +235,6 @@ struct TasksView: View {
         }
     }
 
-    private var sectionedTasks: [(String, [Task])] {
-        return sectionType.groupTasks(sortedTasks)
-    }
 
     // MARK: - Task Row Builder
 
@@ -299,8 +265,7 @@ struct TasksView: View {
                     }
                 }
             },
-            onTagAssignment: nil, // Removed tag button from TasksView
-            showsTagButton: false // Disable tag button
+            onTagAssignment: nil // Removed tag button from TasksView
         )
         .overlay {
             if taskToDelete?.id == task.id {
@@ -308,32 +273,17 @@ struct TasksView: View {
             }
         }
         .animation(.none, value: taskToDelete)
-        .listRowBackground(
-            // Selected row background and border accent
-            Group {
-                if isMultiSelectMode && selectedTasks.contains(task.id) {
-                    HStack(spacing: 0) {
-                        // Left border accent
-                        Rectangle()
-                            .fill(Color.daisyTask)
-                            .frame(width: 6)
-
-                        // Background tint
-                        Color.daisyTask.opacity(0.15)
-                    }
+        .rowStyling(
+            isSelected: isMultiSelectMode && selectedTasks.contains(task.id),
+            accentColor: .daisyTask,
+            onTap: {
+                if isMultiSelectMode {
+                    toggleTaskSelection(task)
                 } else {
-                    Color.clear
+                    taskToDetail = task
                 }
             }
         )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if isMultiSelectMode {
-                toggleTaskSelection(task)
-            } else {
-                taskToDetail = task
-            }
-        }
         .standardRowSwipeActions(
             isMultiSelectMode: isMultiSelectMode,
             accentColor: .daisyTask,
@@ -409,9 +359,25 @@ struct TasksView: View {
 
     private func bulkToggleCompletion() {
         let tasksToUpdate = sortedTasks.filter { selectedTasks.contains($0.id) }
+        var completedTasks: [Task] = []
+
         for task in tasksToUpdate {
             _ = taskManager.toggleTaskCompletionSafely(task)
+            if task.isCompleted {
+                completedTasks.append(task)
+            }
         }
+
+        // Show toast if any tasks were completed
+        if let lastTask = completedTasks.last {
+            toastManager.showCompletionToast(for: lastTask) { [completedTasks] in
+                // Undo all completed tasks
+                for task in completedTasks {
+                    _ = taskManager.toggleTaskCompletionSafely(task)
+                }
+            }
+        }
+
         selectedTasks.removeAll()
         isMultiSelectMode = false
     }
@@ -462,72 +428,12 @@ struct TasksView: View {
     }
 
     private var taskListView: some View {
-        VStack(spacing: 0) {
-            // Overall progress indicator when not sectioned
-            if !rootTasks.isEmpty {
-                overallProgressIndicator
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-                    .background(Color.daisySurface)
+        List {
+            ForEach(sortedTasks) { task in
+                taskRow(for: task)
             }
-
-            List {
-                ForEach(sectionedTasks, id: \.0) { section in
-                    if sectionType == .none || sectionedTasks.count == 1 {
-                        // No sectioning - show tasks directly
-                        ForEach(section.1) { task in
-                            taskRow(for: task)
-                        }
-                    } else {
-                        // Show sections with headers
-                        Section {
-                            ForEach(section.1) { task in
-                                taskRow(for: task)
-                            }
-                        } header: {
-                            sectionType.sectionHeader(title: section.0, count: section.1.count)
-                        }
-                    }
-                }
-            }
-            .listStyle(PlainListStyle())
         }
-    }
-
-    private var overallProgressIndicator: some View {
-        // Count tasks completed today
-        let startOfToday = Calendar.current.startOfDay(for: Date())
-        let completedToday = completedTasks.filter { task in
-            guard let completedDate = task.completedDate else { return false }
-            return completedDate >= startOfToday
-        }.count
-
-        return HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Tasks Completed Today")
-                    .font(.caption.weight(.medium))
-                    .foregroundColor(.daisyText)
-
-                HStack(spacing: 8) {
-                    // Checkmark icon
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.daisySuccess)
-
-                    // Completion count
-                    Text("\(completedToday)")
-                        .font(.title2.weight(.bold))
-                        .foregroundColor(.daisyText)
-                        .monospacedDigit()
-
-                    Text(completedToday == 1 ? "task" : "tasks")
-                        .font(.subheadline)
-                        .foregroundColor(.daisyTextSecondary)
-                }
-            }
-
-            Spacer()
-        }
+        .listStyle(PlainListStyle())
     }
 }
 

@@ -17,10 +17,11 @@ import UserNotifications
 @main
 struct DaisyDosApp: App {
     let localOnlyModeManager = LocalOnlyModeManager()
+    let appearanceManager = AppearanceManager()
     let navigationManager = NavigationManager()
 
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema(versionedSchema: DaisyDosSchemaV4.self)
+        let schema = Schema(versionedSchema: DaisyDosSchemaV7.self)
         // Explicitly disable CloudKit for local-only mode
         let modelConfiguration = ModelConfiguration(
             schema: schema,
@@ -41,7 +42,8 @@ struct DaisyDosApp: App {
         #endif
 
         do {
-            let container = try ModelContainer(for: schema, migrationPlan: DaisyDosMigrationPlan.self, configurations: [modelConfiguration])
+            // No migration plan - we don't have user data to migrate yet
+            let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
             return container
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
@@ -55,10 +57,12 @@ struct DaisyDosApp: App {
                     // Run logbook housekeeping on app launch (if needed)
                     await runLogbookHousekeepingIfNeeded()
                 }
+                .applyAppearance(appearanceManager)
         }
         .modelContainer(sharedModelContainer)
         .environment(navigationManager)
         .environment(localOnlyModeManager)
+        .environment(appearanceManager)
         .environment(TaskManager(modelContext: sharedModelContainer.mainContext))
         .environment(HabitManager(modelContext: sharedModelContainer.mainContext))
         .environment(TagManager(modelContext: sharedModelContainer.mainContext))

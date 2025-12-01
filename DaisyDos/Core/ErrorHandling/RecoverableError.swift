@@ -9,7 +9,8 @@ import Foundation
 
 /// Protocol for errors that can provide user-friendly messages and recovery actions
 /// Final tier in the three-tier error handling system (Platform → App → User)
-protocol RecoverableError: Error {
+/// Conforms to LocalizedError for seamless SwiftUI alert integration
+protocol RecoverableError: Error, LocalizedError {
     /// User-friendly message that explains what went wrong
     var userMessage: String { get }
 
@@ -21,6 +22,24 @@ protocol RecoverableError: Error {
 
     /// Priority level for displaying this error
     var priority: ErrorPriority { get }
+}
+
+// MARK: - LocalizedError Conformance
+
+extension RecoverableError {
+    /// Maps userMessage to SwiftUI's errorDescription for alert presentation
+    var errorDescription: String? { userMessage }
+
+    /// Maps userReason to SwiftUI's recoverySuggestion for alert message
+    var recoverySuggestion: String? {
+        userReason.isEmpty ? nil : userReason
+    }
+
+    /// No failure reason needed - userReason provides context
+    var failureReason: String? { nil }
+
+    /// No help anchor - recovery options provide actions
+    var helpAnchor: String? { nil }
 }
 
 /// Priority levels for error presentation
@@ -89,12 +108,8 @@ extension DaisyDosError: RecoverableError {
             return "Too many tags"
         case .invalidRecurrence:
             return "Invalid schedule settings"
-        case .invalidDateRange:
-            return "Invalid dates"
         case .circularReference:
             return "Invalid task relationship"
-        case .attachmentLimitExceeded:
-            return "Attachment too large"
         case .duplicateEntity(let type):
             return "\(type.capitalized) already exists"
         case .entityNotFound(let type):
@@ -107,6 +122,12 @@ extension DaisyDosError: RecoverableError {
             return "Permission required"
         case .integrationFailed(let service):
             return "\(service.capitalized) is temporarily unavailable"
+        case .databaseError(let operation, _):
+            return "Database error: \(operation)"
+        case .exportFailed:
+            return "Export failed"
+        case .importFailed:
+            return "Import failed"
         }
     }
 
@@ -121,15 +142,11 @@ extension DaisyDosError: RecoverableError {
         case .validationFailed:
             return "Some required information is missing or incorrect."
         case .tagLimitExceeded:
-            return "You can only have 3 tags per item and 30 total tags in your system."
+            return "You can only have 5 tags per item and 30 total tags in your system."
         case .invalidRecurrence:
             return "The schedule you've set up has invalid settings."
-        case .invalidDateRange:
-            return "The start date must be before the due date."
         case .circularReference:
             return "This would create a circular relationship between tasks."
-        case .attachmentLimitExceeded:
-            return "This attachment would exceed the size limit for tasks."
         case .duplicateEntity:
             return "An item with this information already exists in your system."
         case .entityNotFound:
@@ -142,6 +159,12 @@ extension DaisyDosError: RecoverableError {
             return "DaisyDos needs permission to access \(service) to continue."
         case .integrationFailed:
             return "The external service is experiencing technical difficulties."
+        case .databaseError:
+            return "A database operation failed unexpectedly."
+        case .exportFailed(let details):
+            return "Failed to export your data: \(details)"
+        case .importFailed(let details):
+            return "Failed to import the data: \(details)"
         }
     }
 
@@ -186,23 +209,9 @@ extension DaisyDosError: RecoverableError {
                 RecoveryAction(title: "Cancel", style: .secondary) { /* Cancel */ }
             ]
 
-        case .invalidDateRange:
-            return [
-                RecoveryAction(title: "Fix Dates", style: .primary) { /* Return to date editor */ },
-                RecoveryAction(title: "Remove Dates", style: .secondary) { /* Clear dates */ },
-                RecoveryAction(title: "Cancel", style: .secondary) { /* Cancel */ }
-            ]
-
         case .circularReference:
             return [
                 RecoveryAction(title: "Choose Different Parent", style: .primary) { /* Parent selection */ },
-                RecoveryAction(title: "Cancel", style: .secondary) { /* Cancel */ }
-            ]
-
-        case .attachmentLimitExceeded:
-            return [
-                RecoveryAction(title: "Remove Attachments", style: .primary) { /* Attachment management */ },
-                RecoveryAction(title: "Choose Smaller File", style: .secondary) { /* File picker */ },
                 RecoveryAction(title: "Cancel", style: .secondary) { /* Cancel */ }
             ]
 
@@ -243,16 +252,34 @@ extension DaisyDosError: RecoverableError {
                 RecoveryAction(title: "Try Again", style: .primary) { /* Retry integration */ },
                 RecoveryAction(title: "Skip for Now", style: .secondary) { /* Skip integration */ }
             ]
+
+        case .databaseError:
+            return [
+                RecoveryAction(title: "Try Again", style: .primary) { /* Retry operation */ },
+                RecoveryAction(title: "Cancel", style: .secondary) { /* Cancel */ }
+            ]
+
+        case .exportFailed:
+            return [
+                RecoveryAction(title: "Try Again", style: .primary) { /* Retry export */ },
+                RecoveryAction(title: "Cancel", style: .secondary) { /* Cancel */ }
+            ]
+
+        case .importFailed:
+            return [
+                RecoveryAction(title: "Choose Different File", style: .primary) { /* File picker */ },
+                RecoveryAction(title: "Cancel", style: .secondary) { /* Cancel */ }
+            ]
         }
     }
 
     var priority: ErrorPriority {
         switch self {
-        case .validationFailed, .tagLimitExceeded, .invalidRecurrence, .invalidDateRange, .circularReference, .attachmentLimitExceeded:
+        case .validationFailed, .tagLimitExceeded, .invalidRecurrence, .circularReference:
             return .low
-        case .duplicateEntity, .entityNotFound, .persistenceFailed:
+        case .duplicateEntity, .entityNotFound, .persistenceFailed, .exportFailed, .importFailed:
             return .medium
-        case .networkUnavailable, .permissionDenied, .integrationFailed:
+        case .networkUnavailable, .permissionDenied, .integrationFailed, .databaseError:
             return .high
         case .modelContextUnavailable, .dataCorrupted, .syncConflict:
             return .critical

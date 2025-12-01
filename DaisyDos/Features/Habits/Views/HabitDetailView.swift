@@ -3,69 +3,116 @@
 //  DaisyDos
 //
 //  Created by Claude Code on 9/29/25.
+//  Refactored with vertical card layout on 11/10/25
+//  Refactored with shared components on 11/11/25
+//
+//  FEATURE DIFFERENCES FROM TASKDETAILVIEW:
+//  ════════════════════════════════════════════════════════════════════════════
+//  1. DUE DATES: Habits don't have due dates; they use recurrence rules for scheduling
+//     Rationale: Habits are about building consistent behaviors, not meeting deadlines
+//
+//  2. SKIP FUNCTIONALITY: Habits can be skipped with reasons; tasks are binary (done/not done)
+//     Rationale: Life happens - users need flexibility without breaking streaks
+//
+//  3. COMPLETION TRACKING: Multiple completion entries with mood/duration; tasks have single state
+//     Rationale: Track behavioral patterns and progress over time (see "Recent Activity" card)
+//
+//  4. STREAK DISPLAY: Shows current streak prominently; tasks don't track streaks
+//     Rationale: Streaks motivate consistency in habit formation
+//
+//  5. COMPLETION TOAST: 5-second undo with HabitCompletionToastManager; tasks don't use toasts
+//     Rationale: Quick undo prevents accidental completions in daily habit tracking
+//
+//  6. NO LOGBOOK: Habits maintain continuous history; no archival needed
+//     Rationale: Habit tracking is ongoing; completion history never expires
+//
+//  SHARED BEHAVIORS:
+//  ════════════════════════════════════════════════════════════════════════════
+//  - Subtasks, tags, attachments, recurrence, alerts, priority
+//  - Card-based layout using shared components (HistoryCard, TagsCard, DetailCard)
+//  - Consistent tag/subtask management via manager methods
+//  - Shared formatting utilities (DetailViewHelpers)
 //
 
 import SwiftUI
 import SwiftData
+import QuickLook
 
 struct HabitDetailView: View {
     // MARK: - Properties
 
-    @Bindable var habit: Habit
-    @Environment(\.modelContext) private var modelContext
+    @Environment(HabitManager.self) private var habitManager
     @Environment(\.dismiss) private var dismiss
     @Environment(HabitCompletionToastManager.self) private var toastManager
 
-    @State private var habitManager: HabitManager
-    @State private var selectedTab: DetailTab = .overview
+    let habit: Habit
+
     @State private var showingEditView = false
     @State private var showingDeleteAlert = false
     @State private var showingSkipView = false
-
-    // MARK: - Initializer
-
-    init(habit: Habit, modelContext: ModelContext) {
-        self.habit = habit
-        self._habitManager = State(initialValue: HabitManager(modelContext: modelContext))
-    }
-
-    // MARK: - Detail Tabs
-
-    enum DetailTab: String, CaseIterable {
-        case overview = "Overview"
-        case history = "History"
-
-        var icon: String {
-            switch self {
-            case .overview: return "info.circle"
-            case .history: return "calendar"
-            }
-        }
-    }
+    @State private var showingTagAssignment = false
+    @State private var showingRecurrencePicker = false
+    @State private var showingAlertPicker = false
+    @State private var showingPriorityPicker = false
+    @State private var newSubtaskTitle = ""
+    @State private var showSubtaskField = false
+    @FocusState private var newSubtaskFocused: Bool
+    @State private var attachmentToPreview: URL?
 
     // MARK: - Body
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Custom Tab Picker
-                tabPicker
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Hero Card - Habit Overview (title, description, priority)
+                    habitOverviewCard
 
-                // Tab Content
-                TabView(selection: $selectedTab) {
-                    overviewTab
-                        .tag(DetailTab.overview)
+                    // Subtasks Section - Always shown
+                    subtasksCard
 
-                    historyTab
-                        .tag(DetailTab.history)
+                    // Metadata Card (recurrence) - Always shown
+                    metadataCard
+
+                    // Tags Section - Always shown
+                    tagsCard
+
+                    // Attachments Section - Always shown
+                    attachmentsCard
+
+                    // Status & Progress Card
+                    statusAndProgressCard
+
+                    // History Card (created, modified, completion history)
+                    historyCard
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .padding()
             }
-            .navigationTitle(habit.title)
-            .navigationBarTitleDisplayMode(.large)
+            .background(Color.daisyBackground)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
+                        // Completion toggle at the top
+                        Button {
+                            if habit.isCompletedToday {
+                                _ = habitManager.undoHabitCompletion(habit)
+                            } else {
+                                if let _ = habitManager.markHabitCompletedWithTracking(habit) {
+                                    toastManager.showCompletionToast(for: habit) {
+                                        _ = habitManager.undoHabitCompletion(habit)
+                                    }
+                                }
+                            }
+                        } label: {
+                            if habit.isCompletedToday {
+                                Label("Mark as Incomplete", systemImage: "circle")
+                            } else {
+                                Label("Mark as Complete", systemImage: "checkmark.circle.fill")
+                            }
+                        }
+
+                        Divider()
+
                         Button {
                             showingEditView = true
                         } label: {
@@ -73,25 +120,6 @@ struct HabitDetailView: View {
                         }
 
                         Divider()
-
-                        // Quick Actions
-                        if habit.isCompletedToday {
-                            Button {
-                                let _ = habitManager.undoHabitCompletion(habit)
-                            } label: {
-                                Label("Mark Incomplete", systemImage: "minus.circle")
-                            }
-                        } else {
-                            Button {
-                                if let _ = habitManager.markHabitCompletedWithTracking(habit) {
-                                    toastManager.showCompletionToast(for: habit) {
-                                        let _ = habitManager.undoHabitCompletion(habit)
-                                    }
-                                }
-                            } label: {
-                                Label("Mark Complete", systemImage: "checkmark.circle")
-                            }
-                        }
 
                         Button {
                             showingSkipView = true
@@ -119,9 +147,60 @@ struct HabitDetailView: View {
             SimpleHabitSkipView(
                 habit: habit,
                 onSkip: { reason in
-                    let _ = habitManager.skipHabit(habit, reason: reason)
+                    _ = habitManager.skipHabit(habit, reason: reason)
                 }
             )
+        }
+        .sheet(isPresented: $showingTagAssignment) {
+            TagSelectionView(selectedTags: .init(
+                get: { habit.tags },
+                set: { newTags in
+                    updateHabitTags(newTags)
+                }
+            ))
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showingRecurrencePicker) {
+            RecurrenceRulePickerView(recurrenceRule: .init(
+                get: { habit.recurrenceRule },
+                set: { newRule in
+                    habit.recurrenceRule = newRule
+                    habit.modifiedDate = Date()
+                }
+            ))
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showingAlertPicker) {
+            AlertPickerSheet(
+                selectedAlert: .init(
+                    get: {
+                        if let interval = habit.alertTimeInterval {
+                            return AlertOption.allCases.first { $0.timeInterval == interval }
+                        }
+                        return nil
+                    },
+                    set: { newAlert in
+                        habit.alertTimeInterval = newAlert?.timeInterval
+                        habit.modifiedDate = Date()
+                    }
+                ),
+                accentColor: .daisyHabit
+            )
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showingPriorityPicker) {
+            PriorityPickerSheet(
+                selectedPriority: .init(
+                    get: { habit.priority },
+                    set: { newPriority in
+                        habit.priority = newPriority
+                        habit.modifiedDate = Date()
+                    }
+                ),
+                accentColor: .daisyHabit
+            )
+            .presentationDetents([.medium])
         }
         .alert("Delete Habit", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
@@ -131,299 +210,441 @@ struct HabitDetailView: View {
         } message: {
             Text("Are you sure you want to delete '\(habit.title)'? This action cannot be undone.")
         }
+        .quickLookPreview($attachmentToPreview)
+        .errorAlert(error: Binding(
+            get: { habitManager.lastError },
+            set: { habitManager.lastError = $0 }
+        ))
     }
 
-    // MARK: - Tab Picker
+    // MARK: - Hero Card - Habit Overview
 
     @ViewBuilder
-    private var tabPicker: some View {
-        HStack(spacing: 0) {
-            ForEach(DetailTab.allCases, id: \.self) { tab in
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        selectedTab = tab
-                    }
-                }) {
-                    VStack(spacing: 4) {
-                        Image(systemName: tab.icon)
-                            .font(.body.weight(.medium))
+    private var habitOverviewCard: some View {
+        OverviewCard(
+            title: habit.title,
+            description: habit.habitDescriptionAttributed
+        )
+    }
 
-                        Text(tab.rawValue)
-                            .font(.caption.weight(.medium))
+    // MARK: - Status & Progress Card
+
+    @ViewBuilder
+    private var statusAndProgressCard: some View {
+        StatusProgressCard(
+            hasSubtasks: habit.hasSubtasks,
+            completedSubtaskCount: habit.completedSubtaskCount,
+            totalSubtaskCount: habit.subtaskCount,
+            accentColor: .daisyHabit
+        ) {
+            HStack(spacing: 20) {
+                // Today's completion
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Today")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                    HStack(spacing: 6) {
+                        Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(habit.isCompletedToday ? .daisySuccess : .daisyTextSecondary)
+                        Text(habit.isCompletedToday ? "Complete" : "Incomplete")
+                            .font(.subheadline.weight(.medium))
                     }
-                    .frame(minWidth: 44, minHeight: 44)
-                    .foregroundColor(selectedTab == tab ? .daisyHabit : .daisyTextSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
                 }
-                .background(
-                    Rectangle()
-                        .fill(selectedTab == tab ? Color.daisyHabit.opacity(0.1) : Color.clear)
-                        .animation(.easeInOut(duration: 0.3), value: selectedTab)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Divider()
+                    .frame(height: 40)
+
+                // Current Streak
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Current Streak")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                    HStack(spacing: 6) {
+                        Image(systemName: "flame.fill")
+                            .foregroundColor(.orange)
+                        Text("\(habit.currentStreak)")
+                            .font(.subheadline.weight(.medium))
+                        Text("days")
+                            .font(.caption)
+                            .foregroundColor(.daisyTextSecondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Divider()
+                    .frame(height: 40)
+
+                // Subtask progress
+                SubtaskStatusSection(
+                    hasSubtasks: habit.hasSubtasks,
+                    completedCount: habit.completedSubtaskCount,
+                    totalCount: habit.subtaskCount,
+                    accentColor: .daisyHabit
                 )
             }
         }
-        .background(Color.daisySurface)
-        .overlay(
-            // Selection indicator
-            GeometryReader { geometry in
-                VStack {
-                    Spacer()
-                    Rectangle()
-                        .fill(Color.daisyHabit)
-                        .frame(width: geometry.size.width / CGFloat(DetailTab.allCases.count), height: 2)
-                        .offset(x: tabIndicatorOffset(for: geometry.size.width))
-                        .animation(.easeInOut(duration: 0.3), value: selectedTab)
+    }
+
+    // MARK: - Tags Card
+
+    @ViewBuilder
+    private var tagsCard: some View {
+        TagsCard(
+            tags: habit.tags,
+            accentColor: .daisyHabit,
+            canModify: true,
+            maxTags: 5,
+            onAddTags: {
+                showingTagAssignment = true
+            },
+            onRemoveTag: { tag in
+                removeTag(tag)
+            }
+        )
+    }
+
+    // MARK: - Metadata Card
+
+    @ViewBuilder
+    private var metadataCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Details")
+                .font(.headline)
+                .foregroundColor(.daisyText)
+
+            VStack(spacing: 12) {
+                // Recurrence - Always shown
+                Button(action: {
+                    showingRecurrencePicker = true
+                }) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Label("Recurrence", systemImage: "repeat")
+                                .font(.subheadline)
+                                .foregroundColor(.daisyTextSecondary)
+                            Spacer()
+                            HStack(spacing: 4) {
+                                if habit.recurrenceRule == nil {
+                                    Text("None")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundColor(.daisyTextSecondary)
+                                }
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.daisyTextSecondary)
+                            }
+                        }
+
+                        // Pattern description (only shown if recurrence exists)
+                        if let recurrenceRule = habit.recurrenceRule {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(recurrenceRule.displayDescription)
+                                    .font(.subheadline)
+                                    .foregroundColor(.daisyTextSecondary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.daisyBackground.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+                            }
+
+                            // Next occurrence info
+                            if let nextDate = recurrenceRule.nextOccurrence(after: Date()) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Next")
+                                        .font(.caption.weight(.medium))
+                                        .foregroundColor(.daisyTextSecondary)
+
+                                    HStack {
+                                        Text(nextDate, style: .date)
+                                            .font(.subheadline)
+                                            .foregroundColor(.daisyText)
+
+                                        Spacer()
+
+                                        Text(formatRelativeDate(nextDate))
+                                            .font(.caption)
+                                            .foregroundColor(.daisyHabit)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Divider()
+
+                // Alert - Always shown
+                Button(action: {
+                    showingAlertPicker = true
+                }) {
+                    HStack {
+                        Label("Alert", systemImage: "bell.fill")
+                            .font(.subheadline)
+                            .foregroundColor(.daisyTextSecondary)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            if let alertInterval = habit.alertTimeInterval {
+                                Text(formatAlertInterval(alertInterval))
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.daisyText)
+                            } else {
+                                Text("None")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.daisyTextSecondary)
+                            }
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.daisyTextSecondary)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Divider()
+
+                // Priority - Always shown
+                Button(action: {
+                    showingPriorityPicker = true
+                }) {
+                    HStack {
+                        Label("Priority", systemImage: "flag.fill")
+                            .font(.subheadline)
+                            .foregroundColor(.daisyTextSecondary)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            if habit.priority != .none {
+                                habit.priority.indicatorView()
+                                    .font(.caption)
+                                Text(habit.priority.displayName)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.daisyText)
+                            } else {
+                                Text("None")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.daisyTextSecondary)
+                            }
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.daisyTextSecondary)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Subtasks Section
+
+    @ViewBuilder
+    private var subtasksCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            Text("Subtasks")
+                .font(.headline)
+                .foregroundColor(.daisyText)
+
+            if habit.subtasks.isEmpty && !showSubtaskField {
+                // Empty state - button to show field
+                SubtaskAddButton {
+                    showSubtaskField = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        newSubtaskFocused = true
+                    }
+                }
+            }
+
+            // Subtasks list or field showing
+            if !habit.subtasks.isEmpty || showSubtaskField {
+                VStack(spacing: 0) {
+                    // Existing subtasks list
+                    if !habit.subtasks.isEmpty {
+                        List {
+                            ForEach(habit.orderedSubtasks) { subtask in
+                                SubtaskRow(
+                                    subtask: subtask,
+                                    accentColor: .daisyHabit,
+                                    onToggle: {
+                                        toggleSubtask(subtask)
+                                    }
+                                )
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                            }
+                        }
+                        .listStyle(.plain)
+                        .frame(height: CGFloat(habit.subtasks.count) * 44)
+                        .scrollDisabled(true)
+                    }
+
+                    // Add new subtask field
+                    if showSubtaskField {
+                        SubtaskInputField(
+                            text: $newSubtaskTitle,
+                            isFocused: $newSubtaskFocused,
+                            onAdd: {
+                                addSubtaskAndClose()
+                            }
+                        )
+                    }
+
+                    // Always-visible + button
+                    SubtaskAddButton {
+                        // If field is showing and has text, add the subtask first
+                        if showSubtaskField && !newSubtaskTitle.isEmpty {
+                            addSubtask()
+                        }
+
+                        // Show field if hidden
+                        if !showSubtaskField {
+                            showSubtaskField = true
+                        }
+
+                        // Always focus the field
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            newSubtaskFocused = true
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Attachments Card
+
+    @ViewBuilder
+    private var attachmentsCard: some View {
+        AttachmentPreviewSection(
+            attachments: habit.attachments,
+            accentColor: .daisyHabit,
+            onTap: { attachment in
+                // Create temporary URL from attachment data for QuickLook preview
+                let tempURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(attachment.id.uuidString)
+                    .appendingPathExtension(attachment.fileExtension)
+
+                do {
+                    try attachment.fileData.write(to: tempURL)
+                    attachmentToPreview = tempURL
+                } catch {
+                    // Silently fail - could add error handling if needed
+                    print("Failed to create temporary file for preview: \(error)")
                 }
             }
         )
     }
 
-    private func tabIndicatorOffset(for totalWidth: CGFloat) -> CGFloat {
-        let tabWidth = totalWidth / CGFloat(DetailTab.allCases.count)
-        let index = DetailTab.allCases.firstIndex(of: selectedTab) ?? 0
-        return CGFloat(index) * tabWidth
-    }
-
-    // MARK: - Overview Tab
+    // MARK: - History Card
 
     @ViewBuilder
-    private var overviewTab: some View {
-        ScrollView {
-            LazyVStack(spacing: 20) {
-                // Habit Information Card
-                habitInfoCard
+    private var historyCard: some View {
+        let sortedCompletions = habit.completionEntries
+            .sorted { $0.completedDate > $1.completedDate }
 
-                // Current Status Card
-                currentStatusCard
+        VStack(spacing: 20) {
+            // Main history card (created, modified, completion stats)
+            HistoryCard(
+                createdDate: habit.createdDate,
+                modifiedDate: habit.modifiedDate,
+                completionInfo: !sortedCompletions.isEmpty
+                    ? .multiple(count: sortedCompletions.count, lastDate: sortedCompletions.first!.completedDate)
+                    : nil
+            )
 
-                // Tags Section
-                if !habit.tags.isEmpty {
-                    tagsCard
-                }
+            // Additional habit-specific completion details (last 5 entries)
+            if sortedCompletions.count > 1 {
+                DetailCard(title: "Recent Activity") {
+                    VStack(spacing: 4) {
+                        ForEach(sortedCompletions.prefix(5), id: \.id) { completion in
+                            CompletionRowView(completion: completion, showDetails: false)
+                        }
 
-            }
-            .padding()
-        }
-        .background(Color.daisyBackground)
-        .overlay(alignment: .bottomTrailing) {
-            // Floating completion toggle
-            Button(action: {
-                if habit.isCompletedToday {
-                    let _ = habitManager.undoHabitCompletion(habit)
-                } else {
-                    if let _ = habitManager.markHabitCompletedWithTracking(habit) {
-                        toastManager.showCompletionToast(for: habit) {
-                            let _ = habitManager.undoHabitCompletion(habit)
+                        if sortedCompletions.count > 5 {
+                            Text("+ \(sortedCompletions.count - 5) more")
+                                .font(.caption2)
+                                .foregroundColor(.daisyTextSecondary)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.top, 4)
                         }
                     }
                 }
-            }) {
-                Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
-                    .font(.largeTitle)
-                    .imageScale(.large)
-                    .foregroundColor(habit.isCompletedToday ? .daisySuccess : .daisyHabit)
-                    .background(
-                        Circle()
-                            .fill(.regularMaterial)
-                            .shadow(radius: 8)
-                    )
             }
-            .frame(minWidth: 64, minHeight: 64)
-            .padding()
-            .accessibilityLabel(habit.isCompletedToday ? "Mark as incomplete" : "Mark as complete")
-            .accessibilityHint("Double tap to toggle completion status")
         }
     }
 
-    // MARK: - History Tab
+    // MARK: - Initializer
 
-    @ViewBuilder
-    private var historyTab: some View {
-        ScrollView {
-            LazyVStack(spacing: 20) {
-                // Completion History List
-                completionHistoryCard
-            }
-            .padding()
-        }
-        .background(Color.daisyBackground)
-    }
-
-    // MARK: - Overview Cards
-
-    @ViewBuilder
-    private var habitInfoCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("About")
-                    .font(.headline)
-                    .foregroundColor(.daisyText)
-                Spacer()
-                if habit.priority != .none {
-                    HStack(spacing: 6) {
-                        habit.priority.indicatorView()
-                            .font(.caption)
-                        Text(habit.priority.displayName)
-                            .font(.caption.weight(.medium))
-                            .foregroundColor(.daisyTextSecondary)
-                    }
-                }
-            }
-
-            if !habit.habitDescription.isEmpty {
-                ScrollableDescriptionView(
-                    text: habit.habitDescriptionAttributed,
-                    maxHeight: 200
-                )
-            }
-
-            if let recurrenceRule = habit.recurrenceRule {
-                Label(
-                    recurrenceRule.displayDescription,
-                    systemImage: "repeat"
-                )
-                .font(.caption)
-                .foregroundColor(.daisyTextSecondary)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Label(
-                    "Created \(habit.createdDate.formatted(date: .abbreviated, time: .omitted))",
-                    systemImage: "calendar"
-                )
-                .font(.caption)
-                .foregroundColor(.daisyTextSecondary)
-
-                // Only show modified if different from created (more than 1 minute difference)
-                if habit.modifiedDate.timeIntervalSince(habit.createdDate) > 60 {
-                    Label(
-                        "Modified \(habit.modifiedDate.formatted(date: .abbreviated, time: .omitted))",
-                        systemImage: "pencil.circle"
-                    )
-                    .font(.caption)
-                    .foregroundColor(.daisyTextSecondary)
-                }
-            }
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    @ViewBuilder
-    private var currentStatusCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Current Status")
-                .font(.headline)
-                .foregroundColor(.daisyText)
-
-            HStack {
-                // Current Streak
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "flame.fill")
-                            .foregroundColor(.orange)
-
-                        Text("\(habit.currentStreak)")
-                            .font(.title2.weight(.bold))
-                            .foregroundColor(.daisyText)
-
-                        Text("days")
-                            .font(.caption)
-                            .foregroundColor(.daisyTextSecondary)
-                    }
-
-                    Text("Current Streak")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
-                }
-
-                Spacer()
-
-                // Completion Status
-                VStack(alignment: .trailing, spacing: 4) {
-                    Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
-                        .font(.title2)
-                        .foregroundColor(habit.isCompletedToday ? .daisySuccess : .daisyTextSecondary)
-
-                    Text(habit.isCompletedToday ? "Completed Today" : "Not Completed")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
-                }
-            }
-
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    @ViewBuilder
-    private var tagsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Tags")
-                .font(.headline)
-                .foregroundColor(.daisyText)
-
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
-                ForEach(habit.tags, id: \.id) { tag in
-                    TagChipView(tag: tag)
-                }
-            }
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
-    }
-
-
-
-    // MARK: - History Cards
-
-    @ViewBuilder
-    private var completionHistoryCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Completion History")
-                .font(.headline)
-                .foregroundColor(.daisyText)
-
-            let sortedCompletions = habit.completionEntries
-                .sorted { $0.completedDate > $1.completedDate }
-
-            if sortedCompletions.isEmpty {
-                Text("No completions recorded yet")
-                    .font(.body)
-                    .foregroundColor(.daisyTextSecondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 40)
-            } else {
-                LazyVStack(spacing: 8) {
-                    ForEach(sortedCompletions.prefix(20), id: \.id) { completion in
-                        CompletionRowView(completion: completion, showDetails: true)
-                    }
-
-                    if sortedCompletions.count > 20 {
-                        Text("\(sortedCompletions.count - 20) more completions")
-                            .font(.caption)
-                            .foregroundColor(.daisyTextSecondary)
-                            .padding(.top, 8)
-                    }
-                }
-            }
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 12))
+    init(habit: Habit) {
+        self.habit = habit
     }
 
     // MARK: - Helper Methods
+    // Note: Formatting methods now use DetailViewHelpers for consistency
+
+    private func formatRelativeDate(_ date: Date) -> String {
+        DetailViewHelpers.formatRelativeDate(date)
+    }
+
+    private func formatAlertInterval(_ interval: TimeInterval) -> String {
+        DetailViewHelpers.formatAlertInterval(interval)
+    }
+
+    private func updateHabitTags(_ newTags: [Tag]) {
+        // Remove tags that are no longer selected
+        for tag in habit.tags {
+            if !newTags.contains(tag) {
+                _ = habitManager.removeTag(tag, from: habit)
+            }
+        }
+
+        // Add newly selected tags
+        for tag in newTags {
+            if !habit.tags.contains(tag) {
+                _ = habitManager.addTag(tag, to: habit)
+            }
+        }
+    }
 
     private func deleteHabit() {
         _ = habitManager.deleteHabit(habit)
         dismiss()
     }
+
+    private func removeTag(_ tag: Tag) {
+        _ = habitManager.removeTag(tag, from: habit)
+    }
+
+    private func toggleSubtask(_ subtask: HabitSubtask) {
+        _ = habitManager.toggleHabitSubtaskCompletion(subtask)
+    }
+
+    private func addSubtask() {
+        let trimmedTitle = newSubtaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+
+        // Create subtask directly on the habit model
+        _ = habit.createSubtask(title: trimmedTitle)
+        newSubtaskTitle = ""
+    }
+
+    private func addSubtaskAndClose() {
+        addSubtask()
+        showSubtaskField = false
+        newSubtaskFocused = false
+    }
 }
 
 // MARK: - Supporting Views
 
-struct CompletionRowView: View {
+private struct CompletionRowView: View {
     let completion: HabitCompletion
     var showDetails: Bool = false
 
@@ -470,27 +691,9 @@ struct CompletionRowView: View {
     }
 }
 
-struct MetricTile: View {
-    let title: String
-    let value: String
-    let color: Color
+// MARK: - Habit Detail Subtask Row
+// HabitDetailSubtaskRow removed - now using shared SubtaskRow component from Core/Design/Components/Shared/Rows/
 
-    var body: some View {
-        VStack(spacing: 8) {
-            Text(value)
-                .font(.title2.weight(.bold))
-                .foregroundColor(color)
-
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.daisyTextSecondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity, minHeight: 60)
-        .padding()
-        .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
-    }
-}
 
 // MARK: - Date Formatters
 
@@ -511,17 +714,19 @@ private extension DateFormatter {
 // MARK: - Preview
 
 #Preview("Habit Detail") {
-    HabitDetailViewPreview()
+    HabitDetailPreview()
 }
 
-struct HabitDetailViewPreview: View {
+struct HabitDetailPreview: View {
     var body: some View {
         let container = try! ModelContainer(
             for: Habit.self, HabitCompletion.self, HabitStreak.self, Tag.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
-        let context = container.mainContext
-        let tagManager = TagManager(modelContext: context)
+
+        let habitManager = HabitManager(modelContext: container.mainContext)
+        let tagManager = TagManager(modelContext: container.mainContext)
+        let toastManager = HabitCompletionToastManager()
 
         // Create sample tags
         let workoutTag = tagManager.createTag(name: "Workout", sfSymbolName: "figure.run", colorName: "red")!
@@ -532,12 +737,23 @@ struct HabitDetailViewPreview: View {
             title: "Morning Exercise",
             habitDescription: "30 minutes of cardio or strength training to energize the day and maintain physical health",
             recurrenceRule: .daily(),
+            priority: .high
         )
         habit.currentStreak = 15
         habit.longestStreak = 32
         _ = habit.addTag(workoutTag)
         _ = habit.addTag(healthTag)
-        context.insert(habit)
+        container.mainContext.insert(habit)
+
+        // Add subtasks
+        let subtask1 = habit.createSubtask(title: "Warm up stretches")
+        let subtask2 = habit.createSubtask(title: "Main workout routine")
+        let subtask3 = habit.createSubtask(title: "Cool down and hydrate")
+        subtask1.setCompleted(true)
+
+        container.mainContext.insert(subtask1)
+        container.mainContext.insert(subtask2)
+        container.mainContext.insert(subtask3)
 
         // Add sample completions
         let calendar = Calendar.current
@@ -550,13 +766,16 @@ struct HabitDetailViewPreview: View {
                     mood: HabitCompletion.Mood.allCases.randomElement() ?? .neutral,
                     duration: TimeInterval.random(in: 1200...2400) // 20-40 minutes
                 )
-                context.insert(completion)
+                container.mainContext.insert(completion)
             }
         }
 
-        try! context.save()
+        try! container.mainContext.save()
 
-        return HabitDetailView(habit: habit, modelContext: context)
+        return HabitDetailView(habit: habit)
             .modelContainer(container)
+            .environment(habitManager)
+            .environment(tagManager)
+            .environment(toastManager)
     }
 }

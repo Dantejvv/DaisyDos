@@ -14,14 +14,13 @@ import SwiftData
 struct TaskRowView: View {
     // MARK: - Properties
 
+    @Environment(AppearanceManager.self) private var appearanceManager
+
     let task: Task
     let onToggleCompletion: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onTagAssignment: (() -> Void)?
-
-    let showsSubtasks: Bool
-    let showsTagButton: Bool
 
     // Animation state
     @State private var isAnimatingCompletion = false
@@ -34,86 +33,108 @@ struct TaskRowView: View {
         onToggleCompletion: @escaping () -> Void,
         onEdit: @escaping () -> Void,
         onDelete: @escaping () -> Void,
-        onTagAssignment: (() -> Void)? = nil,
-        showsSubtasks: Bool = true,
-        showsTagButton: Bool = true
+        onTagAssignment: (() -> Void)? = nil
     ) {
         self.task = task
         self.onToggleCompletion = onToggleCompletion
         self.onEdit = onEdit
         self.onDelete = onDelete
         self.onTagAssignment = onTagAssignment
-        self.showsSubtasks = showsSubtasks
-        self.showsTagButton = showsTagButton
     }
 
     // MARK: - Body
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
             // Completion toggle
             completionToggle
 
-            // Content
+            // Content - 3 Row Layout
             VStack(alignment: .leading, spacing: 4) {
+                // ROW 1: Title
                 Text(task.title)
                     .font(.body)
                     .strikethrough(task.isCompleted)
                     .foregroundColor(task.isCompleted ? .daisyTextSecondary : .daisyText)
                     .lineLimit(1)
 
-                HStack(spacing: 4) {
-                    // Tags (icon-only)
-                    if !task.tags.isEmpty {
+                if !task.isCompleted {
+                    // UNCOMPLETED TASKS: Inline Layout
+
+                    // ROW 2: Metadata • Tags (LEFT/MIDDLE) | Due Date (RIGHT)
+                    if task.hasSubtasks || task.hasAlert || task.hasRecurrence || !task.tags.isEmpty || task.dueDate != nil {
                         HStack(spacing: 4) {
-                            ForEach(task.tags.prefix(3), id: \.id) { tag in
-                                IconOnlyTagChipView(tag: tag)
+                            // Left side: Subtasks
+                            if let progressText = task.subtaskProgressText {
+                                SubtaskProgressIndicator(progressText: progressText)
                             }
-                            if task.tags.count > 3 {
-                                Text("+\(task.tags.count - 3)")
-                                    .font(.caption2)
-                                    .foregroundColor(.daisyTextSecondary)
+
+                            // Combined Alert/Recurrence indicator
+                            if task.hasAlert || task.hasRecurrence {
+                                alertRecurrenceIndicator
+                            }
+
+                            // Middle: Tags (inline with metadata, limit to 3 max)
+                            if !task.tags.isEmpty {
+                                let visibleTags = Array(task.tags.prefix(3))
+                                let remainingCount = task.tags.count - visibleTags.count
+
+                                ForEach(visibleTags, id: \.id) { tag in
+                                    IconOnlyTagChipView(tag: tag)
+                                }
+
+                                if remainingCount > 0 {
+                                    Text("+\(remainingCount)")
+                                        .font(.caption2.weight(.medium))
+                                        .foregroundColor(.daisyTextSecondary)
+                                }
+                            }
+
+                            Spacer()
+
+                            // Right side: Due date or "Today" badge
+                            if let dueDate = task.dueDate {
+                                if task.isDueToday {
+                                    todayBadgeView
+                                } else {
+                                    Text(dueDate.formatted(date: .abbreviated, time: .omitted))
+                                        .font(.caption2)
+                                        .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyTextSecondary)
+                                }
                             }
                         }
                     }
+                } else {
+                    // COMPLETED TASKS: Minimal Layout
 
-                    // Due date
-                    if let dueDate = task.dueDate {
-                        if !task.tags.isEmpty {
-                            Text("•")
-                                .font(.caption2)
-                                .foregroundColor(.daisyTextSecondary)
+                    // ROW 2: Subtasks (LEFT) | Completed Date (RIGHT)
+                    HStack(spacing: 4) {
+                        // Left side: Subtasks only
+                        if let progressText = task.subtaskProgressText {
+                            SubtaskProgressIndicator(progressText: progressText)
                         }
-                        Text("due \(dueDate.formatted(date: .abbreviated, time: .omitted))")
-                            .font(.caption2)
-                            .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyTextSecondary)
+
+                        Spacer()
+
+                        // Right side: Completed date
+                        if let completedText = task.completedDateDisplayText {
+                            Text(completedText)
+                                .font(.caption2)
+                                .foregroundColor(.daisySuccess.opacity(0.8))
+                        }
                     }
                 }
             }
+            .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
-
-            // Indicators
-            HStack(spacing: 4) {
-                // Recurrence indicator
-                if task.hasRecurrence {
-                    Image(systemName: "repeat.circle.fill")
-                        .foregroundColor(.daisyTask)
-                        .font(.caption2)
-                        .accessibilityLabel("Recurring task")
-                }
-
-                // Priority indicator
-                task.priority.indicatorView()
-                    .font(.caption2)
-            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(
             ZStack {
-                // Base background
-                Color.daisySurface
+                // Priority background tint
+                priorityBackgroundColor
 
                 // Success highlight (only during animation)
                 if isAnimatingCompletion {
@@ -129,6 +150,73 @@ struct TaskRowView: View {
     }
 
     // MARK: - Reusable Components
+
+    // MARK: Priority Background
+    private var priorityBackgroundColor: Color {
+        // Completed tasks: all use gray
+        if task.isCompleted {
+            return Color.daisyTextSecondary.opacity(0.08)
+        }
+
+        // If priority backgrounds are disabled, use default gray
+        guard appearanceManager.showPriorityBackgrounds else {
+            return Color.daisyTextSecondary.opacity(0.08)
+        }
+
+        // Uncompleted tasks: priority-based colors
+        switch task.priority {
+        case .none:
+            return Color.daisyTextSecondary.opacity(0.08)
+        case .low:
+            return appearanceManager.lowPriorityDisplayColor.opacity(0.08)
+        case .medium:
+            return appearanceManager.mediumPriorityDisplayColor.opacity(0.08)
+        case .high:
+            return appearanceManager.highPriorityDisplayColor.opacity(0.08)
+        }
+    }
+
+    // MARK: Metadata Components
+
+    @ViewBuilder
+    private var alertRecurrenceIndicator: some View {
+        if task.hasAlert && task.hasRecurrence {
+            Image(systemName: "bell.badge.fill")
+                .font(.body)
+                .foregroundColor(.daisyWarning)
+                .accessibilityLabel("Has reminder and recurring")
+        } else if task.hasAlert {
+            Image(systemName: "bell.fill")
+                .font(.body)
+                .foregroundColor(.daisyWarning)
+                .accessibilityLabel("Has reminder")
+        } else if task.hasRecurrence {
+            Image(systemName: "repeat.circle.fill")
+                .font(.body)
+                .foregroundColor(.daisyTask)
+                .accessibilityLabel(task.recurrenceRule?.displayDescription ?? "Recurring task")
+        }
+    }
+
+    @ViewBuilder
+    private var todayBadgeView: some View {
+        Text("Today")
+            .font(.caption2.weight(.semibold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(task.hasOverdueStatus ? Color.daisyError : Color.daisyWarning)
+            .cornerRadius(4)
+    }
+
+    @ViewBuilder
+    private func completedDateView(text: String) -> some View {
+        Text(text)
+            .font(.caption2)
+            .foregroundColor(.daisySuccess.opacity(0.8))
+    }
+
+    // MARK: Completion Toggle
 
     @ViewBuilder
     private var completionToggle: some View {
@@ -177,18 +265,43 @@ struct TaskRowView: View {
 
     private var accessibilityLabel: String {
         var label = task.title
+
         if task.isCompleted {
             label += ", completed"
+            if let completedText = task.completedDateDisplayText {
+                label += ", \(completedText.lowercased())"
+            }
         }
-        if task.priority != .medium {
+
+        if task.priority != .none {
             label += ", \(task.priority.displayName) priority"
         }
-        if let dueDate = task.dueDate {
-            label += ", due \(dueDate.formatted(date: .complete, time: .omitted))"
+
+        if let progressText = task.subtaskProgressText {
+            label += ", \(progressText) subtasks completed"
         }
+
+        if task.hasAttachments {
+            let attachmentWord = task.attachmentCount == 1 ? "attachment" : "attachments"
+            label += ", \(task.attachmentCount) \(attachmentWord)"
+        }
+
+        if let dueDate = task.dueDate {
+            if task.isDueToday {
+                label += ", due today"
+            } else {
+                label += ", due \(dueDate.formatted(date: .complete, time: .omitted))"
+            }
+        }
+
         if task.hasOverdueStatus {
             label += ", overdue"
         }
+
+        if task.hasAlert {
+            label += ", has reminder"
+        }
+
         if task.hasRecurrence {
             if let recurrenceRule = task.recurrenceRule {
                 label += ", recurring \(recurrenceRule.displayDescription.lowercased())"
@@ -196,6 +309,7 @@ struct TaskRowView: View {
                 label += ", recurring task"
             }
         }
+
         return label
     }
 

@@ -411,30 +411,34 @@ struct HabitModelTests {
 
     // MARK: - Tag Management Tests
 
-    @Test("Habit enforces 3-tag limit")
+    @Test("Habit enforces 5-tag limit")
     func testTagLimit() {
         let habit = Habit(title: "Test")
 
         #expect(habit.canAddTag())
 
-        // Create 3 tags
+        // Create 5 tags
         let tag1 = Tag(name: "Tag1", sfSymbolName: "star", colorName: "blue")
         let tag2 = Tag(name: "Tag2", sfSymbolName: "heart", colorName: "red")
         let tag3 = Tag(name: "Tag3", sfSymbolName: "leaf", colorName: "green")
+        let tag4 = Tag(name: "Tag4", sfSymbolName: "sun.max", colorName: "yellow")
+        let tag5 = Tag(name: "Tag5", sfSymbolName: "moon", colorName: "purple")
 
         _ = habit.addTag(tag1)
         _ = habit.addTag(tag2)
         _ = habit.addTag(tag3)
+        _ = habit.addTag(tag4)
+        _ = habit.addTag(tag5)
 
-        #expect(habit.tags.count == 3)
+        #expect(habit.tags.count == 5)
         #expect(!habit.canAddTag())
 
-        // Try to add 4th tag
-        let tag4 = Tag(name: "Tag4", sfSymbolName: "sun.max", colorName: "yellow")
-        let added = habit.addTag(tag4)
+        // Try to add 6th tag
+        let tag6 = Tag(name: "Tag6", sfSymbolName: "cloud", colorName: "gray")
+        let added = habit.addTag(tag6)
 
         #expect(added == false)
-        #expect(habit.tags.count == 3)
+        #expect(habit.tags.count == 5)
     }
 
     @Test("Habit prevents duplicate tags")

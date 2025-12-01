@@ -10,11 +10,18 @@ import SwiftData
 
 struct TagSelectionView: View {
     @Environment(TagManager.self) private var tagManager
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: [SortDescriptor(\Tag.name)]) private var allTags: [Tag]
     @Binding var selectedTags: [Tag]
 
     @State private var searchText = ""
     @State private var showingCreateTag = false
+    @State private var workingSelectedTags: [Tag] = []
+
+    init(selectedTags: Binding<[Tag]>) {
+        self._selectedTags = selectedTags
+        self._workingSelectedTags = State(initialValue: selectedTags.wrappedValue)
+    }
 
     private var filteredTags: [Tag] {
         if searchText.isEmpty {
@@ -27,10 +34,11 @@ struct TagSelectionView: View {
     }
 
     private var canSelectMoreTags: Bool {
-        selectedTags.count < 3
+        workingSelectedTags.count < 5
     }
 
     var body: some View {
+        NavigationStack {
         VStack(alignment: .leading, spacing: 16) {
             // Search bar (moved to top)
             HStack {
@@ -42,50 +50,15 @@ struct TagSelectionView: View {
             .padding()
             .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 10))
 
-            // Selected tags section (now below search)
-            if !selectedTags.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Selected Tags (\(selectedTags.count)/3)")
-                            .font(.headline)
-
-                        Spacer()
-
-                        if selectedTags.count == 3 {
-                            Text("Maximum reached")
-                                .font(.caption)
-                                .foregroundColor(.daisyWarning)
-                        }
-                    }
-
-                    // Wrapping tag chips using LazyVGrid
-                    LazyVGrid(
-                        columns: [
-                            GridItem(.flexible(), spacing: 8),
-                            GridItem(.flexible(), spacing: 8)
-                        ],
-                        alignment: .leading,
-                        spacing: 8
-                    ) {
-                        ForEach(selectedTags, id: \.id) { tag in
-                            TagChipView(
-                                tag: tag,
-                                isSelected: true,
-                                isRemovable: true,
-                                onRemove: {
-                                    removeTag(tag)
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Available tags section
+            // Available tags section with counter
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Available Tags")
                         .font(.headline)
+
+                    Text("(\(workingSelectedTags.count)/5)")
+                        .font(.headline)
+                        .foregroundColor(workingSelectedTags.count == 5 ? .daisyWarning : .daisyTextSecondary)
 
                     Spacer()
 
@@ -130,7 +103,7 @@ struct TagSelectionView: View {
                         GridItem(.flexible())
                     ], spacing: 12) {
                         ForEach(filteredTags, id: \.id) { tag in
-                            let isSelected = selectedTags.contains(tag)
+                            let isSelected = workingSelectedTags.contains(tag)
 
                             TagChipView(
                                 tag: tag,
@@ -149,13 +122,33 @@ struct TagSelectionView: View {
             Spacer()
         }
         .padding()
+        .navigationTitle("Tags")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .foregroundColor(.daisyTextSecondary)
+            }
+
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") {
+                    selectedTags = workingSelectedTags
+                    dismiss()
+                }
+                .fontWeight(.semibold)
+                .foregroundColor(.daisyTask)
+            }
+        }
         .sheet(isPresented: $showingCreateTag) {
             TagCreationView()
+        }
         }
     }
 
     private func toggleTag(_ tag: Tag) {
-        if selectedTags.contains(tag) {
+        if workingSelectedTags.contains(tag) {
             removeTag(tag)
         } else {
             addTag(tag)
@@ -164,13 +157,13 @@ struct TagSelectionView: View {
 
     private func addTag(_ tag: Tag) {
         guard canSelectMoreTags else { return }
-        guard !selectedTags.contains(tag) else { return }
+        guard !workingSelectedTags.contains(tag) else { return }
 
-        selectedTags.append(tag)
+        workingSelectedTags.append(tag)
     }
 
     private func removeTag(_ tag: Tag) {
-        selectedTags.removeAll { $0.id == tag.id }
+        workingSelectedTags.removeAll { $0.id == tag.id }
     }
 }
 

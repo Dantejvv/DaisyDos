@@ -16,14 +16,14 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 ### ✅ Foundation & Core Architecture (COMPLETE)
 
 **Navigation & Infrastructure:**
-- [X] Tab-based navigation with 6 tabs (Today, Tasks, Habits, Logbook, Tags, Settings)
+- [X] Tab-based navigation with 5 tabs (Today, Tasks, Habits, Logbook, Settings)
 - [X] NavigationManager with independent NavigationStack per tab
 - [X] Tab switching with state preservation
 - [X] Accessibility labels for tab items
 
 **Data Layer:**
 - [X] SwiftData ModelContainer with DaisyDosMigrationPlan
-- [X] Schema versions V1-V4 implemented
+- [X] Schema V7 implemented
 - [X] CloudKit foundation configured (disabled by default)
 - [X] Local-only mode functional
 - [X] Three-tier error handling system (Platform → App → User)
@@ -56,7 +56,7 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 **Task Data Models:**
 - [X] Task model with @Model macro
 - [X] Priority enum (Low, Medium, High)
-- [X] Due dates and start dates
+- [X] Due dates
 - [X] Task descriptions
 - [X] Subtask relationships (one-level hierarchy)
 - [X] TaskAttachment model for PhotoKit integration
@@ -178,7 +178,7 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 **Tag Manager Service:**
 - [X] TagManager @Observable class
 - [X] CRUD operations
-- [X] 3-tag per item limit enforcement
+- [X] 5-tag per item limit enforcement
 - [X] 30-tag system limit validation
 - [X] Usage analytics
 - [X] Tag deletion with usage validation
@@ -195,7 +195,7 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
   - [X] Undo support (5-second window)
 - [X] TagPickerView
   - [X] Tag assignment interface
-  - [X] 3-tag limit visual feedback
+  - [X] 5-tag limit visual feedback
   - [X] Real-time validation
 
 ---
@@ -237,12 +237,77 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 
 ---
 
+### ✅ Today View (COMPLETE)
+
+**Today Data Models:**
+- [X] TodayItem enum for unified task/habit handling
+- [X] TodayViewModel @Observable class
+- [X] Unified filtering and sorting logic
+
+**Today UI Components:**
+- [X] TodayView
+  - [X] Unified task/habit list display
+  - [X] Multiple sort options (time, priority, type, title)
+  - [X] Show/hide completed items toggle
+  - [X] Multi-select mode with bulk operations
+  - [X] Search functionality across tasks and habits
+  - [X] Quick add menu for tasks and habits
+- [X] UnifiedTodayRow
+  - [X] Reuses TaskRowView and HabitRowView patterns
+  - [X] Consistent action closures
+  - [X] Accessibility support
+
+**Today Features:**
+- [X] Swipe actions (edit, delete, duplicate, skip for habits, reschedule for tasks)
+- [X] Detail navigation for both tasks and habits
+- [X] User accent color support via AppearanceManager
+- [X] Real-time updates with @Query
+- [X] Performance optimized for large datasets
+
+---
+
+### ✅ Settings System (COMPLETE)
+
+**Settings Manager Services:**
+- [X] AppearanceManager @Observable class
+- [X] ImportExportManager for data import/export
+- [X] LocalOnlyModeManager for privacy controls
+- [X] RecentColorsManager for color picker history
+
+**Settings UI Components:**
+- [X] SettingsView
+  - [X] Data overview with counts
+  - [X] Tag management integration
+  - [X] About view
+- [X] AppearanceSettingsView
+  - [X] Theme controls (system/light/dark)
+  - [X] Accent color selection (7 colors)
+  - [X] Recent color history
+- [X] ImportExportView
+  - [X] Data import functionality
+  - [X] Data export functionality
+- [X] ResetDeleteView
+  - [X] Data deletion controls
+  - [X] Reset options
+- [X] ErrorMessageTestView (developer tool)
+- [X] TestDataGenerator (developer tool)
+
+**Settings Features:**
+- [X] Appearance customization (theme, accent color)
+- [X] Local-only mode controls
+- [X] Habit notification settings integration
+- [X] CloudKit toggle (disabled by default)
+- [X] Import/export functionality
+- [X] Data management (reset/delete)
+- [X] Tag management access
+
+---
+
 ### ✅ Testing Infrastructure (COMPLETE)
 
 **Testing Framework:**
 - [X] Swift Testing framework (@Test macro, #expect assertions)
-- [X] 118 tests with 100% pass rate
-- [X] 0.226s execution time (~1.9ms per test)
+- [X] 190 tests with 100% pass rate
 - [X] Struct-based test suites for isolation
 - [X] Fresh ModelContainer per test
 
@@ -308,10 +373,10 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 ### Advanced Habit Analytics (20% Complete)
 
 **What Exists:**
-- [X] Charts framework imported and prepared
 - [X] CompletionAggregate model defined (unused)
 - [X] Basic completion history in HabitDetailView
 - [X] Streak milestone tracking structure
+- [ ] Charts framework (planned for future analytics, not yet imported)
 
 **What's Missing:**
 - [ ] HabitProgressChart component
@@ -324,55 +389,6 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 - [ ] Milestone progress tracking (7, 14, 21, 30, 50, 75, 100+ days)
 
 **Status:** Framework prepared, visualization components not implemented.
-
----
-
-### Today View (5% Complete)
-
-**What Exists:**
-- [X] Today tab in navigation
-- [X] Basic tab shell
-
-**What's Missing:**
-- [ ] TodayManager @Observable class
-- [ ] TodayItem protocol for unified handling
-- [ ] Unified data filtering (tasks + habits)
-- [ ] Intelligent prioritization algorithms
-- [ ] Today-specific UI using existing TaskRowView and HabitRowView
-- [ ] Daily goal setting
-- [ ] Quick rescheduling functionality
-- [ ] Daily motivation/inspiration display
-- [ ] Quick task/habit creation
-- [ ] Daily progress summary
-
-**Status:** Tab exists, no functional implementation.
-
----
-
-### Settings System (30% Complete)
-
-**What Exists:**
-- [X] Basic SettingsView UI
-- [X] Habit notification settings integration
-- [X] Local-only mode toggle exists
-- [X] CloudKit configuration toggle (disabled)
-
-**What's Missing:**
-- [ ] Hierarchical settings navigation
-- [ ] Settings persistence (UserDefaults + SwiftData hybrid)
-- [ ] Settings validation and constraints
-- [ ] Settings search functionality
-- [ ] Settings import/export
-- [ ] Data retention controls
-- [ ] Permission management interface
-- [ ] Privacy dashboard
-- [ ] Data deletion functionality
-- [ ] Theme controls (light/dark/auto)
-- [ ] Default behavior settings
-- [ ] Workflow customization options
-- [ ] Accessibility preference overrides
-
-**Status:** Basic UI exists, comprehensive settings not implemented.
 
 ---
 
@@ -429,7 +445,7 @@ This section is intentionally left empty. Future features and development phases
 3. **Error Handling**: Three-tier system working end-to-end
 4. **Accessibility**: WCAG AA compliance validated
 5. **Performance**: Handles 100+ items efficiently
-6. **Testing**: Swift Testing framework proven with 118 tests
+6. **Testing**: Swift Testing framework proven with 190 tests
 
 ### 🔄 Patterns to Validate
 1. **Charts Integration**: Framework prepared but not yet implemented in production
@@ -474,7 +490,7 @@ This section is intentionally left empty. Future features and development phases
 - `/DaisyDosTests/Documentation/TestingGuide.md` - Testing patterns and examples
 
 **Key Metrics:**
-- Tests: 118 passing, 0.226s execution
+- Tests: 190 passing
 - Performance: <2s launch, <100ms UI response
 - Accessibility: WCAG AA compliant
 - Code: Builds cleanly with minor warnings

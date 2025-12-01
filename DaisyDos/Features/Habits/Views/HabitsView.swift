@@ -17,49 +17,32 @@ struct HabitsView: View {
     @State private var showingAddHabit = false
     @State private var habitToDelete: Habit?
     @State private var showingDeleteConfirmation = false
-    @State private var showingBulkDeleteConfirmation = false
     @State private var habitToSkip: Habit?
     @State private var habitToEdit: Habit?
     @State private var habitToAssignTags: Habit?
     @State private var habitToDetail: Habit?
-    @State private var isMultiSelectMode = false
-    @State private var selectedHabits: Set<Habit.ID> = []
-    @State private var sortOption: SortOption = .creationDate
-    @State private var sectionOption: SectionOption = .none
+    @State private var isReorderMode = false
+    @State private var showCompletedBeforeReorder = false
+    @AppStorage("habitSortOption") private var sortOptionRaw: String = SortOption.custom.rawValue
     @State private var showingSortOptions = false
+    @State private var showCompletedHabits = false
 
-    enum SortOption: String, CaseIterable {
-        case creationDate = "Creation Date"
-        case streakLength = "Streak Length"
-        case priority = "Priority"
-        case title = "Title"
-
-        var systemImage: String {
-            switch self {
-            case .creationDate: return "calendar"
-            case .streakLength: return "flame"
-            case .priority: return "diamond"
-            case .title: return "textformat.abc"
-            }
-        }
+    private var currentSortOption: SortOption {
+        SortOption(rawValue: sortOptionRaw) ?? .title
     }
 
-    enum SectionOption: String, CaseIterable {
-        case none = "None"
+    enum SortOption: String, CaseIterable {
+        case title = "Title"
         case priority = "Priority"
-        case tags = "Tags"
-        case createdDate = "Created"
-        case frequency = "Frequency"
-        case streakStatus = "Streak Status"
+        case streakLength = "Streak Length"
+        case custom = "Custom"
 
         var systemImage: String {
             switch self {
-            case .none: return "list.bullet"
-            case .priority: return "exclamationmark.triangle"
-            case .tags: return "tag"
-            case .createdDate: return "clock"
-            case .frequency: return "repeat"
-            case .streakStatus: return "flame"
+            case .title: return "textformat.abc"
+            case .priority: return "diamond"
+            case .streakLength: return "flame"
+            case .custom: return "arrow.up.arrow.down"
             }
         }
     }
@@ -99,11 +82,22 @@ struct HabitsView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !allHabits.isEmpty {
-                        Button(isMultiSelectMode ? "Done" : "Select") {
-                            withAnimation {
-                                isMultiSelectMode.toggle()
-                                if !isMultiSelectMode {
-                                    selectedHabits.removeAll()
+                        if isReorderMode {
+                            Button("Done") {
+                                withAnimation {
+                                    isReorderMode = false
+                                    // Restore previous showCompleted preference
+                                    showCompletedHabits = showCompletedBeforeReorder
+                                }
+                            }
+                        } else {
+                            Button("Reorder") {
+                                withAnimation {
+                                    // Save current showCompleted preference
+                                    showCompletedBeforeReorder = showCompletedHabits
+                                    // Auto-show completed habits in reorder mode
+                                    showCompletedHabits = true
+                                    isReorderMode = true
                                 }
                             }
                         }
@@ -112,8 +106,17 @@ struct HabitsView: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
-                        if !isMultiSelectMode {
-                            // Sort picker button - ALWAYS visible
+                        if !isReorderMode {
+                            // Show/Hide Completed toggle button
+                            Button(action: {
+                                withAnimation {
+                                    showCompletedHabits.toggle()
+                                }
+                            }) {
+                                Image(systemName: showCompletedHabits ? "eye.fill" : "eye.slash.fill")
+                            }
+
+                            // Sort picker button
                             Menu {
                                 Text("Sort Habits By")
                                     .font(.headline)
@@ -122,57 +125,18 @@ struct HabitsView: View {
 
                                 ForEach(SortOption.allCases, id: \.self) { option in
                                     Button(action: {
-                                        sortOption = option
+                                        sortOptionRaw = option.rawValue
                                     }) {
                                         Label(option.rawValue, systemImage: option.systemImage)
-                                        if sortOption == option {
+                                        if currentSortOption == option {
                                             Image(systemName: "checkmark")
                                         }
                                     }
                                 }
                             } label: {
-                                Image(systemName: sortOption.systemImage)
-                                    .foregroundColor(.daisyToolbar)
+                                Image(systemName: currentSortOption.systemImage)
                             }
 
-                            // Section picker button - ALWAYS visible
-                            Menu {
-                                Text("Group Habits By")
-                                    .font(.headline)
-
-                                Divider()
-
-                                ForEach(SectionOption.allCases, id: \.self) { option in
-                                    Button(action: {
-                                        sectionOption = option
-                                    }) {
-                                        Label(option.rawValue, systemImage: option.systemImage)
-                                        if sectionOption == option {
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                            } label: {
-                                Image(systemName: sectionOption.systemImage)
-                                    .foregroundColor(.daisyToolbar)
-                            }
-                        }
-
-                        if isMultiSelectMode {
-                            Menu {
-                                Button("Select All") {
-                                    selectedHabits = Set(allHabits.map(\.id))
-                                }
-                                .disabled(selectedHabits.count == allHabits.count)
-
-                                Button("Select None") {
-                                    selectedHabits.removeAll()
-                                }
-                                .disabled(selectedHabits.isEmpty)
-                            } label: {
-                                Image(systemName: "ellipsis")
-                            }
-                        } else {
                             Button(action: {
                                 showingAddHabit = true
                             }) {
@@ -200,36 +164,25 @@ struct HabitsView: View {
                     .environment(habitManager)
             }
             .sheet(item: $habitToAssignTags) { habit in
-                TagAssignmentSheet(
-                    title: "Habit Tags",
-                    selectedTags: Binding(
-                        get: { Array(habit.tags) },
-                        set: { newTags in
-                            // Remove all current tags
-                            let currentTags = Array(habit.tags)
-                            for tag in currentTags {
-                                habit.removeTag(tag)
-                            }
-                            // Add new tags
-                            for tag in newTags {
-                                _ = habit.addTag(tag)
-                            }
-                            // Save changes
-                            try? modelContext.save()
+                TagSelectionView(selectedTags: Binding(
+                    get: { Array(habit.tags) },
+                    set: { newTags in
+                        // Remove all current tags
+                        let currentTags = Array(habit.tags)
+                        for tag in currentTags {
+                            habit.removeTag(tag)
                         }
-                    ),
-                    onSave: { _ in
-                        self.habitToAssignTags = nil
+                        // Add new tags
+                        for tag in newTags {
+                            _ = habit.addTag(tag)
+                        }
+                        // Save changes
+                        try? modelContext.save()
                     }
-                )
-            }
-            .safeAreaInset(edge: .bottom) {
-                if isMultiSelectMode && !selectedHabits.isEmpty {
-                    bulkActionToolbar
-                }
+                ))
             }
             .navigationDestination(item: $habitToDetail) { habit in
-                HabitDetailView(habit: habit, modelContext: modelContext)
+                HabitDetailView(habit: habit)
             }
             .alert(
                 "Delete Habit",
@@ -259,24 +212,18 @@ struct HabitsView: View {
                     }
                 }
             }
-            .alert(
-                "Delete \(selectedHabits.count) Habits",
-                isPresented: $showingBulkDeleteConfirmation
-            ) {
-                Button("Delete \(selectedHabits.count) Habits", role: .destructive) {
-                    bulkDelete()
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("Are you sure you want to delete \(selectedHabits.count) selected habits? This action cannot be undone.")
-            }
             .onDisappear {
-                // Deactivate multi-select mode when navigating away
-                if isMultiSelectMode {
-                    isMultiSelectMode = false
-                    selectedHabits.removeAll()
+                // Deactivate reorder mode when navigating away
+                if isReorderMode {
+                    isReorderMode = false
+                    // Restore previous showCompleted preference
+                    showCompletedHabits = showCompletedBeforeReorder
                 }
             }
+            .errorAlert(error: Binding(
+                get: { habitManager.lastError },
+                set: { habitManager.lastError = $0 }
+            ))
         }
     }
 
@@ -286,150 +233,34 @@ struct HabitsView: View {
         let habits = Array(allHabits)
 
         // Optimize sorting for large datasets
-        switch sortOption {
-        case .creationDate:
-            return habits.sorted { $0.createdDate > $1.createdDate }
-        case .streakLength:
-            return habits.sorted { $0.currentStreak > $1.currentStreak }
+        switch currentSortOption {
+        case .title:
+            return habits.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         case .priority:
             return habits.sorted { habit1, habit2 in
                 if habit1.priority == habit2.priority {
-                    return habit1.createdDate > habit2.createdDate
+                    return habit1.title.localizedCaseInsensitiveCompare(habit2.title) == .orderedAscending
                 }
                 return habit1.priority.sortOrder > habit2.priority.sortOrder
             }
-        case .title:
-            return habits.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .streakLength:
+            return habits.sorted { $0.currentStreak > $1.currentStreak }
+        case .custom:
+            return habits.sorted { $0.habitOrder < $1.habitOrder }
         }
     }
 
-    private var sectionedHabits: [(String, [Habit])] {
-        let habits = sortedHabits
+    private var filteredHabits: [Habit] {
+        // In reorder mode, always show habits in custom order
+        let habitsToDisplay = isReorderMode ? Array(allHabits).sorted { $0.habitOrder < $1.habitOrder } : sortedHabits
 
-        switch sectionOption {
-        case .none:
-            return [("", habits)]
-
-        case .priority:
-            let grouped = Priority.group(habits)
-            var sections: [(String, [Habit])] = []
-
-            // Order sections by priority (High → Medium → Low)
-            for priority in Priority.sortedByPriority {
-                if let habitsForPriority = grouped[priority], !habitsForPriority.isEmpty {
-                    let sectionTitle = "\(priority.displayName) (\(habitsForPriority.count))"
-                    sections.append((sectionTitle, habitsForPriority))
-                }
-            }
-            return sections
-
-        case .tags:
-            var taggedHabits: [(String, [Habit])] = []
-            var untaggedHabits: [Habit] = []
-            var usedTags: Set<String> = []
-
-            for habit in habits {
-                if habit.tags.isEmpty {
-                    untaggedHabits.append(habit)
-                } else {
-                    for tag in habit.tags {
-                        if !usedTags.contains(tag.name) {
-                            usedTags.insert(tag.name)
-                            let habitsWithThisTag = habits.filter { $0.tags.contains(tag) }
-                            taggedHabits.append(("\(tag.name) (\(habitsWithThisTag.count))", habitsWithThisTag))
-                        }
-                    }
-                }
-            }
-
-            // Sort tag sections alphabetically
-            taggedHabits.sort { $0.0 < $1.0 }
-
-            // Add untagged section at the end if there are untagged habits
-            if !untaggedHabits.isEmpty {
-                taggedHabits.append(("No Tags (\(untaggedHabits.count))", untaggedHabits))
-            }
-
-            return taggedHabits
-
-        case .createdDate:
-            let calendar = Calendar.current
-            let today = calendar.startOfDay(for: Date())
-            let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
-            let lastWeek = calendar.date(byAdding: .day, value: -7, to: today)!
-            let lastMonth = calendar.date(byAdding: .month, value: -1, to: today)!
-
-            var todayHabits: [Habit] = []
-            var yesterdayHabits: [Habit] = []
-            var thisWeekHabits: [Habit] = []
-            var thisMonthHabits: [Habit] = []
-            var olderHabits: [Habit] = []
-
-            for habit in habits {
-                let createdDay = calendar.startOfDay(for: habit.createdDate)
-
-                if createdDay == today {
-                    todayHabits.append(habit)
-                } else if createdDay == calendar.startOfDay(for: yesterday) {
-                    yesterdayHabits.append(habit)
-                } else if createdDay >= lastWeek {
-                    thisWeekHabits.append(habit)
-                } else if createdDay >= lastMonth {
-                    thisMonthHabits.append(habit)
-                } else {
-                    olderHabits.append(habit)
-                }
-            }
-
-            var sections: [(String, [Habit])] = []
-
-            if !todayHabits.isEmpty {
-                sections.append(("Today (\(todayHabits.count))", todayHabits))
-            }
-            if !yesterdayHabits.isEmpty {
-                sections.append(("Yesterday (\(yesterdayHabits.count))", yesterdayHabits))
-            }
-            if !thisWeekHabits.isEmpty {
-                sections.append(("This Week (\(thisWeekHabits.count))", thisWeekHabits))
-            }
-            if !thisMonthHabits.isEmpty {
-                sections.append(("This Month (\(thisMonthHabits.count))", thisMonthHabits))
-            }
-            if !olderHabits.isEmpty {
-                sections.append(("Older (\(olderHabits.count))", olderHabits))
-            }
-
-            return sections
-
-        case .frequency:
-            let grouped = Dictionary(grouping: habits) { habit in
-                habit.recurrenceRule?.frequency.rawValue.capitalized ?? "Daily"
-            }
-            return grouped.sorted { $0.key < $1.key }
-
-        case .streakStatus:
-            let grouped = Dictionary(grouping: habits) { habit in
-                switch habit.currentStreak {
-                case 0:
-                    return "New Habits"
-                case 1...6:
-                    return "Building (1-6 days)"
-                case 7...20:
-                    return "Established (7-20 days)"
-                case 21...66:
-                    return "Strong (21-66 days)"
-                default:
-                    return "Mastered (66+ days)"
-                }
-            }
-            let order = ["New Habits", "Building (1-6 days)", "Established (7-20 days)", "Strong (21-66 days)", "Mastered (66+ days)"]
-            return order.compactMap { key in
-                guard let habits = grouped[key], !habits.isEmpty else { return nil }
-                return (key, habits)
-            }
-
+        if showCompletedHabits {
+            return habitsToDisplay
+        } else {
+            return habitsToDisplay.filter { !$0.isCompletedToday }
         }
     }
+
 
     // MARK: - Helper Views
 
@@ -446,19 +277,11 @@ struct HabitsView: View {
 
             // Habit List (optimized for large datasets)
             List {
-                ForEach(sectionedHabits, id: \.0) { sectionTitle, habits in
-                    if sectionOption != .none {
-                        Section(header: sectionHeaderView(title: sectionTitle, count: habits.count)) {
-                            habitRows(for: habits)
-                        }
-                        .listSectionSpacing(.compact)
-                    } else {
-                        habitRows(for: habits)
-                    }
-                }
+                habitRows(for: filteredHabits)
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            .environment(\.editMode, isReorderMode ? .constant(.active) : .constant(.inactive))
         }
     }
 
@@ -509,100 +332,28 @@ struct HabitsView: View {
         }
     }
 
-    @ViewBuilder
-    private func sectionHeaderView(title: String, count: Int) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.daisyText)
-
-                if sectionOption != .none {
-                    let sectionHabits = sectionedHabits.first(where: { $0.0 == title })?.1 ?? []
-                    progressIndicator(for: sectionHabits)
-                }
-            }
-
-            Spacer()
-
-            Text("\(count)")
-                .font(.caption.weight(.medium))
-                .foregroundColor(.daisyTextSecondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 2)
-                .background(Color.daisyBackground, in: Capsule())
-        }
-    }
-
-    @ViewBuilder
-    private func progressIndicator(for habits: [Habit]) -> some View {
-        let completedToday = habits.filter { $0.isCompletedToday }.count
-        let totalHabits = habits.count
-        let progressPercent = totalHabits > 0 ? Double(completedToday) / Double(totalHabits) : 0
-
-        HStack(spacing: 6) {
-            // Progress bar
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    // Background
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.daisyBackground)
-                        .frame(height: 4)
-
-                    // Progress fill
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.daisySuccess)
-                        .frame(width: geometry.size.width * progressPercent, height: 4)
-                }
-            }
-            .frame(width: 60, height: 4)
-
-            // Progress text
-            Text("\(completedToday)/\(totalHabits)")
-                .font(.caption2)
-                .foregroundColor(.daisyTextSecondary)
-                .monospacedDigit()
-        }
-    }
 
     @ViewBuilder
     private func habitRows(for habits: [Habit]) -> some View {
         ForEach(habits) { habit in
-            habitRowView(for: habit)
+            habitRowView(for: habit, in: habits)
                 .overlay {
                     if habitToDelete?.id == habit.id {
                         Color.daisyBackground
                     }
                 }
                 .animation(.none, value: habitToDelete)
-                .listRowBackground(
-                    // Selected row background and border accent
-                    Group {
-                        if isMultiSelectMode && selectedHabits.contains(habit.id) {
-                            HStack(spacing: 0) {
-                                // Left border accent
-                                Rectangle()
-                                    .fill(Color.daisyHabit)
-                                    .frame(width: 6)
-
-                                // Background tint
-                                Color.daisyHabit.opacity(0.15)
-                            }
-                        } else {
-                            Color.clear
+                .rowStyling(
+                    isSelected: false,
+                    accentColor: .daisyHabit,
+                    onTap: {
+                        if !isReorderMode {
+                            habitToDetail = habit
                         }
                     }
                 )
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    if isMultiSelectMode {
-                        toggleHabitSelection(habit)
-                    } else {
-                        habitToDetail = habit
-                    }
-                }
                 .standardRowSwipeActions(
-                    isMultiSelectMode: isMultiSelectMode,
+                    isMultiSelectMode: isReorderMode,
                     accentColor: .daisyHabit,
                     onDelete: {
                         var transaction = Transaction()
@@ -625,10 +376,11 @@ struct HabitsView: View {
                     }
                 )
         }
+        .onMove(perform: isReorderMode ? moveHabits : nil)
     }
 
     @ViewBuilder
-    private func habitRowView(for habit: Habit) -> some View {
+    private func habitRowView(for habit: Habit, in habits: [Habit]) -> some View {
         HabitRowView(
             habit: habit,
             onMarkComplete: {
@@ -653,78 +405,60 @@ struct HabitsView: View {
             },
             onTagAssignment: {
                 habitToAssignTags = habit
-            }
+            },
+            isReorderMode: isReorderMode,
+            onMoveUp: {
+                moveHabitUp(habit)
+            },
+            onMoveDown: {
+                moveHabitDown(habit)
+            },
+            canMoveUp: canMoveUp(habit, in: habits),
+            canMoveDown: canMoveDown(habit, in: habits)
         )
-    }
-
-    // MARK: - Bulk Action Toolbar
-
-    @ViewBuilder
-    private var bulkActionToolbar: some View {
-        BulkActionToolbar(selectedCount: selectedHabits.count) {
-            // Bulk completion
-            Button(action: {
-                bulkMarkComplete()
-            }) {
-                Label("Mark Complete", systemImage: "checkmark.circle")
-                    .labelStyle(.iconOnly)
-                    .font(.title3)
-            }
-            .foregroundColor(.daisySuccess)
-
-            // Bulk skip
-            Button(action: {
-                bulkSkip()
-            }) {
-                Label("Skip", systemImage: "forward")
-                    .labelStyle(.iconOnly)
-                    .font(.title3)
-            }
-            .foregroundColor(.daisyWarning)
-
-            // Bulk delete
-            Button(action: {
-                showingBulkDeleteConfirmation = true
-            }) {
-                Label("Delete", systemImage: "trash")
-                    .labelStyle(.iconOnly)
-                    .font(.title3)
-            }
-            .foregroundColor(.daisyError)
-        }
     }
 
     // MARK: - Helper Methods
 
-    private func toggleHabitSelection(_ habit: Habit) {
-        selectedHabits.toggleMembership(habit.id)
+    private func moveHabits(from source: IndexSet, to destination: Int) {
+        // Create a mutable copy of the filtered habits for reordering
+        var reorderedHabits = filteredHabits
+        reorderedHabits.move(fromOffsets: source, toOffset: destination)
+
+        // Update habitOrder for all habits in the reordered list
+        _ = habitManager.reorderHabits(reorderedHabits)
     }
 
-    private func bulkMarkComplete() {
-        let habitsToComplete = allHabits.filter { selectedHabits.contains($0.id) }
-        for habit in habitsToComplete {
-            if !habit.isCompletedToday {
-                let _ = habitManager.markHabitCompletedWithTracking(habit)
-            }
-        }
-        selectedHabits.removeAll()
-        isMultiSelectMode = false
+    private func moveHabitUp(_ habit: Habit) {
+        let habits = filteredHabits
+        guard let currentIndex = habits.firstIndex(where: { $0.id == habit.id }),
+              currentIndex > 0 else { return }
+
+        var reorderedHabits = habits
+        reorderedHabits.swapAt(currentIndex, currentIndex - 1)
+
+        _ = habitManager.reorderHabits(reorderedHabits)
     }
 
-    private func bulkSkip() {
-        let habitsToSkip = allHabits.filter { selectedHabits.contains($0.id) }
-        for habit in habitsToSkip {
-            let _ = habitManager.skipHabit(habit, reason: "Bulk skip")
-        }
-        selectedHabits.removeAll()
-        isMultiSelectMode = false
+    private func moveHabitDown(_ habit: Habit) {
+        let habits = filteredHabits
+        guard let currentIndex = habits.firstIndex(where: { $0.id == habit.id }),
+              currentIndex < habits.count - 1 else { return }
+
+        var reorderedHabits = habits
+        reorderedHabits.swapAt(currentIndex, currentIndex + 1)
+
+        _ = habitManager.reorderHabits(reorderedHabits)
     }
 
-    private func bulkDelete() {
-        let habitsToDelete = allHabits.filter { selectedHabits.contains($0.id) }
-        _ = habitManager.deleteHabits(habitsToDelete)
-        selectedHabits.removeAll()
-        isMultiSelectMode = false
+    private func canMoveUp(_ habit: Habit, in habits: [Habit]) -> Bool {
+        guard let index = habits.firstIndex(where: { $0.id == habit.id }) else { return false }
+        return index > 0
+    }
+
+    private func canMoveDown(_ habit: Habit, in habits: [Habit]) -> Bool {
+        guard let index = habits.firstIndex(where: { $0.id == habit.id }) else { return false }
+        return index < habits.count - 1
     }
 
     private func handleHabitCompletion(_ habit: Habit) {

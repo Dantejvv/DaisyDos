@@ -224,7 +224,7 @@ struct CompletionToastContainer<Entity, Content: View>: View {
                         isVisible: .constant(true)
                     )
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 100) // Account for tab bar
+                    .padding(.bottom, 60) // Position right above tab bar
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(1000)

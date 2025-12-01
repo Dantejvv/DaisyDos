@@ -28,20 +28,14 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
 
     // MARK: - Business Logic Errors
 
-    /// User attempted to exceed maximum tag limit (3 per item, 30 total)
+    /// User attempted to exceed maximum tag limit (5 per item, 30 total)
     case tagLimitExceeded
 
     /// Invalid recurrence rule configuration
     case invalidRecurrence
 
-    /// Invalid date range (start date after due date)
-    case invalidDateRange
-
     /// Circular reference in subtask hierarchy
     case circularReference
-
-    /// Attachment size limit exceeded
-    case attachmentLimitExceeded
 
     /// Duplicate entity creation attempted
     case duplicateEntity(String)
@@ -63,6 +57,15 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
     /// External service integration failed
     case integrationFailed(String)
 
+    /// Database operation failed
+    case databaseError(String, underlyingError: Error? = nil)
+
+    /// Data export failed
+    case exportFailed(String)
+
+    /// Data import failed
+    case importFailed(String)
+
     // MARK: - LocalizedError Implementation
 
     var errorDescription: String? {
@@ -79,12 +82,8 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
             return "Maximum tag limit exceeded"
         case .invalidRecurrence:
             return "Invalid recurrence configuration"
-        case .invalidDateRange:
-            return "Start date must be before due date"
         case .circularReference:
             return "Subtasks cannot have subtasks"
-        case .attachmentLimitExceeded:
-            return "Attachment size limit exceeded"
         case .duplicateEntity(let type):
             return "Duplicate \(type) already exists"
         case .entityNotFound(let type):
@@ -97,6 +96,12 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
             return "Permission denied for \(service)"
         case .integrationFailed(let service):
             return "Integration with \(service) failed"
+        case .databaseError(let operation, _):
+            return "Database error: \(operation)"
+        case .exportFailed(let details):
+            return "Export failed: \(details)"
+        case .importFailed(let details):
+            return "Import failed: \(details)"
         }
     }
 
@@ -111,15 +116,11 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
         case .validationFailed:
             return "The provided data does not meet requirements"
         case .tagLimitExceeded:
-            return "You can only have 3 tags per item and 30 total tags"
+            return "You can only have 5 tags per item and 30 total tags"
         case .invalidRecurrence:
             return "The recurrence pattern is not valid"
-        case .invalidDateRange:
-            return "The start date cannot be after the due date"
         case .circularReference:
             return "Only tasks can have subtasks - subtasks cannot have their own subtasks"
-        case .attachmentLimitExceeded:
-            return "This would exceed the attachment size limit (200MB per task)"
         case .duplicateEntity:
             return "An item with this information already exists"
         case .entityNotFound:
@@ -132,6 +133,12 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
             return "The app does not have permission to access this service"
         case .integrationFailed:
             return "External service is temporarily unavailable"
+        case .databaseError:
+            return "A database operation failed"
+        case .exportFailed:
+            return "The data export could not be completed"
+        case .importFailed:
+            return "The data import could not be completed"
         }
     }
 
@@ -149,12 +156,8 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
             return "Remove existing tags to add new ones, or delete unused tags."
         case .invalidRecurrence:
             return "Please check your recurrence settings and try again."
-        case .invalidDateRange:
-            return "Set the start date before the due date, or remove one of the dates."
         case .circularReference:
             return "Only root-level tasks can have subtasks. Choose a task that isn't already a subtask."
-        case .attachmentLimitExceeded:
-            return "Remove existing attachments or choose smaller files."
         case .duplicateEntity:
             return "Try using a different name or modify the existing item."
         case .entityNotFound:
@@ -167,6 +170,12 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
             return "Go to Settings and grant permission to continue."
         case .integrationFailed:
             return "Try again later or check the service status."
+        case .databaseError:
+            return "Try again. If the problem persists, restart the app."
+        case .exportFailed:
+            return "Check available storage space and try again."
+        case .importFailed:
+            return "Verify the file is a valid DaisyDos export and try again."
         }
     }
 
@@ -175,7 +184,7 @@ enum DaisyDosError: Error, LocalizedError, Equatable {
     /// Indicates if this error represents a user mistake vs system issue
     var isUserError: Bool {
         switch self {
-        case .tagLimitExceeded, .invalidRecurrence, .invalidDateRange, .circularReference, .attachmentLimitExceeded, .validationFailed, .duplicateEntity:
+        case .tagLimitExceeded, .invalidRecurrence, .circularReference, .validationFailed, .duplicateEntity:
             return true
         default:
             return false
@@ -246,6 +255,47 @@ extension DaisyDosError {
             return .networkUnavailable
         } else {
             return .integrationFailed(context.isEmpty ? "system" : context)
+        }
+    }
+
+    // MARK: - Equatable Implementation
+
+    static func == (lhs: DaisyDosError, rhs: DaisyDosError) -> Bool {
+        switch (lhs, rhs) {
+        case (.modelContextUnavailable, .modelContextUnavailable):
+            return true
+        case (.dataCorrupted(let a), .dataCorrupted(let b)):
+            return a == b
+        case (.persistenceFailed(let a), .persistenceFailed(let b)):
+            return a == b
+        case (.validationFailed(let a), .validationFailed(let b)):
+            return a == b
+        case (.tagLimitExceeded, .tagLimitExceeded):
+            return true
+        case (.invalidRecurrence, .invalidRecurrence):
+            return true
+        case (.circularReference, .circularReference):
+            return true
+        case (.duplicateEntity(let a), .duplicateEntity(let b)):
+            return a == b
+        case (.entityNotFound(let a), .entityNotFound(let b)):
+            return a == b
+        case (.networkUnavailable, .networkUnavailable):
+            return true
+        case (.syncConflict(let a), .syncConflict(let b)):
+            return a == b
+        case (.permissionDenied(let a), .permissionDenied(let b)):
+            return a == b
+        case (.integrationFailed(let a), .integrationFailed(let b)):
+            return a == b
+        case (.databaseError(let a, _), .databaseError(let b, _)):
+            return a == b
+        case (.exportFailed(let a), .exportFailed(let b)):
+            return a == b
+        case (.importFailed(let a), .importFailed(let b)):
+            return a == b
+        default:
+            return false
         }
     }
 }

@@ -32,11 +32,12 @@ extension View {
                     Button(role: .destructive, action: onDelete) {
                         Label("Delete", systemImage: "trash")
                     }
+                    .tint(.red)
 
                     Button(action: onEdit) {
                         Label("Edit", systemImage: "pencil")
                     }
-                    .tint(accentColor)
+                    .tint(Colors.Secondary.blue)
                 }
             }
             .swipeActions(edge: .leading, allowsFullSwipe: false) {

@@ -18,9 +18,6 @@ struct InputValidation {
         /// Maximum characters for titles (both tasks and habits)
         static let title: Int = 50
 
-        /// Maximum characters for descriptions (both tasks and habits)
-        static let description: Int = 500
-
         /// Maximum characters for tag names
         static let tagName: Int = 20
 

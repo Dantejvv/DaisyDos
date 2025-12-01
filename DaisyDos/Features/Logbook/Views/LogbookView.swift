@@ -78,6 +78,10 @@ struct LogbookView: View {
                     searchText: $searchText,
                     isSearchPresented: $isSearchPresented
                 )
+                .errorAlert(error: Binding(
+                    get: { logbookManager.lastError },
+                    set: { logbookManager.lastError = $0 }
+                ))
         }
     }
 
@@ -129,7 +133,6 @@ struct LogbookView: View {
                     Image(systemName: "chevron.down")
                         .font(.caption)
                 }
-                .foregroundColor(.daisyTask)
             }
         }
         .padding()
@@ -164,73 +167,18 @@ struct LogbookView: View {
                     // Task list
                     ForEach(Array(completions.enumerated()), id: \.offset) { _, completion in
                         if let task = completion as? Task {
-                            // Recent completion (0-90 days) - full TaskRowView with navigation
+                            // Recent completion (0-90 days) - Use TaskRowView
                             NavigationLink(destination: TaskDetailView(task: task, isLogbookMode: true)) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    // Task row with inline subtask indicator
-                                    HStack(spacing: 8) {
-                                        // Completion checkmark
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.title2)
-                                            .foregroundColor(.daisySuccess)
-
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            // Title
-                                            Text(task.title)
-                                                .font(.body)
-                                                .strikethrough()
-                                                .foregroundColor(.daisyTextSecondary)
-                                                .lineLimit(2)
-
-                                            // Parent task reference if subtask
-                                            if task.parentTask != nil, let parentTitle = task.parentTask?.title {
-                                                HStack(spacing: 4) {
-                                                    Image(systemName: "folder")
-                                                        .font(.caption2)
-                                                    Text(parentTitle)
-                                                        .font(.caption2)
-                                                        .lineLimit(1)
-                                                }
-                                                .foregroundColor(Colors.Primary.textTertiary)
-                                            }
-
-                                            // Metadata (priority, tags, dates)
-                                            if let completedDate = task.completedDate {
-                                                HStack(spacing: 8) {
-                                                    Text(completedDate.formatted(date: .abbreviated, time: .omitted))
-                                                        .font(.caption)
-                                                        .foregroundColor(Colors.Primary.textTertiary)
-
-                                                    if !task.tags.isEmpty {
-                                                        Text("•")
-                                                            .font(.caption2)
-                                                            .foregroundColor(Colors.Primary.textTertiary)
-
-                                                        Text(task.tags.map { $0.name }.joined(separator: ", "))
-                                                            .font(.caption)
-                                                            .foregroundColor(Colors.Primary.textTertiary)
-                                                            .lineLimit(1)
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        Spacer()
-
-                                        // Priority indicator
-                                        task.priority.indicatorView()
-                                            .font(.caption2)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
-                                    .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 10))
-                                }
-                                .opacity(0.9)
+                                TaskRowView(
+                                    task: task,
+                                    onToggleCompletion: {}, // No-op in logbook
+                                    onEdit: {}, // No-op in logbook
+                                    onDelete: {} // No-op in logbook
+                                )
                             }
                             .buttonStyle(.plain)
                             .padding(.horizontal)
                             .padding(.vertical, 4)
-                            .accessibilityLabel(task.parentTask != nil ? "Subtask: \(task.title). View details" : "View details for \(task.title)")
                         } else if let logEntry = completion as? TaskLogEntry {
                             // Archived completion (91-365 days) - lightweight LogEntryRow (read-only)
                             LogEntryRow(entry: logEntry)

@@ -249,7 +249,7 @@ struct TaskModelTests {
 
     // MARK: - Tag Management Tests
 
-    @Test("Task enforces 3-tag limit")
+    @Test("Task enforces 5-tag limit")
     func testTagLimit() {
         let task = Task(title: "Test")
 
@@ -258,19 +258,23 @@ struct TaskModelTests {
         let tag1 = Tag(name: "Tag1", sfSymbolName: "star", colorName: "blue")
         let tag2 = Tag(name: "Tag2", sfSymbolName: "heart", colorName: "red")
         let tag3 = Tag(name: "Tag3", sfSymbolName: "leaf", colorName: "green")
+        let tag4 = Tag(name: "Tag4", sfSymbolName: "sun.max", colorName: "yellow")
+        let tag5 = Tag(name: "Tag5", sfSymbolName: "moon", colorName: "purple")
 
         _ = task.addTag(tag1)
         _ = task.addTag(tag2)
         _ = task.addTag(tag3)
+        _ = task.addTag(tag4)
+        _ = task.addTag(tag5)
 
-        #expect(task.tags.count == 3)
+        #expect(task.tags.count == 5)
         #expect(!task.canAddTag())
 
-        let tag4 = Tag(name: "Tag4", sfSymbolName: "sun.max", colorName: "yellow")
-        let added = task.addTag(tag4)
+        let tag6 = Tag(name: "Tag6", sfSymbolName: "cloud", colorName: "gray")
+        let added = task.addTag(tag6)
 
         #expect(added == false)
-        #expect(task.tags.count == 3)
+        #expect(task.tags.count == 5)
     }
 
     @Test("Task prevents duplicate tags")

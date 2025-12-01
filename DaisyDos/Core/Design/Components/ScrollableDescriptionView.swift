@@ -54,6 +54,7 @@ struct ScrollableDescriptionView: View {
                     .font(.body)
                     .foregroundColor(.daisyTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.trailing, isScrollable ? -8 : 0) // Reduce scrollbar whitespace
                     .background(
                         GeometryReader { geometry in
                             Color.clear.preference(

@@ -9,7 +9,9 @@ import Foundation
 import SwiftData
 
 @Observable
-class TaskManager {
+class TaskManager: EntityManagerProtocol {
+    typealias Entity = Task
+
     internal let modelContext: ModelContext
 
     // Error handling
@@ -530,6 +532,39 @@ class TaskManager {
             // Copy tags
             for tag in task.tags {
                 _ = duplicateTask.addTag(tag)
+            }
+
+            // Copy subtasks
+            for subtask in task.subtasks {
+                let duplicateSubtask = Task(
+                    title: subtask.title,
+                    taskDescription: subtask.taskDescription,
+                    priority: subtask.priority,
+                    dueDate: nil, // Subtasks don't have due dates
+                    recurrenceRule: nil
+                )
+                duplicateSubtask.subtaskOrder = subtask.subtaskOrder
+
+                // Copy subtask tags
+                for tag in subtask.tags {
+                    _ = duplicateSubtask.addTag(tag)
+                }
+
+                duplicateTask.addSubtask(duplicateSubtask)
+                modelContext.insert(duplicateSubtask)
+            }
+
+            // Copy attachments
+            for attachment in task.attachments {
+                let duplicateAttachment = TaskAttachment(
+                    fileName: attachment.fileName,
+                    fileSize: attachment.fileSize,
+                    mimeType: attachment.mimeType,
+                    fileData: attachment.fileData,
+                    thumbnailData: attachment.thumbnailData
+                )
+                duplicateTask.attachments.append(duplicateAttachment)
+                modelContext.insert(duplicateAttachment)
             }
 
             try modelContext.save()

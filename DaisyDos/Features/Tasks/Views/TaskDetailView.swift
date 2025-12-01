@@ -3,27 +3,59 @@
 //  DaisyDos
 //
 //  Created by Claude Code on 9/26/25.
-//  Refactored with tabbed interface on 10/1/25
+//  Refactored with vertical card layout on 11/8/25
+//  Refactored with shared components on 11/11/25
+//
+//  FEATURE DIFFERENCES FROM HABITDETAILVIEW:
+//  ════════════════════════════════════════════════════════════════════════════
+//  1. DUE DATES: Tasks have due dates; habits focus on recurrence patterns
+//     Rationale: Tasks are deadline-oriented work items; habits are continuous behaviors
+//
+//  2. LOGBOOK MODE: Tasks can be archived in logbook; habits track continuous history
+//     Rationale: Completed tasks are archived after 90 days; habits maintain ongoing records
+//
+//  3. RECOVERY: Completed tasks can be recovered from logbook; habits don't need recovery
+//     Rationale: Task archival is reversible; habit completions are permanent records
+//
+//  4. COMPLETION MODEL: Single completion state (done/not done); habits track multiple completions
+//     Rationale: Tasks = discrete deliverables; habits = repeated behaviors with history
+//
+//  5. SKIP FUNCTIONALITY: Tasks don't have skip; habits allow skipping days with reasons
+//     Rationale: Tasks are binary (done/pending); habits need flexibility for life circumstances
+//
+//  SHARED BEHAVIORS:
+//  ════════════════════════════════════════════════════════════════════════════
+//  - Subtasks, tags, attachments, recurrence, alerts, priority
+//  - Card-based layout using shared components (HistoryCard, TagsCard, DetailCard)
+//  - Consistent tag/subtask management via manager methods
+//  - Shared formatting utilities (DetailViewHelpers)
 //
 
 import SwiftUI
 import SwiftData
+import QuickLook
 
 struct TaskDetailView: View {
     @Environment(TaskManager.self) private var taskManager
+    @Environment(TaskCompletionToastManager.self) private var toastManager
     @Environment(\.dismiss) private var dismiss
 
     let task: Task
     let isLogbookMode: Bool
 
-    @State private var selectedTab: DetailTab = .overview
     @State private var showingEditView = false
     @State private var showingTagAssignment = false
     @State private var showingDeleteConfirmation = false
-    @State private var showingSubtaskCreation = false
     @State private var showingTaskShare = false
     @State private var showingRecurrencePicker = false
     @State private var showingRecoverConfirmation = false
+    @State private var showingDatePicker = false
+    @State private var showingAlertPicker = false
+    @State private var showingPriorityPicker = false
+    @State private var newSubtaskTitle = ""
+    @State private var showSubtaskField = false
+    @FocusState private var newSubtaskFocused: Bool
+    @State private var attachmentToPreview: URL?
 
     // MARK: - Computed Properties
 
@@ -31,43 +63,61 @@ struct TaskDetailView: View {
         !task.isCompleted || !isLogbookMode
     }
 
-    // MARK: - Detail Tabs
-
-    enum DetailTab: String, CaseIterable {
-        case overview = "Overview"
-        case subtasks = "Subtasks"
-
-        var icon: String {
-            switch self {
-            case .overview: return "info.circle"
-            case .subtasks: return "checklist"
-            }
-        }
-    }
-
     // MARK: - Body
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Custom Tab Picker
-                tabPicker
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Hero Card - Task Overview (title, description, priority)
+                    taskOverviewCard
 
-                // Tab Content
-                TabView(selection: $selectedTab) {
-                    overviewTab
-                        .tag(DetailTab.overview)
+                    // Subtasks Section - Always shown
+                    subtasksCard
 
-                    subtasksTab
-                        .tag(DetailTab.subtasks)
+                    // Metadata Card (dates, recurrence, alerts) - Always shown
+                    metadataCard
+
+                    // Tags Section - Always shown
+                    tagsCard
+
+                    // Attachments Section - Always shown
+                    attachmentsCard
+
+                    // Status & Progress Card
+                    statusAndProgressCard
+
+                    // History Card (created, modified, completion)
+                    historyCard
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .padding()
             }
-            .navigationTitle(task.title)
-            .navigationBarTitleDisplayMode(.large)
+            .background(Color.daisyBackground)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
+                        // Completion toggle at the top (hidden in logbook mode)
+                        if !isLogbookMode {
+                            Button {
+                                _ = taskManager.toggleTaskCompletionSafely(task)
+
+                                // Show undo toast if task was completed
+                                if task.isCompleted {
+                                    toastManager.showCompletionToast(for: task) {
+                                        _ = taskManager.toggleTaskCompletionSafely(task)
+                                    }
+                                }
+                            } label: {
+                                if task.isCompleted {
+                                    Label("Mark as Incomplete", systemImage: "circle")
+                                } else {
+                                    Label("Mark as Complete", systemImage: "checkmark.circle.fill")
+                                }
+                            }
+
+                            Divider()
+                        }
+
                         // Only show Edit if task can be modified
                         if canModify {
                             Button {
@@ -114,36 +164,19 @@ struct TaskDetailView: View {
                     }
                 }
             }
-            .overlay(alignment: .bottomTrailing) {
-                // Floating completion toggle (hidden in logbook mode)
-                if !isLogbookMode {
-                    Button(action: {
-                        _ = taskManager.toggleTaskCompletionSafely(task)
-                    }) {
-                        Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 56))
-                            .foregroundColor(task.isCompleted ? .daisySuccess : .daisyTask)
-                            .background(
-                                Circle()
-                                    .fill(.regularMaterial)
-                                    .shadow(radius: 8)
-                            )
-                    }
-                    .padding()
-                    .accessibilityLabel(task.isCompleted ? "Mark as incomplete" : "Mark as complete")
-                }
-            }
         }
         .sheet(isPresented: $showingEditView) {
             TaskEditView(task: task)
         }
         .sheet(isPresented: $showingTagAssignment) {
-            TagAssignmentSheet.forTask(task: task) { newTags in
-                updateTaskTags(newTags)
-            }
-        }
-        .sheet(isPresented: $showingSubtaskCreation) {
-            SubtaskCreationView(parentTask: task)
+            TagSelectionView(selectedTags: .init(
+                get: { task.tags },
+                set: { newTags in
+                    updateTaskTags(newTags)
+                }
+            ))
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingTaskShare) {
             TaskShareSheet(task: task, includeAttachments: false)
@@ -162,6 +195,58 @@ struct TaskDetailView: View {
                     )
                 }
             ))
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showingDatePicker) {
+            DatePickerSheet(
+                selectedDate: .init(
+                    get: { task.dueDate },
+                    set: { newDate in
+                        task.dueDate = newDate
+                        task.modifiedDate = Date()
+                    }
+                ),
+                hasDate: .constant(task.dueDate != nil),
+                accentColor: .daisyTask
+            )
+            .presentationDetents([.large])
+        }
+        .sheet(isPresented: $showingAlertPicker) {
+            AlertPickerSheet(
+                selectedAlert: .init(
+                    get: {
+                        if let interval = task.alertTimeInterval {
+                            return AlertOption.allCases.first { $0.timeInterval == interval }
+                        }
+                        return nil
+                    },
+                    set: { newAlert in
+                        task.alertTimeInterval = newAlert?.timeInterval
+                        task.modifiedDate = Date()
+                    }
+                ),
+                accentColor: .daisyTask
+            )
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showingPriorityPicker) {
+            PriorityPickerSheet(
+                selectedPriority: .init(
+                    get: { task.priority },
+                    set: { newPriority in
+                        let _ = taskManager.updateTask(
+                            task,
+                            title: task.title,
+                            taskDescription: task.taskDescription,
+                            priority: newPriority,
+                            dueDate: task.dueDate,
+                            recurrenceRule: task.recurrenceRule
+                        )
+                    }
+                ),
+                accentColor: .daisyTask
+            )
+            .presentationDetents([.medium])
         }
         .alert("Delete Task", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
@@ -179,154 +264,33 @@ struct TaskDetailView: View {
         } message: {
             Text("This task will be moved back to your active tasks list and marked as incomplete.")
         }
+        .quickLookPreview($attachmentToPreview)
+        .errorAlert(error: Binding(
+            get: { taskManager.lastError },
+            set: { taskManager.lastError = $0 }
+        ))
     }
 
-    // MARK: - Tab Picker
+    // MARK: - Hero Card - Task Overview
 
     @ViewBuilder
-    private var tabPicker: some View {
-        HStack(spacing: 0) {
-            ForEach(DetailTab.allCases, id: \.self) { tab in
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        selectedTab = tab
-                    }
-                }) {
-                    VStack(spacing: 4) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 16, weight: .medium))
-
-                        Text(tab.rawValue)
-                            .font(.caption.weight(.medium))
-                    }
-                    .foregroundColor(selectedTab == tab ? .daisyTask : .daisyTextSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                }
-                .background(
-                    Rectangle()
-                        .fill(selectedTab == tab ? Color.daisyTask.opacity(0.1) : Color.clear)
-                        .animation(.easeInOut(duration: 0.3), value: selectedTab)
-                )
-            }
-        }
-        .background(Color.daisySurface)
-        .overlay(
-            // Selection indicator
-            GeometryReader { geometry in
-                VStack {
-                    Spacer()
-                    Rectangle()
-                        .fill(Color.daisyTask)
-                        .frame(width: geometry.size.width / CGFloat(DetailTab.allCases.count), height: 2)
-                        .offset(x: tabIndicatorOffset(for: geometry.size.width))
-                        .animation(.easeInOut(duration: 0.3), value: selectedTab)
-                }
-            }
+    private var taskOverviewCard: some View {
+        OverviewCard(
+            title: task.title,
+            description: task.taskDescriptionAttributed
         )
     }
 
-    private func tabIndicatorOffset(for totalWidth: CGFloat) -> CGFloat {
-        let tabWidth = totalWidth / CGFloat(DetailTab.allCases.count)
-        let index = DetailTab.allCases.firstIndex(of: selectedTab) ?? 0
-        return CGFloat(index) * tabWidth
-    }
-
-    // MARK: - Overview Tab
+    // MARK: - Status & Progress Card
 
     @ViewBuilder
-    private var overviewTab: some View {
-        ScrollView {
-            LazyVStack(spacing: 20) {
-                // Task Information Card
-                taskInfoCard
-
-                // Current Status Card
-                currentStatusCard
-
-                // Tags Section
-                if !task.tags.isEmpty {
-                    tagsCard
-                }
-
-                // Dates Card
-                if task.dueDate != nil {
-                    datesCard
-                }
-
-                // Recurrence Card
-                if task.hasRecurrence {
-                    recurrenceCard
-                }
-            }
-            .padding()
-        }
-        .background(Color.daisyBackground)
-    }
-
-    @ViewBuilder
-    private var taskInfoCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("About")
-                    .font(.headline)
-                    .foregroundColor(.daisyText)
-                Spacer()
-                HStack(spacing: 6) {
-                    task.priority.indicatorView()
-                        .font(.caption)
-                    Text(task.priority.displayName)
-                        .font(.caption.weight(.medium))
-                        .foregroundColor(.daisyTextSecondary)
-                }
-            }
-
-            if !task.taskDescription.isEmpty {
-                ScrollableDescriptionView(
-                    text: task.taskDescriptionAttributed,
-                    maxHeight: 200
-                )
-            }
-
-            if let recurrenceRule = task.recurrenceRule {
-                Label(
-                    recurrenceRule.displayDescription,
-                    systemImage: "repeat"
-                )
-                .font(.caption)
-                .foregroundColor(.daisyTextSecondary)
-            }
-
-            // Metadata
-            VStack(alignment: .leading, spacing: 4) {
-                Label(
-                    "Created \(task.createdDate.formatted(date: .abbreviated, time: .omitted))",
-                    systemImage: "calendar"
-                )
-                .font(.caption)
-                .foregroundColor(.daisyTextSecondary)
-
-                // Only show modified if different from created (more than 1 minute difference)
-                if task.modifiedDate.timeIntervalSince(task.createdDate) > 60 {
-                    Label(
-                        "Modified \(task.modifiedDate.formatted(date: .abbreviated, time: .omitted))",
-                        systemImage: "pencil.circle"
-                    )
-                    .font(.caption)
-                    .foregroundColor(.daisyTextSecondary)
-                }
-            }
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    @ViewBuilder
-    private var currentStatusCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Status")
-                .font(.headline)
-
+    private var statusAndProgressCard: some View {
+        StatusProgressCard(
+            hasSubtasks: task.hasSubtasks,
+            completedSubtaskCount: task.completedSubtaskCount,
+            totalSubtaskCount: task.subtaskCount,
+            accentColor: .daisyTask
+        ) {
             HStack(spacing: 20) {
                 // Completion status
                 VStack(alignment: .leading, spacing: 4) {
@@ -340,207 +304,366 @@ struct TaskDetailView: View {
                             .font(.subheadline.weight(.medium))
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 Divider()
                     .frame(height: 40)
 
                 // Subtask progress
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Subtasks")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
-                    if task.hasSubtasks {
-                        HStack(spacing: 6) {
-                            Image(systemName: "checklist")
-                                .foregroundColor(.daisyTask)
-                            Text("\(task.completedSubtaskCount)/\(task.subtaskCount)")
-                                .font(.subheadline.weight(.medium))
-                        }
-                    } else {
-                        Text("None")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(.daisyTextSecondary)
-                    }
-                }
+                SubtaskStatusSection(
+                    hasSubtasks: task.hasSubtasks,
+                    completedCount: task.completedSubtaskCount,
+                    totalCount: task.subtaskCount,
+                    accentColor: .daisyTask
+                )
             }
         }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
     }
+
+    // MARK: - Tags Card
 
     @ViewBuilder
     private var tagsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Tags")
+        TagsCard(
+            tags: task.tags,
+            accentColor: .daisyTask,
+            canModify: canModify,
+            maxTags: 5,
+            onAddTags: {
+                showingTagAssignment = true
+            },
+            onRemoveTag: { tag in
+                removeTag(tag)
+            }
+        )
+    }
+
+    // MARK: - Metadata Card
+
+    @ViewBuilder
+    private var metadataCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Details")
                 .font(.headline)
                 .foregroundColor(.daisyText)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(task.tags, id: \.id) { tag in
-                        TagChipView(tag: tag)
-                    }
-                }
-                .padding(.horizontal, 4)
-            }
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    @ViewBuilder
-    private var datesCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Due Date")
-                .font(.headline)
-
             VStack(spacing: 12) {
-                if let dueDate = task.dueDate {
-                    HStack {
-                        Label("Due Date", systemImage: "calendar.badge.clock")
-                            .font(.subheadline)
-                            .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyTextSecondary)
-                        Spacer()
-                        Text(dueDate.formatted(date: .abbreviated, time: .omitted))
-                            .font(.subheadline)
-                            .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyText)
+                // Due Date - Always shown
+                Button(action: {
+                    if canModify {
+                        showingDatePicker = true
                     }
+                }) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Label("Due Date", systemImage: "calendar.badge.clock")
+                                .font(.subheadline)
+                                .foregroundColor(.daisyTextSecondary)
+                            Spacer()
+                            HStack(spacing: 4) {
+                                if let dueDate = task.dueDate {
+                                    Text(dueDate.formatted(date: .abbreviated, time: .omitted))
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundColor(task.hasOverdueStatus ? .daisyError : .daisyText)
+                                } else {
+                                    Text("None")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundColor(.daisyTextSecondary)
+                                }
 
-                    if task.hasOverdueStatus {
-                        HStack(spacing: 6) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.caption)
-                                .foregroundColor(.daisyError)
-                            Text("This task is overdue")
-                                .font(.caption)
-                                .foregroundColor(.daisyError)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Colors.Accent.errorBackground, in: RoundedRectangle(cornerRadius: 8))
-                    }
-                }
-            }
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    @ViewBuilder
-    private var recurrenceCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Recurrence")
-                    .font(.headline)
-                Spacer()
-                Button("Edit") {
-                    showingRecurrencePicker = true
-                }
-                .font(.caption)
-                .foregroundColor(.daisyTask)
-            }
-
-            RecurrenceVisualizationView(
-                recurrenceRule: task.recurrenceRule,
-                onEdit: {
-                    showingRecurrencePicker = true
-                }
-            )
-        }
-        .padding()
-        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    // MARK: - Subtasks Tab
-
-    @ViewBuilder
-    private var subtasksTab: some View {
-        ScrollView {
-            LazyVStack(spacing: 20) {
-                // Progress Card
-                if task.hasSubtasks {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Progress")
-                            .font(.headline)
-
-                        SubtaskProgressSummary(task: task, style: .detailed)
-                    }
-                    .padding()
-                    .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
-                }
-
-                // Subtasks List
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Text("All Subtasks")
-                            .font(.headline)
-                        Spacer()
-                        if canModify {
-                            Button(action: {
-                                showingSubtaskCreation = true
-                            }) {
-                                Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(.daisyTask)
+                                if canModify {
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.daisyTextSecondary)
+                                }
                             }
-                            .accessibilityLabel("Add subtask")
+                        }
+
+                        if task.hasOverdueStatus {
+                            HStack(spacing: 6) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.daisyError)
+                                Text("This task is overdue")
+                                    .font(.caption)
+                                    .foregroundColor(.daisyError)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Colors.Accent.errorBackground, in: RoundedRectangle(cornerRadius: 8))
                         }
                     }
+                }
+                .buttonStyle(.plain)
 
-                    // Info banner when restricted
-                    if !canModify && task.isCompleted {
-                        HStack(spacing: 8) {
-                            Image(systemName: "info.circle")
-                                .foregroundColor(.daisyTask)
-                            Text("Completed tasks in Logbook cannot have new subtasks added")
-                                .font(.caption)
-                                .foregroundColor(.daisyTextSecondary)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.daisyTask.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                Divider()
+
+                // Recurrence - Always shown
+                Button(action: {
+                    if canModify {
+                        showingRecurrencePicker = true
                     }
-
-                    if task.hasSubtasks {
-                        SubtaskListView(parentTask: task, isReadOnly: isLogbookMode)
-                    } else {
-                        VStack(spacing: 16) {
-                            Image(systemName: "checklist")
-                                .font(.system(size: 48))
+                }) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Label("Recurrence", systemImage: "repeat")
+                                .font(.subheadline)
                                 .foregroundColor(.daisyTextSecondary)
+                            Spacer()
+                            HStack(spacing: 4) {
+                                if task.recurrenceRule == nil {
+                                    Text("None")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundColor(.daisyTextSecondary)
+                                }
+                                if canModify {
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.daisyTextSecondary)
+                                }
+                            }
+                        }
 
-                            Text("No Subtasks Yet")
-                                .font(.headline)
-                                .foregroundColor(.daisyText)
+                        // Pattern description (only shown if recurrence exists)
+                        if let recurrenceRule = task.recurrenceRule {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(recurrenceRule.displayDescription)
+                                    .font(.subheadline)
+                                    .foregroundColor(.daisyTextSecondary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.daisyBackground.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+                            }
+
+                            // Next occurrence info
+                            if let nextDate = recurrenceRule.nextOccurrence(after: Date()) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Next")
+                                        .font(.caption.weight(.medium))
+                                        .foregroundColor(.daisyTextSecondary)
+
+                                    HStack {
+                                        Text(nextDate, style: .date)
+                                            .font(.subheadline)
+                                            .foregroundColor(.daisyText)
+
+                                        Spacer()
+
+                                        Text(formatRelativeDate(nextDate))
+                                            .font(.caption)
+                                            .foregroundColor(.daisyTask)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Divider()
+
+                // Alert - Always shown
+                Button(action: {
+                    if canModify {
+                        showingAlertPicker = true
+                    }
+                }) {
+                    HStack {
+                        Label("Alert", systemImage: "bell.fill")
+                            .font(.subheadline)
+                            .foregroundColor(.daisyTextSecondary)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            if let alertInterval = task.alertTimeInterval {
+                                Text(formatAlertInterval(alertInterval))
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.daisyText)
+                            } else {
+                                Text("None")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.daisyTextSecondary)
+                            }
 
                             if canModify {
-                                Text("Break this task into smaller steps")
-                                    .font(.subheadline)
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
                                     .foregroundColor(.daisyTextSecondary)
-                                    .multilineTextAlignment(.center)
-
-                                Button(action: {
-                                    showingSubtaskCreation = true
-                                }) {
-                                    Label("Add Subtask", systemImage: "plus.circle.fill")
-                                        .font(.subheadline.weight(.medium))
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.daisyTask)
-                            } else {
-                                Text("This completed task has no subtasks")
-                                    .font(.subheadline)
-                                    .foregroundColor(.daisyTextSecondary)
-                                    .multilineTextAlignment(.center)
                             }
                         }
-                        .padding(.vertical, 32)
                     }
                 }
-                .padding()
-                .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+                .buttonStyle(.plain)
+
+                Divider()
+
+                // Priority - Always shown
+                Button(action: {
+                    if canModify {
+                        showingPriorityPicker = true
+                    }
+                }) {
+                    HStack {
+                        Label("Priority", systemImage: "flag.fill")
+                            .font(.subheadline)
+                            .foregroundColor(.daisyTextSecondary)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            if task.priority != .none {
+                                task.priority.indicatorView()
+                                    .font(.caption)
+                                Text(task.priority.displayName)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.daisyText)
+                            } else {
+                                Text("None")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.daisyTextSecondary)
+                            }
+
+                            if canModify {
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.daisyTextSecondary)
+                            }
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
             }
-            .padding()
         }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Subtasks Section
+
+    @ViewBuilder
+    private var subtasksCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            Text("Subtasks")
+                .font(.headline)
+                .foregroundColor(.daisyText)
+
+            if task.subtasks.isEmpty && !showSubtaskField {
+                // Empty state - button to show field
+                if canModify {
+                    SubtaskAddButton {
+                        showSubtaskField = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            newSubtaskFocused = true
+                        }
+                    }
+                } else {
+                    // Read-only empty state
+                    HStack {
+                        Text("None")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.daisyTextSecondary)
+
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 12)
+                }
+            }
+
+            // Subtasks list or field showing
+            if !task.subtasks.isEmpty || showSubtaskField {
+                VStack(spacing: 0) {
+                    // Existing subtasks list
+                    if !task.subtasks.isEmpty {
+                        List {
+                            ForEach(task.orderedSubtasks) { subtask in
+                                SubtaskRow(
+                                    subtask: subtask,
+                                    accentColor: .daisyTask,
+                                    onToggle: {
+                                        toggleSubtask(subtask)
+                                    }
+                                )
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                            }
+                        }
+                        .listStyle(.plain)
+                        .frame(height: CGFloat(task.subtasks.count) * 44)
+                        .scrollDisabled(true)
+                    }
+
+                    // Add new subtask field
+                    if showSubtaskField && canModify {
+                        SubtaskInputField(
+                            text: $newSubtaskTitle,
+                            isFocused: $newSubtaskFocused,
+                            onAdd: {
+                                addSubtaskAndClose()
+                            }
+                        )
+                    }
+
+                    // Always-visible + button (when can modify)
+                    if canModify {
+                        SubtaskAddButton {
+                            // If field is showing and has text, add the subtask first
+                            if showSubtaskField && !newSubtaskTitle.isEmpty {
+                                addSubtask()
+                            }
+
+                            // Show field if hidden
+                            if !showSubtaskField {
+                                showSubtaskField = true
+                            }
+
+                            // Always focus the field
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                newSubtaskFocused = true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.daisySurface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Attachments Card
+
+    @ViewBuilder
+    private var attachmentsCard: some View {
+        AttachmentPreviewSection(
+            attachments: task.attachments,
+            accentColor: .daisyTask,
+            onTap: { attachment in
+                // Create temporary URL from attachment data for QuickLook preview
+                let tempURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(attachment.id.uuidString)
+                    .appendingPathExtension(attachment.fileExtension)
+
+                do {
+                    try attachment.fileData.write(to: tempURL)
+                    attachmentToPreview = tempURL
+                } catch {
+                    // Silently fail - could add error handling if needed
+                    print("Failed to create temporary file for preview: \(error)")
+                }
+            }
+        )
+    }
+
+    // MARK: - History Card
+
+    @ViewBuilder
+    private var historyCard: some View {
+        HistoryCard(
+            createdDate: task.createdDate,
+            modifiedDate: task.modifiedDate,
+            completionInfo: task.isCompleted && task.completedDate != nil
+                ? .single(task.completedDate!)
+                : nil
+        )
     }
 
     // MARK: - Initializer
@@ -551,6 +674,15 @@ struct TaskDetailView: View {
     }
 
     // MARK: - Helper Methods
+    // Note: Formatting methods now use DetailViewHelpers for consistency
+
+    private func formatAlertInterval(_ interval: TimeInterval) -> String {
+        DetailViewHelpers.formatAlertInterval(interval)
+    }
+
+    private func formatRelativeDate(_ date: Date) -> String {
+        DetailViewHelpers.formatRelativeDate(date)
+    }
 
     private func recoverTask() {
         let success = taskManager.recoverTaskSafely(task)
@@ -586,7 +718,41 @@ struct TaskDetailView: View {
         }
     }
 
+    private func removeTag(_ tag: Tag) {
+        _ = taskManager.removeTagSafely(tag, from: task)
+    }
+
+    private func toggleSubtask(_ subtask: Task) {
+        if canModify {
+            _ = taskManager.toggleSubtask(subtask)
+        }
+    }
+
+    private func addSubtask() {
+        let trimmedTitle = newSubtaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+
+        let result = taskManager.createSubtask(
+            for: task,
+            title: trimmedTitle,
+            priority: .none
+        )
+
+        if case .success = result {
+            newSubtaskTitle = ""
+        }
+    }
+
+    private func addSubtaskAndClose() {
+        addSubtask()
+        showSubtaskField = false
+        newSubtaskFocused = false
+    }
 }
+
+// MARK: - Task Detail Subtask Row
+// TaskDetailSubtaskRow removed - now using shared SubtaskRow component from Core/Design/Components/Shared/Rows/
+
 
 #Preview {
     let container = try! ModelContainer(
@@ -628,3 +794,8 @@ struct TaskDetailView: View {
         .environment(taskManager)
         .environment(tagManager)
 }
+
+// MARK: - Wrapping HStack Layout
+
+// NOTE: WrappingHStack moved to Core/Design/Components/Shared/Layout/WrappingHStack.swift
+// Using shared component instead of private implementation

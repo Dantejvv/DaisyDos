@@ -370,11 +370,11 @@ extension Color {
     /// Error color
     static let daisyError = Colors.Accent.error
 
-    /// Task accent color
-    static let daisyTask = Colors.Semantic.taskAccent
+    /// Task accent color (uses user's system accent color)
+    static let daisyTask = Color.accentColor
 
-    /// Habit accent color
-    static let daisyHabit = Colors.Semantic.habitAccent
+    /// Habit accent color (uses user's system accent color)
+    static let daisyHabit = Color.accentColor
 
     /// Tag accent color
     static let daisyTag = Colors.Semantic.tagAccent

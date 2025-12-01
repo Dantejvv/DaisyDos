@@ -56,13 +56,19 @@ class Habit {
     /// Priority level for habit importance and organization
     var priority: Priority = Priority.none
 
+    /// Time interval for alert/reminder (e.g., -3600 = 1 hour before)
+    var alertTimeInterval: TimeInterval?
+
+    /// Custom sort order for manual habit arrangement (lower values appear first)
+    var habitOrder: Int = 0
+
     // MARK: - Relationships
 
     @Relationship(deleteRule: .nullify, inverse: \Tag.habits)
     var tags: [Tag] = [] {
         didSet {
-            if tags.count > 3 {
-                tags = Array(tags.prefix(3))
+            if tags.count > 5 {
+                tags = Array(tags.prefix(5))
             }
         }
     }
@@ -75,6 +81,14 @@ class Habit {
 
     /// Skip entries for tracking when habit was skipped
     @Relationship(deleteRule: .cascade) var skips: [HabitSkip] = []
+
+    /// Attachments (photos, documents, etc.)
+    @Relationship(deleteRule: .cascade, inverse: \HabitAttachment.habit)
+    var attachments: [HabitAttachment] = []
+
+    /// Subtasks/checklist items for the habit
+    @Relationship(deleteRule: .cascade)
+    var subtasks: [HabitSubtask] = []
 
     init(title: String, habitDescription: String = "", recurrenceRule: RecurrenceRule? = nil, priority: Priority = .none) {
         self.id = UUID()
@@ -94,8 +108,61 @@ class Habit {
         tags.count
     }
 
+    var subtaskCount: Int {
+        subtasks.count
+    }
+
+    var completedSubtaskCount: Int {
+        subtasks.filter(\.isCompletedToday).count
+    }
+
+    var hasSubtasks: Bool {
+        !subtasks.isEmpty
+    }
+
+    var hasAttachments: Bool {
+        !attachments.isEmpty
+    }
+
+    var attachmentCount: Int {
+        attachments.count
+    }
+
+    var hasAlert: Bool {
+        alertTimeInterval != nil
+    }
+
+    var subtaskProgressText: String? {
+        guard hasSubtasks else { return nil }
+        return "\(completedSubtaskCount)/\(subtaskCount)"
+    }
+
+    var hasRecurrence: Bool {
+        recurrenceRule != nil
+    }
+
+    /// Returns subtasks ordered by their subtaskOrder property
+    var orderedSubtasks: [HabitSubtask] {
+        // Ensure order values are assigned for existing subtasks
+        ensureSubtaskOrderValues()
+        return subtasks.sorted { $0.subtaskOrder < $1.subtaskOrder }
+    }
+
+    /// Ensures all subtasks have proper order values assigned
+    private func ensureSubtaskOrderValues() {
+        // Check if all subtasks have the default order value (0)
+        let allHaveZeroOrder = subtasks.allSatisfy { $0.subtaskOrder == 0 }
+
+        if allHaveZeroOrder && subtasks.count > 1 {
+            // Assign sequential order values to all subtasks
+            for (index, subtask) in subtasks.enumerated() {
+                subtask.subtaskOrder = index
+            }
+        }
+    }
+
     func canAddTag() -> Bool {
-        return tagCount < 3
+        return tagCount < 5
     }
 
     func addTag(_ tag: Tag) -> Bool {
@@ -109,6 +176,95 @@ class Habit {
 
     func removeTag(_ tag: Tag) {
         tags.removeAll { $0 == tag }
+    }
+
+    // MARK: - Subtask Management
+
+    func addSubtask(_ subtask: HabitSubtask) -> Bool {
+        guard subtask.parentHabit == nil else {
+            return false // Subtask already has a parent
+        }
+
+        // Assign the next order value
+        let maxOrder = subtasks.map(\.subtaskOrder).max() ?? -1
+        subtask.subtaskOrder = maxOrder + 1
+
+        subtasks.append(subtask)
+        subtask.parentHabit = self
+        modifiedDate = Date()
+        return true
+    }
+
+    func removeSubtask(_ subtask: HabitSubtask) {
+        subtasks.removeAll { $0 == subtask }
+        subtask.parentHabit = nil
+        modifiedDate = Date()
+    }
+
+    /// Moves a subtask up one position by adjusting order values
+    func moveSubtaskUp(_ subtask: HabitSubtask) {
+        let orderedTasks = orderedSubtasks
+        guard let currentIndex = orderedTasks.firstIndex(of: subtask),
+              currentIndex > 0 else {
+            return
+        }
+
+        // Get the target subtask to swap orders with
+        let targetSubtask = orderedTasks[currentIndex - 1]
+
+        // Swap the order values
+        let tempOrder = subtask.subtaskOrder
+        subtask.subtaskOrder = targetSubtask.subtaskOrder
+        targetSubtask.subtaskOrder = tempOrder
+
+        modifiedDate = Date()
+    }
+
+    /// Moves a subtask down one position by adjusting order values
+    func moveSubtaskDown(_ subtask: HabitSubtask) {
+        let orderedTasks = orderedSubtasks
+        guard let currentIndex = orderedTasks.firstIndex(of: subtask),
+              currentIndex < orderedTasks.count - 1 else {
+            return
+        }
+
+        // Get the target subtask to swap orders with
+        let targetSubtask = orderedTasks[currentIndex + 1]
+
+        // Swap the order values
+        let tempOrder = subtask.subtaskOrder
+        subtask.subtaskOrder = targetSubtask.subtaskOrder
+        targetSubtask.subtaskOrder = tempOrder
+
+        modifiedDate = Date()
+    }
+
+    func createSubtask(title: String) -> HabitSubtask {
+        let subtask = HabitSubtask(title: title)
+
+        // Inherit parent's creation date
+        subtask.createdDate = self.createdDate
+
+        _ = addSubtask(subtask)
+        return subtask
+    }
+
+    /// Reset all subtask completion statuses (called when new day starts)
+    func resetSubtaskCompletions() {
+        for subtask in subtasks {
+            subtask.resetDailyCompletion()
+        }
+        modifiedDate = Date()
+    }
+
+    var subtaskCompletionPercentage: Double {
+        guard hasSubtasks else { return isCompletedToday ? 1.0 : 0.0 }
+        guard subtaskCount > 0 else { return 0.0 }
+        return Double(completedSubtaskCount) / Double(subtaskCount)
+    }
+
+    var isPartiallyComplete: Bool {
+        hasSubtasks && subtaskCompletionPercentage > 0 && subtaskCompletionPercentage < 1.0
     }
 
     func markCompleted() {
@@ -333,7 +489,4 @@ class Habit {
     }
 }
 
-// MARK: - PriorityProvider Conformance
-
-extension Habit: PriorityProvider {}
 

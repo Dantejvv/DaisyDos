@@ -19,6 +19,7 @@ enum Priority: String, Codable, CaseIterable, Comparable, Sendable {
 
     // MARK: - Display Properties
 
+    /// Default display color (used when AppearanceManager not available)
     var displayColor: Color {
         switch self {
         case .none: return .daisyTextSecondary
@@ -28,12 +29,22 @@ enum Priority: String, Codable, CaseIterable, Comparable, Sendable {
         }
     }
 
+    /// Returns the customized color from AppearanceManager
+    func color(from appearanceManager: AppearanceManager) -> Color {
+        switch self {
+        case .none: return .daisyTextSecondary
+        case .low: return appearanceManager.lowPriorityDisplayColor
+        case .medium: return appearanceManager.mediumPriorityDisplayColor
+        case .high: return appearanceManager.highPriorityDisplayColor
+        }
+    }
+
     var sfSymbol: String? {
         switch self {
         case .none: return nil
-        case .low: return "arrow.down"
-        case .medium: return "equal"
-        case .high: return "exclamationmark.2"
+        case .low: return "triangle"
+        case .medium: return "triangle.fill"
+        case .high: return "exclamationmark.triangle.fill"
         }
     }
 
@@ -49,10 +60,10 @@ enum Priority: String, Codable, CaseIterable, Comparable, Sendable {
     // MARK: - Visual Indicator
 
     @ViewBuilder
-    func indicatorView() -> some View {
+    func indicatorView(appearanceManager: AppearanceManager? = nil) -> some View {
         if let symbol = sfSymbol {
             Image(systemName: symbol)
-                .foregroundColor(displayColor)
+                .foregroundColor(appearanceManager != nil ? color(from: appearanceManager!) : displayColor)
                 .font(.caption)
         }
     }
@@ -85,20 +96,8 @@ enum Priority: String, Codable, CaseIterable, Comparable, Sendable {
         }
     }
 
-    // MARK: - Priority Sorting & Grouping Utilities
+    // MARK: - Priority Sorting Utilities
 
     /// Sorted priorities from high to low for display purposes
     static let sortedByPriority: [Priority] = [.high, .medium, .low, .none]
-
-    /// Group items by priority level
-    static func group<T: PriorityProvider>(_ items: [T]) -> [Priority: [T]] {
-        return Dictionary(grouping: items) { $0.priority }
-    }
-}
-
-// MARK: - PriorityProvider Protocol
-
-/// Protocol for objects that have a priority property
-protocol PriorityProvider {
-    var priority: Priority { get }
 }

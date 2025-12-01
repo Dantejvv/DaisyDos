@@ -326,7 +326,7 @@ struct HabitManagerTests {
         #expect(habit.tags.isEmpty)
     }
 
-    @Test("Habit enforces 3-tag limit")
+    @Test("Habit enforces 5-tag limit")
     func testHabitTagLimit() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
@@ -341,24 +341,30 @@ struct HabitManagerTests {
         let tag2 = Tag(name: "Daily", sfSymbolName: "calendar", colorName: "blue")
         let tag3 = Tag(name: "Morning", sfSymbolName: "sunrise", colorName: "orange")
         let tag4 = Tag(name: "Extra", sfSymbolName: "star", colorName: "yellow")
+        let tag5 = Tag(name: "Priority", sfSymbolName: "flag", colorName: "purple")
+        let tag6 = Tag(name: "Overflow", sfSymbolName: "exclamationmark", colorName: "gray")
 
         context.insert(tag1)
         context.insert(tag2)
         context.insert(tag3)
         context.insert(tag4)
+        context.insert(tag5)
+        context.insert(tag6)
 
         _ = manager.addTag(tag1, to: habit)
         _ = manager.addTag(tag2, to: habit)
         _ = manager.addTag(tag3, to: habit)
+        _ = manager.addTag(tag4, to: habit)
+        _ = manager.addTag(tag5, to: habit)
 
-        let result = manager.addTag(tag4, to: habit)
+        let result = manager.addTag(tag6, to: habit)
 
         guard case .failure = result else {
             Issue.record("Should have failed - tag limit exceeded")
             return
         }
 
-        #expect(habit.tags.count == 3)
+        #expect(habit.tags.count == 5)
     }
 
     // MARK: - Search and Filter Tests
@@ -468,5 +474,123 @@ struct HabitManagerTests {
 
         #expect(pending.count == 2)
         #expect(pending.allSatisfy { !$0.isCompletedToday })
+    }
+
+    // MARK: - Custom Ordering Tests
+
+    @Test("Create habit with custom sort active assigns order 0 and increments others")
+    func testCreateHabitCustomSortActive() async throws {
+        let container = try TestHelpers.createTestContainer()
+        let context = ModelContext(container)
+        let manager = HabitManager(modelContext: context)
+
+        // Create initial habits without custom sort
+        guard case .success(let habit1) = manager.createHabit(title: "Habit 1", isCustomSortActive: false),
+              case .success(let habit2) = manager.createHabit(title: "Habit 2", isCustomSortActive: false) else {
+            Issue.record("Failed to create initial habits")
+            return
+        }
+
+        #expect(habit1.habitOrder == 0)
+        #expect(habit2.habitOrder == 1)
+
+        // Create new habit with custom sort active
+        guard case .success(let newHabit) = manager.createHabit(title: "New Habit", isCustomSortActive: true) else {
+            Issue.record("Failed to create new habit")
+            return
+        }
+
+        #expect(newHabit.habitOrder == 0)
+        #expect(habit1.habitOrder == 1)  // Should be incremented
+        #expect(habit2.habitOrder == 2)  // Should be incremented
+    }
+
+    @Test("Create habit with custom sort inactive assigns next sequential order")
+    func testCreateHabitCustomSortInactive() async throws {
+        let container = try TestHelpers.createTestContainer()
+        let context = ModelContext(container)
+        let manager = HabitManager(modelContext: context)
+
+        guard case .success(let habit1) = manager.createHabit(title: "Habit 1", isCustomSortActive: false),
+              case .success(let habit2) = manager.createHabit(title: "Habit 2", isCustomSortActive: false),
+              case .success(let habit3) = manager.createHabit(title: "Habit 3", isCustomSortActive: false) else {
+            Issue.record("Failed to create habits")
+            return
+        }
+
+        #expect(habit1.habitOrder == 0)
+        #expect(habit2.habitOrder == 1)
+        #expect(habit3.habitOrder == 2)
+    }
+
+    @Test("Update habit order")
+    func testUpdateHabitOrder() async throws {
+        let container = try TestHelpers.createTestContainer()
+        let context = ModelContext(container)
+        let manager = HabitManager(modelContext: context)
+
+        guard case .success(let habit) = manager.createHabit(title: "Habit") else {
+            Issue.record("Failed to create habit")
+            return
+        }
+
+        #expect(habit.habitOrder == 0)
+
+        let result = manager.updateHabitOrder(habit, newOrder: 5)
+
+        guard case .success = result else {
+            Issue.record("Failed to update habit order")
+            return
+        }
+
+        #expect(habit.habitOrder == 5)
+    }
+
+    @Test("Reorder habits bulk update")
+    func testReorderHabits() async throws {
+        let container = try TestHelpers.createTestContainer()
+        let context = ModelContext(container)
+        let manager = HabitManager(modelContext: context)
+
+        guard case .success(let habit1) = manager.createHabit(title: "Habit 1", isCustomSortActive: false),
+              case .success(let habit2) = manager.createHabit(title: "Habit 2", isCustomSortActive: false),
+              case .success(let habit3) = manager.createHabit(title: "Habit 3", isCustomSortActive: false) else {
+            Issue.record("Failed to create habits")
+            return
+        }
+
+        // Reorder: habit3, habit1, habit2
+        let reorderedHabits = [habit3, habit1, habit2]
+        let result = manager.reorderHabits(reorderedHabits)
+
+        guard case .success = result else {
+            Issue.record("Failed to reorder habits")
+            return
+        }
+
+        #expect(habit3.habitOrder == 0)
+        #expect(habit1.habitOrder == 1)
+        #expect(habit2.habitOrder == 2)
+    }
+
+    @Test("Habit ordering persists after save")
+    func testHabitOrderingPersistence() async throws {
+        let container = try TestHelpers.createTestContainer()
+        let context = ModelContext(container)
+        let manager = HabitManager(modelContext: context)
+
+        guard case .success(let habit1) = manager.createHabit(title: "First", isCustomSortActive: false),
+              case .success(let habit2) = manager.createHabit(title: "Second", isCustomSortActive: true) else {
+            Issue.record("Failed to create habits")
+            return
+        }
+
+        #expect(habit2.habitOrder == 0)  // New habit at top
+        #expect(habit1.habitOrder == 1)  // First habit incremented
+
+        // Verify ordering is maintained
+        let allHabits = manager.allHabits.sorted { $0.habitOrder < $1.habitOrder }
+        #expect(allHabits[0].id == habit2.id)
+        #expect(allHabits[1].id == habit1.id)
     }
 }

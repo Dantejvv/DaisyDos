@@ -5,12 +5,38 @@
 //  Created by Dante Vercelli on 9/23/25.
 //
 
+// MARK: - Subtask Completion Cascade Behavior
+//
+// DESIGN DECISION: Simplified one-way cascade (parent → subtasks only)
+//
+// WHEN HABIT IS MARKED COMPLETE TODAY:
+// - All subtasks automatically complete for today (CASCADE DOWN)
+// - Ensures data consistency (habit can't be "done" with incomplete subtasks)
+//
+// WHEN HABIT COMPLETION IS UNDONE:
+// - Subtasks retain their completion state for today (NO CASCADE)
+// - Note: Subtasks reset daily anyway (isCompletedToday resets at midnight)
+//
+// WHEN INDIVIDUAL SUBTASK IS TOGGLED:
+// - Parent habit state UNCHANGED (NO PROPAGATION UP)
+// - Users can complete subtasks without forcing habit completion
+// - Removed complexity: toggleHabitSubtaskCompletion() is now simple
+//
+// RATIONALE:
+// - Habits track daily behavioral patterns, not discrete work items
+// - Subtasks are supporting milestones, not required completions
+// - Daily reset makes the cascade behavior less critical than for tasks
+//
+// See also: TaskManager+Subtasks.swift for similar task cascade logic
+
 import Foundation
 import SwiftData
 
 @Observable
-class HabitManager {
-    private let modelContext: ModelContext
+class HabitManager: EntityManagerProtocol {
+    typealias Entity = Habit
+
+    let modelContext: ModelContext
 
     // Error handling
     var lastError: (any RecoverableError)?
@@ -65,7 +91,7 @@ class HabitManager {
 
     // MARK: - CRUD Operations
 
-    func createHabit(title: String, habitDescription: String = "") -> Result<Habit, AnyRecoverableError> {
+    func createHabit(title: String, habitDescription: String = "", isCustomSortActive: Bool = false) -> Result<Habit, AnyRecoverableError> {
         return ErrorTransformer.safely(
             operation: "create habit",
             entityType: "habit"
@@ -74,10 +100,27 @@ class HabitManager {
                 throw DaisyDosError.validationFailed("title")
             }
 
+            // If in custom sort mode, increment all existing habits to make room at position 0
+            if isCustomSortActive {
+                for habit in allHabits {
+                    habit.habitOrder += 1
+                }
+            }
+
             let habit = Habit(
                 title: title.trimmingCharacters(in: .whitespacesAndNewlines),
                 habitDescription: habitDescription.trimmingCharacters(in: .whitespacesAndNewlines)
             )
+
+            // Set order to 0 for custom mode, or assign next sequential order for other modes
+            if isCustomSortActive {
+                habit.habitOrder = 0
+            } else {
+                // For non-custom modes, assign the next available order value
+                let maxOrder = allHabits.map(\.habitOrder).max() ?? -1
+                habit.habitOrder = maxOrder + 1
+            }
+
             modelContext.insert(habit)
             try modelContext.save()
             return habit
@@ -138,6 +181,16 @@ class HabitManager {
 
         if let completion = completion {
             modelContext.insert(completion)
+        }
+
+        // CASCADE: When habit is marked complete today, complete all subtasks
+        // This ensures data consistency and provides clear completion state
+        for subtask in habit.subtasks {
+            if !subtask.isCompletedToday {
+                subtask.isCompletedToday = true
+                subtask.lastCompletedDate = Date()
+                subtask.modifiedDate = Date()
+            }
         }
 
         do {
@@ -213,6 +266,121 @@ class HabitManager {
         }
     }
 
+    // MARK: - Custom Ordering
+
+    /// Update a single habit's order value
+    func updateHabitOrder(_ habit: Habit, newOrder: Int) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "update habit order",
+            entityType: "habit"
+        ) {
+            habit.habitOrder = newOrder
+            habit.modifiedDate = Date()
+            try modelContext.save()
+        }
+    }
+
+    /// Bulk update habit orders after drag-and-drop reordering
+    func reorderHabits(_ habits: [Habit]) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "reorder habits",
+            entityType: "habits"
+        ) {
+            for (index, habit) in habits.enumerated() {
+                habit.habitOrder = index
+                habit.modifiedDate = Date()
+            }
+            try modelContext.save()
+        }
+    }
+
+    /// Get the next order value for new habits in custom sort mode
+    /// Returns 0 for new habits (existing habits will be incremented)
+    func getNextOrderValue() -> Int {
+        return 0
+    }
+
+    /// Increment all habit orders by 1 to make room for a new habit at position 0
+    func incrementAllHabitOrders() -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "increment habit orders",
+            entityType: "habits"
+        ) {
+            for habit in allHabits {
+                habit.habitOrder += 1
+                habit.modifiedDate = Date()
+            }
+            try modelContext.save()
+        }
+    }
+
+    // MARK: - Habit Duplication
+
+    func duplicateHabit(_ habit: Habit) -> Result<Habit, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "duplicate habit",
+            entityType: "habit"
+        ) {
+            let trimmedTitle = habit.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedTitle.isEmpty else {
+                throw DaisyDosError.validationFailed("title")
+            }
+
+            // Create new habit with "(Copy)" suffix
+            let duplicateTitle = "\(trimmedTitle) (Copy)"
+
+            let duplicateHabit = Habit(
+                title: duplicateTitle,
+                habitDescription: habit.habitDescription,
+                recurrenceRule: habit.recurrenceRule,
+                priority: habit.priority
+            )
+
+            modelContext.insert(duplicateHabit)
+
+            // Copy tags
+            for tag in habit.tags {
+                _ = duplicateHabit.addTag(tag)
+            }
+
+            // Copy subtasks
+            for subtask in habit.subtasks {
+                let duplicateSubtask = HabitSubtask(title: subtask.title)
+                duplicateSubtask.subtaskOrder = subtask.subtaskOrder
+
+                duplicateHabit.subtasks.append(duplicateSubtask)
+                modelContext.insert(duplicateSubtask)
+            }
+
+            // Copy attachments
+            for attachment in habit.attachments {
+                let duplicateAttachment = HabitAttachment(
+                    fileName: attachment.fileName,
+                    fileSize: attachment.fileSize,
+                    mimeType: attachment.mimeType,
+                    fileData: attachment.fileData,
+                    thumbnailData: attachment.thumbnailData
+                )
+                duplicateHabit.attachments.append(duplicateAttachment)
+                modelContext.insert(duplicateAttachment)
+            }
+
+            try modelContext.save()
+            return duplicateHabit
+        }
+    }
+
+    /// Duplicate a habit and handle errors internally
+    func duplicateHabitSafely(_ habit: Habit) -> Habit? {
+        switch duplicateHabit(habit) {
+        case .success(let duplicatedHabit):
+            return duplicatedHabit
+        case .failure(let error):
+            lastError = error.wrapped
+            return nil
+        }
+    }
+
     // MARK: - Tag Management
 
     func addTag(_ tag: Tag, to habit: Habit) -> Result<Void, AnyRecoverableError> {
@@ -233,6 +401,60 @@ class HabitManager {
             entityType: "habit"
         ) {
             habit.removeTag(tag)
+            try modelContext.save()
+        }
+    }
+
+    // MARK: - Subtask Management
+
+    func createHabitSubtask(for habit: Habit, title: String) -> Result<HabitSubtask, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "create habit subtask",
+            entityType: "subtask"
+        ) {
+            guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw DaisyDosError.validationFailed("title")
+            }
+
+            let subtask = habit.createSubtask(title: title.trimmingCharacters(in: .whitespacesAndNewlines))
+            modelContext.insert(subtask)
+            try modelContext.save()
+            return subtask
+        }
+    }
+
+    func updateHabitSubtask(_ subtask: HabitSubtask, title: String) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "update habit subtask",
+            entityType: "subtask"
+        ) {
+            guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw DaisyDosError.validationFailed("title")
+            }
+
+            subtask.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            subtask.modifiedDate = Date()
+            try modelContext.save()
+        }
+    }
+
+    func deleteHabitSubtask(_ subtask: HabitSubtask, from habit: Habit) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "delete habit subtask",
+            entityType: "subtask"
+        ) {
+            habit.removeSubtask(subtask)
+            modelContext.delete(subtask)
+            try modelContext.save()
+        }
+    }
+
+    func toggleHabitSubtaskCompletion(_ subtask: HabitSubtask) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "toggle habit subtask completion",
+            entityType: "subtask"
+        ) {
+            subtask.toggleCompletion()
             try modelContext.save()
         }
     }

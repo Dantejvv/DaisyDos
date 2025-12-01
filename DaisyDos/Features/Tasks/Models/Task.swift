@@ -52,6 +52,7 @@ class Task {
     var dueDate: Date?
     var recurrenceRule: RecurrenceRule?
     var completedDate: Date?
+    var alertTimeInterval: TimeInterval? // Time interval for alert/reminder (negative = before due date)
 
     // MARK: - Ordering Properties
     var subtaskOrder: Int = 0 // For ordering within parent's subtask list
@@ -60,8 +61,8 @@ class Task {
     @Relationship(deleteRule: .nullify, inverse: \Tag.tasks)
     var tags: [Tag] = [] {
         didSet {
-            if tags.count > 3 {
-                tags = Array(tags.prefix(3))
+            if tags.count > 5 {
+                tags = Array(tags.prefix(5))
             }
         }
     }
@@ -72,6 +73,9 @@ class Task {
     @Relationship(inverse: \Task.subtasks)
     var parentTask: Task?
 
+    @Relationship(deleteRule: .cascade, inverse: \TaskAttachment.task)
+    var attachments: [TaskAttachment] = []
+
     // MARK: - Initializers
 
     init(
@@ -79,7 +83,8 @@ class Task {
         taskDescription: String = "",
         priority: Priority = .none,
         dueDate: Date? = nil,
-        recurrenceRule: RecurrenceRule? = nil
+        recurrenceRule: RecurrenceRule? = nil,
+        alertTimeInterval: TimeInterval? = nil
     ) {
         self.id = UUID()
         self.title = title
@@ -87,6 +92,7 @@ class Task {
         self.priority = priority
         self.dueDate = dueDate
         self.recurrenceRule = recurrenceRule
+        self.alertTimeInterval = alertTimeInterval
         self.isCompleted = false
         self.createdDate = Date()
         self.modifiedDate = Date()
@@ -178,7 +184,7 @@ class Task {
     // MARK: - Tag Management
 
     func canAddTag() -> Bool {
-        return tagCount < 3
+        return tagCount < 5
     }
 
     func addTag(_ tag: Tag) -> Bool {
@@ -331,6 +337,40 @@ class Task {
         recurrenceRule != nil
     }
 
+    var hasAttachments: Bool {
+        !attachments.isEmpty
+    }
+
+    var attachmentCount: Int {
+        attachments.count
+    }
+
+    var hasAlert: Bool {
+        alertTimeInterval != nil
+    }
+
+    var subtaskProgressText: String? {
+        guard hasSubtasks else { return nil }
+        return "\(completedSubtaskCount)/\(subtaskCount)"
+    }
+
+    var completedDateDisplayText: String? {
+        guard isCompleted, let completedDate = completedDate else { return nil }
+
+        let calendar = Calendar.current
+        if calendar.isDateInToday(completedDate) {
+            return "Completed today"
+        } else if calendar.isDateInYesterday(completedDate) {
+            return "Completed yesterday"
+        } else if let daysAgo = calendar.dateComponents([.day], from: completedDate, to: Date()).day, daysAgo < 7 {
+            return "Completed \(daysAgo) days ago"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            return "Completed \(formatter.string(from: completedDate))"
+        }
+    }
+
     func nextRecurrence() -> Date? {
         guard let recurrenceRule = recurrenceRule else {
             return nil
@@ -402,10 +442,6 @@ class Task {
     }
 }
 
-// MARK: - PriorityProvider Conformance
-
-extension Task: PriorityProvider {}
-
 // MARK: - Equatable Conformance
 
 extension Task: Equatable {
@@ -421,3 +457,9 @@ extension Task: Hashable {
         hasher.combine(id)
     }
 }
+
+// MARK: - SubtaskDisplayable Conformance
+
+/// Enables Task to be displayed in unified SubtaskRow component
+/// Task already has required properties: title, isCompleted
+extension Task: SubtaskDisplayable {}
