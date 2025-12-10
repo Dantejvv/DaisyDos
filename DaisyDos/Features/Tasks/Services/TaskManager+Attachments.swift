@@ -106,7 +106,8 @@ extension TaskManager {
             )
 
             // Add to task and save
-            task.attachments.append(attachment)
+            if task.attachments == nil { task.attachments = [] }
+            task.attachments!.append(attachment)
             task.modifiedDate = Date()
 
             try modelContext.save()
@@ -124,7 +125,8 @@ extension TaskManager {
     /// - Returns: Result indicating success or failure
     func deleteAttachment(_ attachment: TaskAttachment, from task: Task) -> Result<Void, Error> {
         // Remove from task's attachments array
-        task.attachments.removeAll { $0.id == attachment.id }
+        if task.attachments == nil { task.attachments = [] }
+        task.attachments!.removeAll { $0.id == attachment.id }
         task.modifiedDate = Date()
 
         // Delete the attachment model
@@ -143,7 +145,7 @@ extension TaskManager {
     /// - Parameter task: The task to calculate size for
     /// - Returns: Total size in bytes
     func totalAttachmentSize(for task: Task) -> Int64 {
-        task.attachments.reduce(0) { $0 + $1.fileSize }
+        (task.attachments ?? []).reduce(0) { $0 + $1.fileSize }
     }
 
     /// Get formatted string of total attachment size and remaining capacity

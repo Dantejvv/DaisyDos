@@ -24,171 +24,31 @@ struct SettingsView: View {
     @State private var showingResetDelete = false
     @State private var showingTestDataGenerator = false
     @State private var showingErrorMessageTest = false
+    @State private var showingRestartAlert = false
+    @State private var enableSync = false
+
+    private var localOnlyModeBinding: Binding<Bool> {
+        Binding(
+            get: { localOnlyModeManager.isLocalOnlyMode },
+            set: { newValue in
+                enableSync = !newValue
+                showingRestartAlert = true
+            }
+        )
+    }
 
     var body: some View {
         NavigationStack {
             List {
-                // MARK: - Privacy
-                Section("Privacy") {
-                    HStack {
-                        Label {
-                            Text("Local-Only Mode")
-                                .foregroundColor(.daisyText)
-                        } icon: {
-                            Image(systemName: "lock.shield")
-                        }
-                        Spacer()
-                        Toggle("", isOn: .constant(true))
-                            .disabled(true)
-                    }
-                    Text("DaisyDos keeps your data private by default.")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
-                }
-
-                // MARK: - Appearance
-                Section("Appearance") {
-                    Button(action: { showingAppearanceSettings = true }) {
-                        HStack {
-                            Label {
-                                Text("Theme & Colors")
-                                    .foregroundColor(.daisyText)
-                            } icon: {
-                                Image(systemName: "paintbrush")
-                            }
-                            Spacer()
-                            Text(appearanceManager.preferredColorScheme.displayName)
-                                .foregroundColor(.daisyTextSecondary)
-                                .font(.caption)
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.daisyTextSecondary)
-                        }
-                    }
-                }
-
-                // MARK: - Notifications
-                Section("Notifications") {
-                    Button(action: { showingNotificationSettings = true }) {
-                        HStack {
-                            Label {
-                                Text("Habit Reminders")
-                                    .foregroundColor(.daisyText)
-                            } icon: {
-                                Image(systemName: "bell")
-                            }
-                            Spacer()
-                            if let notificationManager = notificationManager {
-                                Text(notificationManager.isPermissionGranted ? "Enabled" : "Disabled")
-                                    .foregroundColor(.daisyTextSecondary)
-                                    .font(.caption)
-                            }
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.daisyTextSecondary)
-                        }
-                    }
-                }
-
-                // MARK: - Tags
-                Section("Tags") {
-                    Button(action: { showingTagPicker = true }) {
-                        HStack {
-                            Label {
-                                Text("Manage Tags")
-                                    .foregroundColor(.daisyText)
-                            } icon: {
-                                Image(systemName: "tag")
-                            }
-                            Spacer()
-                            Text("\(allTags.count)")
-                                .foregroundColor(.daisyTextSecondary)
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.daisyTextSecondary)
-                        }
-                    }
-                }
-
-                // MARK: - Data Management
-                Section("Data Management") {
-                    Button(action: { showingImportExport = true }) {
-                        HStack {
-                            Label {
-                                Text("Import/Export")
-                                    .foregroundColor(.daisyText)
-                            } icon: {
-                                Image(systemName: "arrow.up.arrow.down.circle")
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.daisyTextSecondary)
-                        }
-                    }
-
-                    Button(action: { showingResetDelete = true }) {
-                        HStack {
-                            Label {
-                                Text("Reset & Delete")
-                                    .foregroundColor(.daisyText)
-                            } icon: {
-                                Image(systemName: "trash.circle")
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.daisyTextSecondary)
-                        }
-                    }
-                }
-
-                // MARK: - Developer Tools
+                privacySection
+                appearanceSection
+                notificationsSection
+                tagsSection
+                dataManagementSection
                 #if DEBUG
-                Section("Developer") {
-                    Button(action: { showingTestDataGenerator = true }) {
-                        Label {
-                            Text("Test Data Generator")
-                                .foregroundColor(.daisyText)
-                        } icon: {
-                            Image(systemName: "wrench.and.screwdriver")
-                        }
-                    }
-
-                    Button(action: { showingErrorMessageTest = true }) {
-                        Label {
-                            Text("Test Error Messages")
-                                .foregroundColor(.daisyText)
-                        } icon: {
-                            Image(systemName: "exclamationmark.triangle")
-                        }
-                    }
-                }
+                developerSection
                 #endif
-
-                // MARK: - App Information
-                Section("App Information") {
-                    Button(action: { showingAbout = true }) {
-                        Label {
-                            Text("About DaisyDos")
-                                .foregroundColor(.daisyText)
-                        } icon: {
-                            Image(systemName: "questionmark.circle")
-                        }
-                    }
-
-                    HStack {
-                        Label {
-                            Text("Version")
-                                .foregroundColor(.daisyText)
-                        } icon: {
-                            Image(systemName: "apps.iphone")
-                        }
-                        Spacer()
-                        Text("1.0.0 Beta")
-                            .foregroundColor(.daisyTextSecondary)
-                    }
-                }
+                appInformationSection
             }
             .navigationTitle("Settings")
             .sheet(isPresented: $showingAbout) {
@@ -221,6 +81,196 @@ struct SettingsView: View {
                 }
             }
             #endif
+            .alert("Restart Required", isPresented: $showingRestartAlert) {
+                Button("Cancel", role: .cancel) {
+                    localOnlyModeManager.isLocalOnlyMode = !enableSync
+                }
+                Button("OK") {
+                    print("⚠️ Please restart the app for changes to take effect")
+                }
+            } message: {
+                Text(enableSync
+                    ? "Enabling iCloud sync requires restarting DaisyDos."
+                    : "Switching to local-only mode requires restarting DaisyDos.")
+            }
+        }
+    }
+
+    // MARK: - View Components
+
+    private var privacySection: some View {
+        Section("Privacy") {
+            Toggle(isOn: localOnlyModeBinding) {
+                Label {
+                    Text("Local-Only Mode")
+                        .foregroundColor(.daisyText)
+                } icon: {
+                    Image(systemName: localOnlyModeManager.isLocalOnlyMode ? "lock.shield" : "icloud")
+                }
+            }
+
+            Text(localOnlyModeManager.isLocalOnlyMode
+                ? "Your data stays on this device. Disable to enable iCloud sync."
+                : "Your data syncs via iCloud. Enable for local-only storage.")
+                .font(.caption)
+                .foregroundColor(.daisyTextSecondary)
+
+            HStack {
+                Text("iCloud Status:")
+                    .font(.caption)
+                Spacer()
+                Text(localOnlyModeManager.cloudKitStatusDescription)
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+            }
+        }
+    }
+
+    private var appearanceSection: some View {
+        Section("Appearance") {
+            Button(action: { showingAppearanceSettings = true }) {
+                HStack {
+                    Label {
+                        Text("Theme & Colors")
+                            .foregroundColor(.daisyText)
+                    } icon: {
+                        Image(systemName: "paintbrush")
+                    }
+                    Spacer()
+                    Text(appearanceManager.preferredColorScheme.displayName)
+                        .foregroundColor(.daisyTextSecondary)
+                        .font(.caption)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+            }
+        }
+    }
+
+    private var notificationsSection: some View {
+        Section("Notifications") {
+            Button(action: { showingNotificationSettings = true }) {
+                HStack {
+                    Label {
+                        Text("Habit Reminders")
+                            .foregroundColor(.daisyText)
+                    } icon: {
+                        Image(systemName: "bell")
+                    }
+                    Spacer()
+                    if let notificationManager = notificationManager {
+                        Text(notificationManager.isPermissionGranted ? "Enabled" : "Disabled")
+                            .foregroundColor(.daisyTextSecondary)
+                            .font(.caption)
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+            }
+        }
+    }
+
+    private var tagsSection: some View {
+        Section("Tags") {
+            Button(action: { showingTagPicker = true }) {
+                HStack {
+                    Label {
+                        Text("Manage Tags")
+                            .foregroundColor(.daisyText)
+                    } icon: {
+                        Image(systemName: "tag")
+                    }
+                    Spacer()
+                    Text("\(allTags.count)")
+                        .foregroundColor(.daisyTextSecondary)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+            }
+        }
+    }
+
+    private var dataManagementSection: some View {
+        Section("Data Management") {
+            Button(action: { showingImportExport = true }) {
+                HStack {
+                    Label {
+                        Text("Import/Export")
+                            .foregroundColor(.daisyText)
+                    } icon: {
+                        Image(systemName: "arrow.up.arrow.down.circle")
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+            }
+
+            Button(action: { showingResetDelete = true }) {
+                HStack {
+                    Label {
+                        Text("Reset & Delete")
+                            .foregroundColor(.daisyText)
+                    } icon: {
+                        Image(systemName: "trash.circle")
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+            }
+        }
+    }
+
+    private var developerSection: some View {
+        Section("Developer") {
+            Button(action: { showingTestDataGenerator = true }) {
+                Label {
+                    Text("Test Data Generator")
+                        .foregroundColor(.daisyText)
+                } icon: {
+                    Image(systemName: "wrench.and.screwdriver")
+                }
+            }
+
+            Button(action: { showingErrorMessageTest = true }) {
+                Label {
+                    Text("Test Error Messages")
+                        .foregroundColor(.daisyText)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle")
+                }
+            }
+        }
+    }
+
+    private var appInformationSection: some View {
+        Section("App Information") {
+            Button(action: { showingAbout = true }) {
+                Label {
+                    Text("About DaisyDos")
+                        .foregroundColor(.daisyText)
+                } icon: {
+                    Image(systemName: "questionmark.circle")
+                }
+            }
+
+            HStack {
+                Label {
+                    Text("Version")
+                        .foregroundColor(.daisyText)
+                } icon: {
+                    Image(systemName: "apps.iphone")
+                }
+                Spacer()
+                Text("1.0.0 Beta")
+                    .foregroundColor(.daisyTextSecondary)
+            }
         }
     }
 }

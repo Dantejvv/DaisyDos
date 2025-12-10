@@ -149,9 +149,12 @@ struct ResetDeleteView: View {
                 habit.currentStreak = 0
                 habit.longestStreak = 0
                 habit.lastCompletedDate = nil
-                habit.completionEntries.removeAll()
-                habit.streaks.removeAll()
-                habit.skips.removeAll()
+                if habit.completionEntries == nil { habit.completionEntries = [] }
+                habit.completionEntries!.removeAll()
+                if habit.streaks == nil { habit.streaks = [] }
+                habit.streaks!.removeAll()
+                if habit.skips == nil { habit.skips = [] }
+                habit.skips!.removeAll()
             }
 
             try modelContext.save()

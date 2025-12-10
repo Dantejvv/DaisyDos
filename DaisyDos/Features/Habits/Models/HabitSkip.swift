@@ -11,12 +11,12 @@ import SwiftData
 @Model
 class HabitSkip {
 
-    // MARK: - Properties
+    // MARK: - Properties (CloudKit-compatible: all have defaults)
 
-    var id: UUID
-    var skippedDate: Date
+    var id: UUID = UUID()
+    var skippedDate: Date = Date()
     var reason: String?
-    var createdDate: Date
+    var createdDate: Date = Date()
 
     // MARK: - Relationships
 
@@ -78,9 +78,9 @@ class HabitSkip {
             return 0.0
         }
 
-        let skips = habit.skips.filter { skip in
+        let skips = habit.skips?.filter { skip in
             skip.skippedDate >= startDate && skip.skippedDate <= endDate
-        }
+        } ?? []
 
         // Calculate total days due in the period
         let totalDueDays: Int

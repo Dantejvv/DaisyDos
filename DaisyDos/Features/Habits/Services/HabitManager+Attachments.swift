@@ -106,7 +106,8 @@ extension HabitManager {
             )
 
             // Add to habit and save
-            habit.attachments.append(attachment)
+            if habit.attachments == nil { habit.attachments = [] }
+            habit.attachments!.append(attachment)
             habit.modifiedDate = Date()
 
             try modelContext.save()
@@ -124,7 +125,8 @@ extension HabitManager {
     /// - Returns: Result indicating success or failure
     func deleteAttachment(_ attachment: HabitAttachment, from habit: Habit) -> Result<Void, Error> {
         // Remove from habit's attachments array
-        habit.attachments.removeAll { $0.id == attachment.id }
+        if habit.attachments == nil { habit.attachments = [] }
+        habit.attachments!.removeAll { $0.id == attachment.id }
         habit.modifiedDate = Date()
 
         // Delete the attachment model
@@ -143,7 +145,7 @@ extension HabitManager {
     /// - Parameter habit: The habit to calculate size for
     /// - Returns: Total size in bytes
     func totalAttachmentSize(for habit: Habit) -> Int64 {
-        habit.attachments.reduce(0) { $0 + $1.fileSize }
+        (habit.attachments ?? []).reduce(0) { $0 + $1.fileSize }
     }
 
     /// Get formatted string of total attachment size and remaining capacity

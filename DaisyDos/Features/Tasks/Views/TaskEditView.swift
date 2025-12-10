@@ -85,7 +85,7 @@ struct TaskEditView: View {
         self._priority = State(initialValue: task.priority)
         self._dueDate = State(initialValue: task.dueDate)
         self._hasDueDate = State(initialValue: task.dueDate != nil)
-        self._selectedTags = State(initialValue: task.tags)
+        self._selectedTags = State(initialValue: task.tags ?? [])
         self._recurrenceRule = State(initialValue: task.recurrenceRule)
 
         // Initialize alert from time interval
@@ -97,7 +97,7 @@ struct TaskEditView: View {
 
         // Initialize staged attachments from existing task attachments
         // Convert existing attachments to temporary URLs for staging
-        self._stagedAttachments = State(initialValue: task.attachments.compactMap { attachment in
+        self._stagedAttachments = State(initialValue: (task.attachments ?? []).compactMap { attachment in
             let tempURL = FileManager.default.temporaryDirectory
                 .appendingPathComponent(attachment.id.uuidString)
                 .appendingPathExtension(attachment.fileExtension)
@@ -160,7 +160,7 @@ struct TaskEditView: View {
         let subtasksChanged = stagedSubtasks != currentSubtaskItems
 
         // Check if attachments have changed
-        let currentAttachmentIds = Set(task.attachments.map(\.id))
+        let currentAttachmentIds = Set((task.attachments ?? []).map(\.id))
         let stagedAttachmentIds = Set(stagedAttachments.compactMap(\.attachmentId))
         let hasNewAttachments = stagedAttachments.contains { $0.attachmentId == nil && !$0.isMarkedForDeletion }
         let hasDeletedAttachments = stagedAttachments.contains { $0.isMarkedForDeletion }
@@ -172,7 +172,7 @@ struct TaskEditView: View {
                (hasDueDate ? dueDate : nil) != task.dueDate ||
                recurrenceRule != task.recurrenceRule ||
                selectedAlert?.timeInterval != task.alertTimeInterval ||
-               Set(selectedTags.map(\.id)) != Set(task.tags.map(\.id)) ||
+               Set(selectedTags.map(\.id)) != Set((task.tags ?? []).map(\.id)) ||
                subtasksChanged ||
                attachmentsChanged
     }
@@ -192,7 +192,7 @@ struct TaskEditView: View {
     }
 
     private var formattedAttachmentSize: String {
-        let totalBytes = task.attachments.reduce(0) { $0 + $1.fileSize }
+        let totalBytes = (task.attachments ?? []).reduce(0) { $0 + $1.fileSize }
         return ByteCountFormatter.string(fromByteCount: Int64(totalBytes), countStyle: .file)
     }
 
@@ -475,7 +475,7 @@ struct TaskEditView: View {
 
     private func updateTaskTags() {
         // Remove tags that are no longer selected
-        for tag in task.tags {
+        for tag in (task.tags ?? []) {
             if !selectedTags.contains(tag) {
                 _ = taskManager.removeTagSafely(tag, from: task)
             }
@@ -483,7 +483,7 @@ struct TaskEditView: View {
 
         // Add newly selected tags
         for tag in selectedTags {
-            if !task.tags.contains(tag) {
+            if !(task.tags ?? []).contains(tag) {
                 _ = taskManager.addTagSafely(tag, to: task)
             }
         }
@@ -491,10 +491,10 @@ struct TaskEditView: View {
 
     private func updateTaskSubtasks() {
         // Create a map of existing subtasks by ID for quick lookup
-        var existingSubtasks = Dictionary(uniqueKeysWithValues: task.subtasks.map { ($0.id, $0) })
+        var existingSubtasks = Dictionary(uniqueKeysWithValues: (task.subtasks ?? []).map { ($0.id, $0) })
 
         // Delete subtasks that are no longer in stagedSubtasks
-        for subtask in task.subtasks {
+        for subtask in (task.subtasks ?? []) {
             if !stagedSubtasks.contains(where: { $0.id == subtask.id }) {
                 _ = taskManager.deleteTaskSafely(subtask)
                 existingSubtasks.removeValue(forKey: subtask.id)
@@ -528,7 +528,7 @@ struct TaskEditView: View {
         // Delete attachments that are marked for deletion
         for stagedAttachment in stagedAttachments where stagedAttachment.isMarkedForDeletion {
             if let attachmentId = stagedAttachment.attachmentId,
-               let existingAttachment = task.attachments.first(where: { $0.id == attachmentId }) {
+               let existingAttachment = (task.attachments ?? []).first(where: { $0.id == attachmentId }) {
                 _ = taskManager.deleteAttachment(existingAttachment, from: task)
             }
         }

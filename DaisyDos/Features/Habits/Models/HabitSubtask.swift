@@ -10,11 +10,12 @@ import SwiftData
 
 @Model
 class HabitSubtask {
-    var id: UUID
-    var title: String
-    var isCompletedToday: Bool
-    var createdDate: Date
-    var modifiedDate: Date
+    // CloudKit-compatible: all have defaults
+    var id: UUID = UUID()
+    var title: String = ""
+    var isCompletedToday: Bool = false
+    var createdDate: Date = Date()
+    var modifiedDate: Date = Date()
     var lastCompletedDate: Date?
 
     /// Ordering property for subtask display

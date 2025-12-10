@@ -62,7 +62,7 @@ struct TaskRowView: View {
                     // UNCOMPLETED TASKS: Inline Layout
 
                     // ROW 2: Metadata • Tags (LEFT/MIDDLE) | Due Date (RIGHT)
-                    if task.hasSubtasks || task.hasAlert || task.hasRecurrence || !task.tags.isEmpty || task.dueDate != nil {
+                    if task.hasSubtasks || task.hasAlert || task.hasRecurrence || !(task.tags ?? []).isEmpty || task.dueDate != nil {
                         HStack(spacing: 4) {
                             // Left side: Subtasks
                             if let progressText = task.subtaskProgressText {
@@ -75,9 +75,9 @@ struct TaskRowView: View {
                             }
 
                             // Middle: Tags (inline with metadata, limit to 3 max)
-                            if !task.tags.isEmpty {
-                                let visibleTags = Array(task.tags.prefix(3))
-                                let remainingCount = task.tags.count - visibleTags.count
+                            if !(task.tags ?? []).isEmpty {
+                                let visibleTags = Array((task.tags ?? []).prefix(3))
+                                let remainingCount = (task.tags ?? []).count - visibleTags.count
 
                                 ForEach(visibleTags, id: \.id) { tag in
                                     IconOnlyTagChipView(tag: tag)

@@ -406,8 +406,9 @@ struct AddHabitView: View {
 
             // Add tags
             for tag in selectedTags {
-                if !habit.tags.contains(tag) {
-                    habit.tags.append(tag)
+                if !(habit.tags ?? []).contains(tag) {
+                    if habit.tags == nil { habit.tags = [] }
+                    habit.tags!.append(tag)
                 }
             }
 

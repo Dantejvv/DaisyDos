@@ -12,30 +12,30 @@ import UniformTypeIdentifiers
 /// Represents a file attachment associated with a habit
 @Model
 final class HabitAttachment: Identifiable {
-    // MARK: - Properties
+    // MARK: - Properties (CloudKit-compatible: all have defaults)
 
     /// Unique identifier for the attachment
-    var id: UUID
+    var id: UUID = UUID()
 
     /// Original filename of the attached file
-    var fileName: String
+    var fileName: String = ""
 
     /// Size of the file in bytes
-    var fileSize: Int64
+    var fileSize: Int64 = 0
 
     /// MIME type of the file (e.g., "image/png", "application/pdf")
-    var mimeType: String
+    var mimeType: String = ""
 
     /// The actual file data stored in SwiftData
     @Attribute(.externalStorage)
-    var fileData: Data
+    var fileData: Data = Data()
 
     /// Optional thumbnail data for preview (primarily for images)
     @Attribute(.externalStorage)
     var thumbnailData: Data?
 
     /// Date when the attachment was added
-    var createdAt: Date
+    var createdAt: Date = Date()
 
     /// Relationship to the parent habit
     var habit: Habit?

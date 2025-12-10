@@ -32,6 +32,13 @@
 import Foundation
 import SwiftData
 
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let habitDidChange = Notification.Name("habitDidChange")
+    static let habitWasDeleted = Notification.Name("habitWasDeleted")
+}
+
 @Observable
 class HabitManager: EntityManagerProtocol {
     typealias Entity = Habit
@@ -151,8 +158,22 @@ class HabitManager: EntityManagerProtocol {
             if hasChanges {
                 habit.modifiedDate = Date()
                 try modelContext.save()
+
+                // Reschedule notifications if title changed (for notification body)
+                notifyHabitChanged(habit)
             }
         }
+    }
+
+    /// Notify that a habit has changed and needs notification rescheduling
+    /// This should be called after any changes that affect notifications (title, recurrence, etc.)
+    private func notifyHabitChanged(_ habit: Habit) {
+        // Post notification for HabitNotificationManager to observe
+        NotificationCenter.default.post(
+            name: .habitDidChange,
+            object: nil,
+            userInfo: ["habitId": habit.id.uuidString]
+        )
     }
 
     func markHabitCompleted(_ habit: Habit) -> Bool {
@@ -185,7 +206,7 @@ class HabitManager: EntityManagerProtocol {
 
         // CASCADE: When habit is marked complete today, complete all subtasks
         // This ensures data consistency and provides clear completion state
-        for subtask in habit.subtasks {
+        for subtask in (habit.subtasks ?? []) {
             if !subtask.isCompletedToday {
                 subtask.isCompletedToday = true
                 subtask.lastCompletedDate = Date()
@@ -245,16 +266,25 @@ class HabitManager: EntityManagerProtocol {
     }
 
     func deleteHabit(_ habit: Habit) -> Result<Void, AnyRecoverableError> {
+        let habitId = habit.id.uuidString // Capture before deletion
         return ErrorTransformer.safely(
             operation: "delete habit",
             entityType: "habit"
         ) {
             modelContext.delete(habit)
             try modelContext.save()
+
+            // Notify that habit was deleted to cleanup notifications
+            NotificationCenter.default.post(
+                name: .habitWasDeleted,
+                object: nil,
+                userInfo: ["habitId": habitId]
+            )
         }
     }
 
     func deleteHabits(_ habits: [Habit]) -> Result<Void, AnyRecoverableError> {
+        let habitIds = habits.map { $0.id.uuidString } // Capture before deletion
         return ErrorTransformer.safely(
             operation: "delete habits",
             entityType: "habits"
@@ -263,6 +293,15 @@ class HabitManager: EntityManagerProtocol {
                 modelContext.delete(habit)
             }
             try modelContext.save()
+
+            // Notify that habits were deleted to cleanup notifications
+            for habitId in habitIds {
+                NotificationCenter.default.post(
+                    name: .habitWasDeleted,
+                    object: nil,
+                    userInfo: ["habitId": habitId]
+                )
+            }
         }
     }
 
@@ -339,21 +378,24 @@ class HabitManager: EntityManagerProtocol {
             modelContext.insert(duplicateHabit)
 
             // Copy tags
-            for tag in habit.tags {
+            for tag in habit.tags ?? [] {
                 _ = duplicateHabit.addTag(tag)
             }
 
             // Copy subtasks
-            for subtask in habit.subtasks {
+            for subtask in (habit.subtasks ?? []) {
                 let duplicateSubtask = HabitSubtask(title: subtask.title)
                 duplicateSubtask.subtaskOrder = subtask.subtaskOrder
 
-                duplicateHabit.subtasks.append(duplicateSubtask)
+                if duplicateHabit.subtasks == nil {
+                    duplicateHabit.subtasks = []
+                }
+                duplicateHabit.subtasks?.append(duplicateSubtask)
                 modelContext.insert(duplicateSubtask)
             }
 
             // Copy attachments
-            for attachment in habit.attachments {
+            for attachment in habit.attachments ?? [] {
                 let duplicateAttachment = HabitAttachment(
                     fileName: attachment.fileName,
                     fileSize: attachment.fileSize,
@@ -361,7 +403,10 @@ class HabitManager: EntityManagerProtocol {
                     fileData: attachment.fileData,
                     thumbnailData: attachment.thumbnailData
                 )
-                duplicateHabit.attachments.append(duplicateAttachment)
+                if duplicateHabit.attachments == nil {
+                    duplicateHabit.attachments = []
+                }
+                duplicateHabit.attachments?.append(duplicateAttachment)
                 modelContext.insert(duplicateAttachment)
             }
 
@@ -477,7 +522,7 @@ class HabitManager: EntityManagerProtocol {
     func habitsWithTag(_ tag: Tag) -> [Habit] {
         // For now, fetch all habits and filter in memory since @Predicate with contains is complex
         return allHabits.filter { habit in
-            habit.tags.contains { $0.id == tag.id }
+            habit.tags?.contains { $0.id == tag.id } ?? false
         }
     }
 

@@ -10,6 +10,9 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(NavigationManager.self) private var navigationManager
+    @Environment(TaskNotificationManager.self) private var taskNotificationManager
+    @Environment(HabitNotificationManager.self) private var habitNotificationManager
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         TaskCompletionToastContainer(config: .task()) {
@@ -23,9 +26,11 @@ struct ContentView: View {
 
             NavigationStack(path: navigationManager.pathBinding(for: .today)) {
                 TodayView()
-                    .navigationDestination(for: String.self) { _ in
-                        // TODO: Add navigation destinations in future phases
-                        Text("Navigation destination placeholder")
+                    .navigationDestination(for: Task.self) { task in
+                        TaskDetailView(task: task)
+                    }
+                    .navigationDestination(for: Habit.self) { habit in
+                        HabitDetailView(habit: habit)
                     }
             }
             .tabItem {
@@ -37,9 +42,8 @@ struct ContentView: View {
 
             NavigationStack(path: navigationManager.pathBinding(for: .tasks)) {
                 TasksView()
-                    .navigationDestination(for: String.self) { _ in
-                        // TODO: Add navigation destinations in future phases
-                        Text("Navigation destination placeholder")
+                    .navigationDestination(for: Task.self) { task in
+                        TaskDetailView(task: task)
                     }
             }
             .tabItem {
@@ -51,9 +55,8 @@ struct ContentView: View {
 
             NavigationStack(path: navigationManager.pathBinding(for: .habits)) {
                 HabitsView()
-                    .navigationDestination(for: String.self) { _ in
-                        // TODO: Add navigation destinations in future phases
-                        Text("Navigation destination placeholder")
+                    .navigationDestination(for: Habit.self) { habit in
+                        HabitDetailView(habit: habit)
                     }
             }
             .tabItem {
@@ -65,9 +68,8 @@ struct ContentView: View {
 
             NavigationStack(path: navigationManager.pathBinding(for: .logbook)) {
                 LogbookView()
-                    .navigationDestination(for: String.self) { _ in
-                        // TODO: Add navigation destinations in future phases
-                        Text("Navigation destination placeholder")
+                    .navigationDestination(for: Task.self) { task in
+                        TaskDetailView(task: task)
                     }
             }
             .tabItem {
@@ -79,10 +81,6 @@ struct ContentView: View {
 
             NavigationStack(path: navigationManager.pathBinding(for: .settings)) {
                 SettingsView()
-                    .navigationDestination(for: String.self) { _ in
-                        // TODO: Add navigation destinations in future phases
-                        Text("Navigation destination placeholder")
-                    }
             }
             .tabItem {
                 TabType.settings.tabLabel
@@ -91,6 +89,25 @@ struct ContentView: View {
             }
             .accessibilityLabel("Main navigation")
             .accessibilityHint("Navigate between different sections of the app")
+            .alert("Navigation Error", isPresented: Binding(
+                get: { navigationManager.showingErrorAlert },
+                set: { navigationManager.showingErrorAlert = $0 }
+            )) {
+                Button("OK", role: .cancel) {
+                    navigationManager.showingErrorAlert = false
+                }
+            } message: {
+                if let errorMessage = navigationManager.errorMessage {
+                    Text(errorMessage)
+                }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                // Re-check notification permissions when app returns to foreground
+                if newPhase == .active {
+                    taskNotificationManager.checkNotificationPermissions()
+                    habitNotificationManager.checkNotificationPermissions()
+                }
+            }
             }
         }
     }

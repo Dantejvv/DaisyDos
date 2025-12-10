@@ -170,23 +170,38 @@ class ErrorTransformer {
             case .networkUnavailable, .networkFailure:
                 return .networkUnavailable
 
-            case .serverRecordChanged, .serverRejectedRequest:
-                return .syncConflict("Server changes conflict with local changes")
+            case .serverRecordChanged:
+                return .syncConflict("Data was updated on another device. The newer version will be kept.")
 
-            case .notAuthenticated, .permissionFailure:
-                return .permissionDenied("iCloud")
+            case .serverRejectedRequest:
+                return .syncConflict("Server rejected sync request. Please try again.")
+
+            case .notAuthenticated:
+                return .permissionDenied("iCloud - Please sign into iCloud in Settings")
+
+            case .permissionFailure:
+                return .permissionDenied("iCloud - Enable iCloud Drive in Settings → Privacy")
 
             case .quotaExceeded:
-                return .integrationFailed("iCloud storage is full")
+                return .integrationFailed("iCloud storage is full. Manage storage in Settings.")
 
-            case .zoneNotFound:
+            case .zoneNotFound, .unknownItem:
                 return .entityNotFound(context.entityType ?? "item")
 
             case .constraintViolation:
                 return .duplicateEntity(context.entityType ?? "item")
 
+            case .partialFailure:
+                return .integrationFailed("Some items failed to sync. Will retry automatically.")
+
+            case .accountTemporarilyUnavailable:
+                return .integrationFailed("iCloud temporarily unavailable. Will resume when available.")
+
+            case .badContainer, .missingEntitlement:
+                return .integrationFailed("iCloud configuration error. Please contact support.")
+
             default:
-                return .integrationFailed("iCloud")
+                return .integrationFailed("iCloud sync error. Will retry automatically.")
             }
         }
 
@@ -195,11 +210,13 @@ class ErrorTransformer {
         if description.contains("network") {
             return .networkUnavailable
         } else if description.contains("conflict") {
-            return .syncConflict("CloudKit sync conflict")
+            return .syncConflict("Sync conflict detected. Newer version will be kept.")
         } else if description.contains("permission") || description.contains("auth") {
-            return .permissionDenied("iCloud")
+            return .permissionDenied("iCloud - Please check iCloud settings")
+        } else if description.contains("quota") || description.contains("storage") {
+            return .integrationFailed("iCloud storage full. Manage storage in Settings.")
         } else {
-            return .integrationFailed("iCloud")
+            return .integrationFailed("iCloud sync error. Will retry automatically.")
         }
     }
 

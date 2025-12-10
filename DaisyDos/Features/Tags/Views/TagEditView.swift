@@ -123,7 +123,7 @@ struct TagEditView: View {
                     }
 
                     if tag.isInUse {
-                        Text("This tag is used by \(tag.tasks.count) tasks and \(tag.habits.count) habits")
+                        Text("This tag is used by \(tag.tasks?.count ?? 0) tasks and \(tag.habits?.count ?? 0) habits")
                             .font(.caption)
                             .foregroundColor(.daisyTextSecondary)
                     }
@@ -179,7 +179,7 @@ struct TagEditView: View {
                 }
             } message: {
                 if tag.isInUse {
-                    Text("This tag is used by \(tag.tasks.count) tasks and \(tag.habits.count) habits. Deleting it will remove it from all items.")
+                    Text("This tag is used by \(tag.tasks?.count ?? 0) tasks and \(tag.habits?.count ?? 0) habits. Deleting it will remove it from all items.")
                 } else {
                     Text("This will permanently delete the '\(tag.name)' tag.")
                 }

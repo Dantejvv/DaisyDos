@@ -8,6 +8,14 @@
 import Foundation
 import SwiftData
 
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let taskDidChange = Notification.Name("taskDidChange")
+    static let taskWasDeleted = Notification.Name("taskWasDeleted")
+    static let taskWasCompleted = Notification.Name("taskWasCompleted")
+}
+
 @Observable
 class TaskManager: EntityManagerProtocol {
     typealias Entity = Task
@@ -19,6 +27,26 @@ class TaskManager: EntityManagerProtocol {
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
+    }
+
+    // MARK: - Notification Helpers
+
+    /// Notify that a task has changed and needs notification rescheduling
+    private func notifyTaskChanged(_ task: Task) {
+        NotificationCenter.default.post(
+            name: .taskDidChange,
+            object: nil,
+            userInfo: ["taskId": task.id.uuidString]
+        )
+    }
+
+    /// Notify that a task was completed
+    private func notifyTaskCompleted(_ task: Task) {
+        NotificationCenter.default.post(
+            name: .taskWasCompleted,
+            object: nil,
+            userInfo: ["taskId": task.id.uuidString]
+        )
     }
 
     // MARK: - Computed Properties for Filtered Data
@@ -117,6 +145,8 @@ class TaskManager: EntityManagerProtocol {
             operation: "update task",
             entityType: "task"
         ) {
+            var wasCompleted = task.isCompleted
+
             if let title = title {
                 let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmedTitle.isEmpty else {
@@ -129,6 +159,13 @@ class TaskManager: EntityManagerProtocol {
             }
             task.modifiedDate = Date()
             try modelContext.save()
+
+            // Notify about changes
+            if task.isCompleted && !wasCompleted {
+                notifyTaskCompleted(task)
+            } else {
+                notifyTaskChanged(task)
+            }
         }
     }
 
@@ -181,13 +218,23 @@ class TaskManager: EntityManagerProtocol {
             }
 
             if let isCompleted = isCompleted {
+                let wasCompleted = task.isCompleted
                 task.setCompleted(isCompleted)
                 hasChanges = true
+
+                // Notify if task was just completed
+                if isCompleted && !wasCompleted {
+                    task.modifiedDate = Date()
+                    try modelContext.save()
+                    notifyTaskCompleted(task)
+                    return // Early return after completion notification
+                }
             }
 
             if hasChanges {
                 task.modifiedDate = Date()
                 try modelContext.save()
+                notifyTaskChanged(task)
             }
         }
     }
@@ -219,16 +266,25 @@ class TaskManager: EntityManagerProtocol {
     }
 
     func deleteTask(_ task: Task) -> Result<Void, AnyRecoverableError> {
+        let taskId = task.id.uuidString // Capture before deletion
         return ErrorTransformer.safely(
             operation: "delete task",
             entityType: "task"
         ) {
             modelContext.delete(task)
             try modelContext.save()
+
+            // Notify that task was deleted to cleanup notifications
+            NotificationCenter.default.post(
+                name: .taskWasDeleted,
+                object: nil,
+                userInfo: ["taskId": taskId]
+            )
         }
     }
 
     func deleteTasks(_ tasks: [Task]) -> Result<Void, AnyRecoverableError> {
+        let taskIds = tasks.map { $0.id.uuidString } // Capture before deletion
         return ErrorTransformer.safely(
             operation: "delete tasks",
             entityType: "task"
@@ -241,6 +297,15 @@ class TaskManager: EntityManagerProtocol {
                 modelContext.delete(task)
             }
             try modelContext.save()
+
+            // Notify that tasks were deleted to cleanup notifications
+            for taskId in taskIds {
+                NotificationCenter.default.post(
+                    name: .taskWasDeleted,
+                    object: nil,
+                    userInfo: ["taskId": taskId]
+                )
+            }
         }
     }
 
@@ -298,7 +363,7 @@ class TaskManager: EntityManagerProtocol {
     func tasksWithTag(_ tag: Tag) -> [Task] {
         // For now, fetch all tasks and filter in memory since @Predicate with contains is complex
         return allTasks.filter { task in
-            task.tags.contains { $0.id == tag.id }
+            (task.tags ?? []).contains { $0.id == tag.id }
         }
     }
 
@@ -530,12 +595,12 @@ class TaskManager: EntityManagerProtocol {
             modelContext.insert(duplicateTask)
 
             // Copy tags
-            for tag in task.tags {
+            for tag in (task.tags ?? []) {
                 _ = duplicateTask.addTag(tag)
             }
 
             // Copy subtasks
-            for subtask in task.subtasks {
+            for subtask in (task.subtasks ?? []) {
                 let duplicateSubtask = Task(
                     title: subtask.title,
                     taskDescription: subtask.taskDescription,
@@ -546,7 +611,7 @@ class TaskManager: EntityManagerProtocol {
                 duplicateSubtask.subtaskOrder = subtask.subtaskOrder
 
                 // Copy subtask tags
-                for tag in subtask.tags {
+                for tag in (subtask.tags ?? []) {
                     _ = duplicateSubtask.addTag(tag)
                 }
 
@@ -555,7 +620,7 @@ class TaskManager: EntityManagerProtocol {
             }
 
             // Copy attachments
-            for attachment in task.attachments {
+            for attachment in (task.attachments ?? []) {
                 let duplicateAttachment = TaskAttachment(
                     fileName: attachment.fileName,
                     fileSize: attachment.fileSize,
@@ -563,7 +628,10 @@ class TaskManager: EntityManagerProtocol {
                     fileData: attachment.fileData,
                     thumbnailData: attachment.thumbnailData
                 )
-                duplicateTask.attachments.append(duplicateAttachment)
+                if duplicateTask.attachments == nil {
+                    duplicateTask.attachments = []
+                }
+                duplicateTask.attachments?.append(duplicateAttachment)
                 modelContext.insert(duplicateAttachment)
             }
 

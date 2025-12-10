@@ -212,8 +212,8 @@ extension TaskManager {
         _ parent: Task,
         strategy: SubtaskCompletionStrategy
     ) throws {
-        let allSubtasksComplete = parent.subtasks.allSatisfy(\.isCompleted)
-        let anySubtaskIncomplete = parent.subtasks.contains { !$0.isCompleted }
+        let allSubtasksComplete = parent.subtasks?.allSatisfy(\.isCompleted) ?? true
+        let anySubtaskIncomplete = parent.subtasks?.contains { !$0.isCompleted } ?? false
 
         switch strategy {
         case .automatic:
@@ -246,7 +246,7 @@ extension TaskManager {
         of task: Task,
         strategy: SubtaskCompletionStrategy
     ) throws {
-        for subtask in task.subtasks where !subtask.isCompleted {
+        for subtask in task.subtasks ?? [] where !subtask.isCompleted {
             subtask.setCompleted(true)
             // No recursion - subtasks cannot have subtasks
         }
@@ -279,7 +279,7 @@ extension TaskManager {
     }
 
     private func canAutoCompleteTask(_ task: Task) -> Bool {
-        return task.hasSubtasks && task.subtasks.allSatisfy(\.isCompleted)
+        return task.hasSubtasks && (task.subtasks?.allSatisfy(\.isCompleted) ?? false)
     }
 
     private func findBlockedSubtasks(_ task: Task) -> [Task] {

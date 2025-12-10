@@ -20,7 +20,7 @@ class CloudKitManager {
         try autoreleasepool {
             let config = ModelConfiguration()
             let desc = NSPersistentStoreDescription(url: config.url)
-            let opts = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.com.yourteam.DaisyDos")
+            let opts = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.com.BKD7HH7ZDH.DaisyDos")
             desc.cloudKitContainerOptions = opts
             desc.shouldAddStoreAsynchronously = false
 

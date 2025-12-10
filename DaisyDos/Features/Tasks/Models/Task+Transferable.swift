@@ -45,13 +45,13 @@ extension Task: Transferable {
                 return SubtaskMoveData(taskId: task.id, parentTaskId: UUID(), currentIndex: -1)
             }
 
-            let currentIndex = parent.subtasks.firstIndex(of: task) ?? -1
+            let currentIndex = parent.subtasks?.firstIndex(of: task) ?? -1
             return SubtaskMoveData(
                 taskId: task.id,
                 parentTaskId: parent.id,
                 currentIndex: currentIndex
             )
-        } importing: { moveData in
+        } importing: { (moveData: SubtaskMoveData) in
             // This should not be used for importing - drop handler manages moves
             Task(title: "Moving...")
         }

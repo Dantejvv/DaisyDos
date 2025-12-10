@@ -165,10 +165,10 @@ struct HabitsView: View {
             }
             .sheet(item: $habitToAssignTags) { habit in
                 TagSelectionView(selectedTags: Binding(
-                    get: { Array(habit.tags) },
+                    get: { Array(habit.tags ?? []) },
                     set: { newTags in
                         // Remove all current tags
-                        let currentTags = Array(habit.tags)
+                        let currentTags = Array(habit.tags ?? [])
                         for tag in currentTags {
                             habit.removeTag(tag)
                         }

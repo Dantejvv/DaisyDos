@@ -11,26 +11,26 @@ import SwiftData
 
 @Model
 class TaskLogEntry {
-    // MARK: - Core Properties
+    // MARK: - Core Properties (CloudKit-compatible: all have defaults)
 
-    var id: UUID
-    var originalTaskId: UUID  // Reference to original task
-    var title: String
-    var taskDescription: String
+    var id: UUID = UUID()
+    var originalTaskId: UUID = UUID()  // Reference to original task
+    var title: String = ""
+    var taskDescription: String = ""
 
     // MARK: - Completion Metadata
 
-    var completedDate: Date
-    var createdDate: Date
+    var completedDate: Date = Date()
+    var createdDate: Date = Date()
     var dueDate: Date?
 
     // MARK: - Task Properties Snapshot
 
-    var priority: Priority
-    var wasOverdue: Bool
-    var subtaskCount: Int
-    var completedSubtaskCount: Int
-    var wasSubtask: Bool  // Was this a subtask of another task?
+    var priority: Priority = Priority.none
+    var wasOverdue: Bool = false
+    var subtaskCount: Int = 0
+    var completedSubtaskCount: Int = 0
+    var wasSubtask: Bool = false  // Was this a subtask of another task?
     var parentTaskTitle: String?  // Title of parent task if this was a subtask
 
     // MARK: - Tag Snapshot (names only, no relationships)
@@ -104,7 +104,7 @@ class TaskLogEntry {
             completedSubtaskCount: task.completedSubtaskCount,
             wasSubtask: task.parentTask != nil,
             parentTaskTitle: task.parentTask?.title,
-            tagNames: task.tags.map { $0.name },
+            tagNames: (task.tags ?? []).map { $0.name },
             completionDuration: duration
         )
     }

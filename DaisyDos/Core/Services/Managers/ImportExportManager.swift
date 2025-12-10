@@ -243,15 +243,15 @@ class ImportExportManager {
             alertDate: nil, // alertTimeInterval is stored differently
             createdAt: task.createdDate,
             completedAt: task.completedDate,
-            tags: task.tags.map { $0.name },
-            subtasks: task.subtasks.map { ExportData.SubtaskExport(
+            tags: (task.tags ?? []).map { $0.name },
+            subtasks: (task.subtasks ?? []).map { ExportData.SubtaskExport(
                 id: $0.id.uuidString,
                 title: $0.title,
                 isCompleted: $0.isCompleted,
                 order: $0.subtaskOrder
             )},
-            hasAttachments: !task.attachments.isEmpty,
-            attachmentCount: task.attachments.count,
+            hasAttachments: !(task.attachments ?? []).isEmpty,
+            attachmentCount: (task.attachments ?? []).count,
             recurrenceRule: task.recurrenceRule.map { convertRecurrenceRuleToExport($0) }
         )
     }
@@ -263,19 +263,19 @@ class ImportExportManager {
             habitDescription: habit.habitDescription,
             priority: habit.priority.rawValue,
             createdAt: habit.createdDate,
-            tags: habit.tags.map { $0.name },
-            subtasks: habit.subtasks.map { ExportData.SubtaskExport(
+            tags: (habit.tags ?? []).map { $0.name },
+            subtasks: (habit.subtasks ?? []).map { ExportData.SubtaskExport(
                 id: $0.id.uuidString,
                 title: $0.title,
                 isCompleted: $0.isCompleted,
                 order: $0.subtaskOrder
             )},
-            hasAttachments: !habit.attachments.isEmpty,
-            attachmentCount: habit.attachments.count,
+            hasAttachments: !(habit.attachments ?? []).isEmpty,
+            attachmentCount: (habit.attachments ?? []).count,
             recurrenceRule: habit.recurrenceRule.map { convertRecurrenceRuleToExport($0) },
             currentStreak: habit.currentStreak,
             longestStreak: habit.longestStreak,
-            completionCount: habit.completionEntries.count
+            completionCount: (habit.completionEntries ?? []).count
         )
     }
 

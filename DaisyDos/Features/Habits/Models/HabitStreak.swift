@@ -12,14 +12,14 @@ import SwiftUI
 @Model
 class HabitStreak {
 
-    // MARK: - Properties
+    // MARK: - Properties (CloudKit-compatible: all have defaults)
 
-    var id: UUID
-    var startDate: Date
+    var id: UUID = UUID()
+    var startDate: Date = Date()
     var endDate: Date?
-    var length: Int
-    var isActive: Bool
-    var streakType: StreakType
+    var length: Int = 0
+    var isActive: Bool = true
+    var streakType: StreakType = StreakType.daily
     var notes: String = ""
 
     // MARK: - Relationships
@@ -108,7 +108,7 @@ class HabitStreak {
     func momentum() -> StreakMomentum {
         guard let habit = habit, length > 0 else { return .stagnant }
 
-        let recentCompletions = habit.completionEntries
+        let recentCompletions = (habit.completionEntries ?? [])
             .filter { completion in
                 let daysSince = Calendar.current.dateComponents([.day],
                     from: completion.completedDate, to: Date()).day ?? 0

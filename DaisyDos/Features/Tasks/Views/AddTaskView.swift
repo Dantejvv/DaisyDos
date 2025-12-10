@@ -407,8 +407,9 @@ struct AddTaskView: View {
         case .success(let task):
             // Add tags
             for tag in selectedTags {
-                if !task.tags.contains(tag) {
-                    task.tags.append(tag)
+                if !(task.tags ?? []).contains(tag) {
+                    if task.tags == nil { task.tags = [] }
+                    task.tags!.append(tag)
                 }
             }
 

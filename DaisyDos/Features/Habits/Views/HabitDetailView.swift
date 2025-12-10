@@ -153,7 +153,7 @@ struct HabitDetailView: View {
         }
         .sheet(isPresented: $showingTagAssignment) {
             TagSelectionView(selectedTags: .init(
-                get: { habit.tags },
+                get: { habit.tags ?? [] },
                 set: { newTags in
                     updateHabitTags(newTags)
                 }
@@ -291,7 +291,7 @@ struct HabitDetailView: View {
     @ViewBuilder
     private var tagsCard: some View {
         TagsCard(
-            tags: habit.tags,
+            tags: habit.tags ?? [],
             accentColor: .daisyHabit,
             canModify: true,
             maxTags: 5,
@@ -449,7 +449,7 @@ struct HabitDetailView: View {
                 .font(.headline)
                 .foregroundColor(.daisyText)
 
-            if habit.subtasks.isEmpty && !showSubtaskField {
+            if (habit.subtasks ?? []).isEmpty && !showSubtaskField {
                 // Empty state - button to show field
                 SubtaskAddButton {
                     showSubtaskField = true
@@ -460,10 +460,10 @@ struct HabitDetailView: View {
             }
 
             // Subtasks list or field showing
-            if !habit.subtasks.isEmpty || showSubtaskField {
+            if !(habit.subtasks ?? []).isEmpty || showSubtaskField {
                 VStack(spacing: 0) {
                     // Existing subtasks list
-                    if !habit.subtasks.isEmpty {
+                    if !(habit.subtasks ?? []).isEmpty {
                         List {
                             ForEach(habit.orderedSubtasks) { subtask in
                                 SubtaskRow(
@@ -479,7 +479,7 @@ struct HabitDetailView: View {
                             }
                         }
                         .listStyle(.plain)
-                        .frame(height: CGFloat(habit.subtasks.count) * 44)
+                        .frame(height: CGFloat((habit.subtasks ?? []).count) * 44)
                         .scrollDisabled(true)
                     }
 
@@ -523,7 +523,7 @@ struct HabitDetailView: View {
     @ViewBuilder
     private var attachmentsCard: some View {
         AttachmentPreviewSection(
-            attachments: habit.attachments,
+            attachments: habit.attachments ?? [],
             accentColor: .daisyHabit,
             onTap: { attachment in
                 // Create temporary URL from attachment data for QuickLook preview
@@ -546,7 +546,7 @@ struct HabitDetailView: View {
 
     @ViewBuilder
     private var historyCard: some View {
-        let sortedCompletions = habit.completionEntries
+        let sortedCompletions = (habit.completionEntries ?? [])
             .sorted { $0.completedDate > $1.completedDate }
 
         VStack(spacing: 20) {
@@ -599,7 +599,7 @@ struct HabitDetailView: View {
 
     private func updateHabitTags(_ newTags: [Tag]) {
         // Remove tags that are no longer selected
-        for tag in habit.tags {
+        for tag in (habit.tags ?? []) {
             if !newTags.contains(tag) {
                 _ = habitManager.removeTag(tag, from: habit)
             }
@@ -607,7 +607,7 @@ struct HabitDetailView: View {
 
         // Add newly selected tags
         for tag in newTags {
-            if !habit.tags.contains(tag) {
+            if !(habit.tags ?? []).contains(tag) {
                 _ = habitManager.addTag(tag, to: habit)
             }
         }

@@ -170,7 +170,7 @@ struct TaskDetailView: View {
         }
         .sheet(isPresented: $showingTagAssignment) {
             TagSelectionView(selectedTags: .init(
-                get: { task.tags },
+                get: { task.tags ?? [] },
                 set: { newTags in
                     updateTaskTags(newTags)
                 }
@@ -325,7 +325,7 @@ struct TaskDetailView: View {
     @ViewBuilder
     private var tagsCard: some View {
         TagsCard(
-            tags: task.tags,
+            tags: task.tags ?? [],
             accentColor: .daisyTask,
             canModify: canModify,
             maxTags: 5,
@@ -545,7 +545,7 @@ struct TaskDetailView: View {
                 .font(.headline)
                 .foregroundColor(.daisyText)
 
-            if task.subtasks.isEmpty && !showSubtaskField {
+            if (task.subtasks ?? []).isEmpty && !showSubtaskField {
                 // Empty state - button to show field
                 if canModify {
                     SubtaskAddButton {
@@ -569,10 +569,10 @@ struct TaskDetailView: View {
             }
 
             // Subtasks list or field showing
-            if !task.subtasks.isEmpty || showSubtaskField {
+            if !(task.subtasks ?? []).isEmpty || showSubtaskField {
                 VStack(spacing: 0) {
                     // Existing subtasks list
-                    if !task.subtasks.isEmpty {
+                    if !(task.subtasks ?? []).isEmpty {
                         List {
                             ForEach(task.orderedSubtasks) { subtask in
                                 SubtaskRow(
@@ -588,7 +588,7 @@ struct TaskDetailView: View {
                             }
                         }
                         .listStyle(.plain)
-                        .frame(height: CGFloat(task.subtasks.count) * 44)
+                        .frame(height: CGFloat((task.subtasks ?? []).count) * 44)
                         .scrollDisabled(true)
                     }
 
@@ -634,7 +634,7 @@ struct TaskDetailView: View {
     @ViewBuilder
     private var attachmentsCard: some View {
         AttachmentPreviewSection(
-            attachments: task.attachments,
+            attachments: task.attachments ?? [],
             accentColor: .daisyTask,
             onTap: { attachment in
                 // Create temporary URL from attachment data for QuickLook preview
@@ -693,7 +693,7 @@ struct TaskDetailView: View {
 
     private func updateTaskTags(_ newTags: [Tag]) {
         // Remove tags that are no longer selected
-        for tag in task.tags {
+        for tag in (task.tags ?? []) {
             if !newTags.contains(tag) {
                 _ = taskManager.removeTagSafely(tag, from: task)
             }
@@ -701,7 +701,7 @@ struct TaskDetailView: View {
 
         // Add newly selected tags
         for tag in newTags {
-            if !task.tags.contains(tag) {
+            if !(task.tags ?? []).contains(tag) {
                 _ = taskManager.addTagSafely(tag, to: task)
             }
         }

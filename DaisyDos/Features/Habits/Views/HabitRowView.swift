@@ -96,9 +96,9 @@ struct HabitRowView: View {
                         }
 
                         // Middle: Tags (inline with metadata, limit to 3 max)
-                        if !habit.tags.isEmpty {
-                            let visibleTags = Array(habit.tags.prefix(3))
-                            let remainingCount = habit.tags.count - visibleTags.count
+                        if !(habit.tags ?? []).isEmpty {
+                            let visibleTags = Array((habit.tags ?? []).prefix(3))
+                            let remainingCount = (habit.tags ?? []).count - visibleTags.count
 
                             ForEach(visibleTags, id: \.id) { tag in
                                 IconOnlyTagChipView(tag: tag)
@@ -310,8 +310,8 @@ struct HabitRowView: View {
         if let recurrenceRule = habit.recurrenceRule {
             label += ", recurring \(recurrenceRule.displayDescription.lowercased())"
         }
-        if !habit.tags.isEmpty {
-            label += ", \(habit.tags.count) tag\(habit.tags.count == 1 ? "" : "s")"
+        if !(habit.tags ?? []).isEmpty {
+            label += ", \((habit.tags ?? []).count) tag\((habit.tags ?? []).count == 1 ? "" : "s")"
         }
         return label
     }

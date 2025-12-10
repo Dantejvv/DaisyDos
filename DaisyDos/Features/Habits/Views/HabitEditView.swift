@@ -89,7 +89,7 @@ struct HabitEditView: View {
         self._title = State(initialValue: habit.title)
         self._habitDescriptionAttributed = State(initialValue: habit.habitDescriptionAttributed)
         self._priority = State(initialValue: habit.priority)
-        self._selectedTags = State(initialValue: habit.tags)
+        self._selectedTags = State(initialValue: habit.tags ?? [])
         self._recurrenceRule = State(initialValue: habit.recurrenceRule)
 
         // Initialize alert from time interval
@@ -101,7 +101,7 @@ struct HabitEditView: View {
 
         // Initialize staged attachments from existing habit attachments
         // Convert existing attachments to temporary URLs for staging
-        self._stagedAttachments = State(initialValue: habit.attachments.compactMap { attachment in
+        self._stagedAttachments = State(initialValue: (habit.attachments ?? []).compactMap { attachment in
             let tempURL = FileManager.default.temporaryDirectory
                 .appendingPathComponent(attachment.id.uuidString)
                 .appendingPathExtension(attachment.fileExtension)
@@ -164,7 +164,7 @@ struct HabitEditView: View {
         let subtasksChanged = stagedSubtasks != currentSubtaskItems
 
         // Check if attachments have changed
-        let currentAttachmentIds = Set(habit.attachments.map(\.id))
+        let currentAttachmentIds = Set((habit.attachments ?? []).map(\.id))
         let stagedAttachmentIds = Set(stagedAttachments.compactMap(\.attachmentId))
         let hasNewAttachments = stagedAttachments.contains { $0.attachmentId == nil && !$0.isMarkedForDeletion }
         let hasDeletedAttachments = stagedAttachments.contains { $0.isMarkedForDeletion }
@@ -175,13 +175,13 @@ struct HabitEditView: View {
                priority != habit.priority ||
                recurrenceRule != habit.recurrenceRule ||
                selectedAlert?.timeInterval != habit.alertTimeInterval ||
-               Set(selectedTags.map(\.id)) != Set(habit.tags.map(\.id)) ||
+               Set(selectedTags.map(\.id)) != Set((habit.tags ?? []).map(\.id)) ||
                subtasksChanged ||
                attachmentsChanged
     }
 
     private var formattedAttachmentSize: String {
-        let totalBytes = habit.attachments.reduce(0) { $0 + $1.fileSize }
+        let totalBytes = (habit.attachments ?? []).reduce(0) { $0 + $1.fileSize }
         return ByteCountFormatter.string(fromByteCount: Int64(totalBytes), countStyle: .file)
     }
 
@@ -454,7 +454,7 @@ struct HabitEditView: View {
 
     private func updateHabitTags() {
         // Remove tags that are no longer selected
-        for tag in habit.tags {
+        for tag in (habit.tags ?? []) {
             if !selectedTags.contains(tag) {
                 _ = habitManager.removeTag(tag, from: habit)
             }
@@ -462,7 +462,7 @@ struct HabitEditView: View {
 
         // Add newly selected tags
         for tag in selectedTags {
-            if !habit.tags.contains(tag) {
+            if !(habit.tags ?? []).contains(tag) {
                 _ = habitManager.addTag(tag, to: habit)
             }
         }
@@ -470,10 +470,10 @@ struct HabitEditView: View {
 
     private func updateHabitSubtasks() {
         // Create a map of existing subtasks by ID for quick lookup
-        var existingSubtasks = Dictionary(uniqueKeysWithValues: habit.subtasks.map { ($0.id, $0) })
+        var existingSubtasks = Dictionary(uniqueKeysWithValues: (habit.subtasks ?? []).map { ($0.id, $0) })
 
         // Delete subtasks that are no longer in stagedSubtasks
-        for subtask in habit.subtasks {
+        for subtask in (habit.subtasks ?? []) {
             if !stagedSubtasks.contains(where: { $0.id == subtask.id }) {
                 _ = habitManager.deleteHabitSubtask(subtask, from: habit)
                 existingSubtasks.removeValue(forKey: subtask.id)
@@ -503,7 +503,7 @@ struct HabitEditView: View {
         // Delete attachments that are marked for deletion
         for stagedAttachment in stagedAttachments where stagedAttachment.isMarkedForDeletion {
             if let attachmentId = stagedAttachment.attachmentId,
-               let existingAttachment = habit.attachments.first(where: { $0.id == attachmentId }) {
+               let existingAttachment = (habit.attachments ?? []).first(where: { $0.id == attachmentId }) {
                 _ = habitManager.deleteAttachment(existingAttachment, from: habit)
             }
         }

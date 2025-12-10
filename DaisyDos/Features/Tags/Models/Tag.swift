@@ -11,21 +11,23 @@ import SwiftUI
 
 @Model
 class Tag: Identifiable {
-    @Attribute(.unique) var id: UUID
-    @Attribute(.unique) var name: String
-    var sfSymbolName: String
-    var colorName: String
+    // CloudKit-compatible: all have defaults, no unique constraints, optional relationships
+    var id: UUID = UUID()  // CloudKit doesn't support @Attribute(.unique)
+    var name: String = ""  // CloudKit doesn't support #Unique - manual validation in TagManager required
+    var sfSymbolName: String = "tag"
+    var colorName: String = "blue"
 
     // Rich text description storage (Data-backed AttributedString)
     @Attribute(.externalStorage) var tagDescriptionData: Data?
 
-    var createdDate: Date
+    var createdDate: Date = Date()
+    var lastModifiedDate: Date = Date()  // For CloudKit conflict resolution
 
     @Relationship(deleteRule: .nullify)
-    var tasks: [Task] = []
+    var tasks: [Task]?
 
     @Relationship(deleteRule: .nullify)
-    var habits: [Habit] = []
+    var habits: [Habit]?
 
     init(name: String, sfSymbolName: String = "tag", colorName: String = "blue", tagDescription: String = "") {
         self.id = UUID()
@@ -33,7 +35,9 @@ class Tag: Identifiable {
         self.sfSymbolName = sfSymbolName
         self.colorName = colorName
         self.tagDescriptionData = tagDescription.isEmpty ? nil : AttributedString.migrate(from: tagDescription)
-        self.createdDate = Date()
+        let now = Date()
+        self.createdDate = now
+        self.lastModifiedDate = now
     }
 
     // Backward compatibility: Computed property for plain text access
@@ -82,7 +86,7 @@ class Tag: Identifiable {
     }
 
     var totalItemCount: Int {
-        tasks.count + habits.count
+        (tasks?.count ?? 0) + (habits?.count ?? 0)
     }
 
     var isInUse: Bool {

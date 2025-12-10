@@ -108,10 +108,10 @@ struct TaskShareSheet: View {
                 }
             }
 
-            if !task.tags.isEmpty {
+            if !(task.tags ?? []).isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(task.tags, id: \.id) { tag in
+                        ForEach(task.tags ?? [], id: \.id) { tag in
                             TagChipView(tag: tag)
                         }
                     }
@@ -328,8 +328,8 @@ struct TaskShareSheet: View {
         }
 
         // Tags
-        if !task.tags.isEmpty {
-            summary += "\n🏷️ Tags: \(task.tags.map { $0.name }.joined(separator: ", "))\n"
+        if !(task.tags ?? []).isEmpty {
+            summary += "\n🏷️ Tags: \((task.tags ?? []).map { $0.name }.joined(separator: ", "))\n"
         }
 
         // Attachments
@@ -505,8 +505,8 @@ struct TaskShareData: Transferable {
             }
         }
 
-        if !task.tags.isEmpty {
-            summary += "\n🏷️ Tags: \(task.tags.map { $0.name }.joined(separator: ", "))\n"
+        if !(task.tags ?? []).isEmpty {
+            summary += "\n🏷️ Tags: \((task.tags ?? []).map { $0.name }.joined(separator: ", "))\n"
         }
 
         if 0 > 0 {

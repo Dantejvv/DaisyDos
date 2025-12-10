@@ -35,35 +35,76 @@ class LocalOnlyModeManager {
     }
 
     init() {
-        checkCloudKitStatus()
+        // Only check CloudKit status if user has enabled sync
+        // This avoids CloudKit entitlement errors in local-only mode
+        if !isLocalOnlyMode {
+            checkCloudKitStatus()
+        }
     }
 
-    /// Attempts to enable CloudKit sync (only if not in local-only mode)
-    func enableCloudSync() {
-        guard !isLocalOnlyMode else {
-            print("CloudKit sync disabled - app is in local-only mode")
-            return
+    /// Attempts to enable CloudKit sync
+    /// Note: Requires app restart to take effect
+    func enableCloudSync() async throws {
+        #if DEBUG
+        print("🔍 enableCloudSync called")
+        print("🔍 Current CloudKit status: \(cloudKitStatus)")
+        print("🔍 Status description: \(cloudKitStatusDescription)")
+        #endif
+
+        // Check CloudKit status if not already checked
+        if cloudKitStatus == .unknown {
+            checkCloudKitStatus()
         }
 
+        // Check CloudKit account status
+        // Note: Status check is async, may still be .unknown when checked immediately
         guard cloudKitStatus == .available else {
-            print("CloudKit sync cannot be enabled - CloudKit not available")
-            return
+            #if DEBUG
+            print("❌ CloudKit not available: \(cloudKitStatusDescription)")
+            #endif
+            throw CloudKitSyncError.accountUnavailable(cloudKitStatusDescription)
         }
 
-        // Future implementation: CloudKit sync activation logic will go here
-        print("CloudKit sync would be enabled here (Phase 10.0)")
+        // Update local-only mode flag
+        isLocalOnlyMode = false
+        UserDefaults.standard.set(false, forKey: "localOnlyMode")
+
+        #if DEBUG
+        print("✅ CloudKit sync enabled. App restart required to activate sync.")
+        print("✅ isLocalOnlyMode set to: \(isLocalOnlyMode)")
+        print("✅ UserDefaults localOnlyMode: \(UserDefaults.standard.bool(forKey: "localOnlyMode"))")
+        #endif
     }
 
     /// Disables CloudKit sync and switches to local-only mode
+    /// Note: Requires app restart to take effect
     func enableLocalOnlyMode() {
         isLocalOnlyMode = true
-        // Future implementation: Disable any active CloudKit operations
-        print("Switched to local-only mode")
+        UserDefaults.standard.set(true, forKey: "localOnlyMode")
+
+        #if DEBUG
+        print("✅ Switched to local-only mode. App restart required to disable sync.")
+        #endif
+    }
+
+    /// Error types for CloudKit sync operations
+    enum CloudKitSyncError: LocalizedError {
+        case accountUnavailable(String)
+        case syncFailed(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .accountUnavailable(let status):
+                return "Cannot enable iCloud sync: \(status)"
+            case .syncFailed(let reason):
+                return "Sync failed: \(reason)"
+            }
+        }
     }
 
     /// Checks CloudKit account status
     private func checkCloudKitStatus() {
-        let container = CKContainer(identifier: "iCloud.com.yourteam.DaisyDos")
+        let container = CKContainer(identifier: "iCloud.com.BKD7HH7ZDH.DaisyDos")
 
         container.accountStatus { [weak self] status, error in
             DispatchQueue.main.async {

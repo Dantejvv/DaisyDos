@@ -181,11 +181,23 @@ DaisyDosTests/                    # Swift Testing framework, 190 tests
 - User accent color support via AppearanceManager
 - UI: TodayView, UnifiedTodayRow (production-ready)
 
+### CloudKit Integration - FULLY IMPLEMENTED
+- **Container ID**: `iCloud.com.BKD7HH7ZDH.DaisyDos`
+- **User-Controlled Toggle**: Privacy-first approach - local-only mode by default
+- **Dynamic ModelConfiguration**: Switches between `.none` and `.automatic` based on user preference
+- **Conflict Resolution**: Last-write-wins strategy using `modifiedDate` timestamps
+- **Offline Queue**: Pending changes queued and synced when connection returns
+- **Network Monitoring**: Real-time connectivity tracking with Network framework
+- **CloudKit Schema**: Removed `#Unique` constraints for CloudKit compatibility
+- **Managers**: CloudKitSyncManager, OfflineQueueManager, NetworkMonitor
+- **Settings UI**: CloudKit toggle, sync status view, iCloud account status
+- **Error Handling**: User-friendly CloudKit error messages with actionable guidance
+- **Note**: Requires app restart when changing sync mode
+
 ### Incomplete Features
 - **Calendar Integration**: EventKit permissions only, no UI
 - **Analytics**: Data models exist, no visualization components
 - **Advanced Notifications**: Smart scheduling edge cases
-- **CloudKit Sync**: Foundation prepared but disabled
 
 
 ## Testing Infrastructure

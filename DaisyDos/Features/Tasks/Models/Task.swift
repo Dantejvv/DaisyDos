@@ -11,9 +11,9 @@ import SwiftData
 
 @Model
 class Task {
-    // MARK: - Core Properties
-    var id: UUID
-    var title: String
+    // MARK: - Core Properties (CloudKit-compatible: all have defaults)
+    var id: UUID = UUID()
+    var title: String = ""
 
     // Rich text description storage (Data-backed AttributedString)
     @Attribute(.externalStorage) var taskDescriptionData: Data?
@@ -43,12 +43,12 @@ class Task {
         }
     }
 
-    var isCompleted: Bool
-    var createdDate: Date
-    var modifiedDate: Date
+    var isCompleted: Bool = false
+    var createdDate: Date = Date()
+    var modifiedDate: Date = Date()
 
     // MARK: - Enhanced Properties (Phase 2.1)
-    var priority: Priority
+    var priority: Priority = Priority.none
     var dueDate: Date?
     var recurrenceRule: RecurrenceRule?
     var completedDate: Date?
@@ -57,24 +57,41 @@ class Task {
     // MARK: - Ordering Properties
     var subtaskOrder: Int = 0 // For ordering within parent's subtask list
 
-    // MARK: - Relationships
+    // MARK: - Relationships (CloudKit-compatible: all optional)
     @Relationship(deleteRule: .nullify, inverse: \Tag.tasks)
-    var tags: [Tag] = [] {
+    var tags: [Tag]? {
         didSet {
-            if tags.count > 5 {
-                tags = Array(tags.prefix(5))
+            if let tags = tags, tags.count > 5 {
+                self.tags = Array(tags.prefix(5))
             }
         }
     }
 
     @Relationship(deleteRule: .cascade)
-    var subtasks: [Task] = []
+    var subtasks: [Task]?
 
     @Relationship(inverse: \Task.subtasks)
     var parentTask: Task?
 
     @Relationship(deleteRule: .cascade, inverse: \TaskAttachment.task)
-    var attachments: [TaskAttachment] = []
+    var attachments: [TaskAttachment]?
+
+    // MARK: - Computed Properties for Non-Optional Array Access
+
+    private var tagsArray: [Tag] {
+        get { tags ?? [] }
+        set { tags = newValue }
+    }
+
+    private var subtasksArray: [Task] {
+        get { subtasks ?? [] }
+        set { subtasks = newValue }
+    }
+
+    private var attachmentsArray: [TaskAttachment] {
+        get { attachments ?? [] }
+        set { attachments = newValue }
+    }
 
     // MARK: - Initializers
 
@@ -107,36 +124,36 @@ class Task {
     // MARK: - Computed Properties
 
     var tagCount: Int {
-        tags.count
+        tagsArray.count
     }
 
     var subtaskCount: Int {
-        subtasks.count
+        subtasksArray.count
     }
 
     var completedSubtaskCount: Int {
-        subtasks.filter(\.isCompleted).count
+        subtasksArray.filter(\.isCompleted).count
     }
 
     var hasSubtasks: Bool {
-        !subtasks.isEmpty
+        !subtasksArray.isEmpty
     }
 
     /// Returns subtasks ordered by their subtaskOrder property
     var orderedSubtasks: [Task] {
         // Ensure order values are assigned for existing tasks
         ensureSubtaskOrderValues()
-        return subtasks.sorted { $0.subtaskOrder < $1.subtaskOrder }
+        return subtasksArray.sorted { $0.subtaskOrder < $1.subtaskOrder }
     }
 
     /// Ensures all subtasks have proper order values assigned
     private func ensureSubtaskOrderValues() {
         // Check if all subtasks have the default order value (0)
-        let allHaveZeroOrder = subtasks.allSatisfy { $0.subtaskOrder == 0 }
+        let allHaveZeroOrder = subtasksArray.allSatisfy { $0.subtaskOrder == 0 }
 
-        if allHaveZeroOrder && subtasks.count > 1 {
+        if allHaveZeroOrder && subtasksArray.count > 1 {
             // Assign sequential order values to all subtasks
-            for (index, subtask) in subtasks.enumerated() {
+            for (index, subtask) in subtasksArray.enumerated() {
                 subtask.subtaskOrder = index
             }
         }
@@ -189,8 +206,8 @@ class Task {
 
     func addTag(_ tag: Tag) -> Bool {
         guard canAddTag() else { return false }
-        if !tags.contains(tag) {
-            tags.append(tag)
+        if !tagsArray.contains(tag) {
+            tagsArray.append(tag)
             modifiedDate = Date()
             return true
         }
@@ -198,7 +215,7 @@ class Task {
     }
 
     func removeTag(_ tag: Tag) {
-        tags.removeAll { $0 == tag }
+        tagsArray.removeAll { $0 == tag }
         modifiedDate = Date()
     }
 
@@ -218,7 +235,7 @@ class Task {
         if completed {
             // When completing a parent task, mark all subtasks as complete
             // and inherit the parent's completion date for age-based housekeeping
-            for subtask in subtasks {
+            for subtask in subtasksArray {
                 if !subtask.isCompleted {
                     subtask.setCompleted(true)
                     subtask.completedDate = self.completedDate
@@ -226,7 +243,7 @@ class Task {
             }
         } else {
             // When uncompleting a parent task, also uncomplete all subtasks
-            for subtask in subtasks {
+            for subtask in subtasksArray {
                 if subtask.isCompleted {
                     subtask.setCompleted(false)
                 }
@@ -259,17 +276,17 @@ class Task {
         }
 
         // Assign the next order value
-        let maxOrder = subtasks.map(\.subtaskOrder).max() ?? -1
+        let maxOrder = subtasksArray.map(\.subtaskOrder).max() ?? -1
         subtask.subtaskOrder = maxOrder + 1
 
-        subtasks.append(subtask)
+        subtasksArray.append(subtask)
         subtask.parentTask = self
         modifiedDate = Date()
         return true
     }
 
     func removeSubtask(_ subtask: Task) {
-        subtasks.removeAll { $0 == subtask }
+        subtasksArray.removeAll { $0 == subtask }
         subtask.parentTask = nil
         modifiedDate = Date()
     }
@@ -338,11 +355,11 @@ class Task {
     }
 
     var hasAttachments: Bool {
-        !attachments.isEmpty
+        !attachmentsArray.isEmpty
     }
 
     var attachmentCount: Int {
-        attachments.count
+        attachmentsArray.count
     }
 
     var hasAlert: Bool {
@@ -402,7 +419,7 @@ class Task {
         let query = searchQuery.lowercased()
         return title.lowercased().contains(query) ||
                taskDescription.lowercased().contains(query) ||
-               tags.contains { $0.name.lowercased().contains(query) }
+               tagsArray.contains { $0.name.lowercased().contains(query) }
     }
 
     // MARK: - Display Helpers

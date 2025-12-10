@@ -20,24 +20,39 @@ struct DaisyDosApp: App {
     let appearanceManager = AppearanceManager()
     let navigationManager = NavigationManager()
 
+    // CloudKit and network managers
+    @State private var cloudKitSyncManager: CloudKitSyncManager?
+    @State private var networkMonitor: NetworkMonitor?
+    @State private var offlineQueueManager: OfflineQueueManager?
+
+    // Store notification delegate to prevent deallocation
+    @State private var notificationDelegate: NotificationDelegate?
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema(versionedSchema: DaisyDosSchemaV7.self)
-        // Explicitly disable CloudKit for local-only mode
+
+        // Dynamic CloudKit configuration based on LocalOnlyModeManager
+        // Note: Changing this requires app restart, handled in LocalOnlyModeManager
+        // Default to true (local-only) if key doesn't exist - privacy-first approach
+        let isLocalOnly = UserDefaults.standard.object(forKey: "localOnlyMode") as? Bool ?? true
+        let cloudKitDatabase: ModelConfiguration.CloudKitDatabase = isLocalOnly ? .none : .automatic
+
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
-            cloudKitDatabase: .none  // This disables CloudKit integration
+            cloudKitDatabase: cloudKitDatabase
         )
 
-        #if DEBUG && false
-        // CloudKit schema initialization disabled for Phase 1.6
-        // This will be enabled in Phase 10.0 when CloudKit sync is implemented
-        // The schema validation was causing issues with local-only mode
-        do {
-            try CloudKitManager.initializeCloudKitSchemaIfNeeded()
-            print("CloudKit schema initialization completed (DEBUG mode)")
-        } catch {
-            print("CloudKit schema initialization failed: \(error.localizedDescription)")
+        #if DEBUG
+        // CloudKit schema initialization for development
+        // Only runs in DEBUG builds to set up CloudKit schema
+        if !isLocalOnly {
+            do {
+                try CloudKitManager.initializeCloudKitSchemaIfNeeded()
+                print("✅ CloudKit schema initialization completed (DEBUG mode)")
+            } catch {
+                print("⚠️ CloudKit schema initialization failed: \(error.localizedDescription)")
+            }
         }
         #endif
 
@@ -54,8 +69,38 @@ struct DaisyDosApp: App {
         WindowGroup {
             ContentView()
                 .task {
+                    // Set ModelContext on NavigationManager for deep linking entity fetches
+                    navigationManager.setModelContext(sharedModelContainer.mainContext)
+
+                    // Initialize CloudKit managers if sync is enabled
+                    if !localOnlyModeManager.isLocalOnlyMode {
+                        cloudKitSyncManager = CloudKitSyncManager(modelContext: sharedModelContainer.mainContext)
+                        networkMonitor = NetworkMonitor()
+                        offlineQueueManager = OfflineQueueManager(
+                            modelContext: sharedModelContainer.mainContext,
+                            networkMonitor: networkMonitor!
+                        )
+                    }
+
+                    // Create and set up notification delegate (stored to prevent deallocation)
+                    let taskManager = TaskManager(modelContext: sharedModelContainer.mainContext)
+                    let habitManager = HabitManager(modelContext: sharedModelContainer.mainContext)
+                    let taskNotificationManager = TaskNotificationManager(modelContext: sharedModelContainer.mainContext)
+                    let delegate = NotificationDelegate(
+                        navigationManager: navigationManager,
+                        habitManager: habitManager,
+                        taskManager: taskManager,
+                        taskNotificationManager: taskNotificationManager
+                    )
+                    notificationDelegate = delegate
+                    UNUserNotificationCenter.current().delegate = delegate
+
                     // Run logbook housekeeping on app launch (if needed)
                     await runLogbookHousekeepingIfNeeded()
+                }
+                .onOpenURL { url in
+                    // Handle deep links from external sources
+                    navigationManager.handleDeepLink(url: url)
                 }
                 .applyAppearance(appearanceManager)
         }
@@ -64,10 +109,14 @@ struct DaisyDosApp: App {
         .environment(localOnlyModeManager)
         .environment(appearanceManager)
         .environment(TaskManager(modelContext: sharedModelContainer.mainContext))
+        .environment(TaskNotificationManager(modelContext: sharedModelContainer.mainContext))
         .environment(HabitManager(modelContext: sharedModelContainer.mainContext))
         .environment(TagManager(modelContext: sharedModelContainer.mainContext))
         .environment(HabitNotificationManager(modelContext: sharedModelContainer.mainContext))
         .environment(LogbookManager(modelContext: sharedModelContainer.mainContext))
+        .environment(cloudKitSyncManager)
+        .environment(networkMonitor)
+        .environment(offlineQueueManager)
     }
 
     // MARK: - Logbook Housekeeping

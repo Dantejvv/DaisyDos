@@ -11,8 +11,9 @@ import SwiftData
 
 @Model
 class Habit {
-    var id: UUID
-    var title: String
+    // CloudKit-compatible: all have defaults
+    var id: UUID = UUID()
+    var title: String = ""
 
     // Rich text description storage (Data-backed AttributedString)
     @Attribute(.externalStorage) var habitDescriptionData: Data?
@@ -42,9 +43,9 @@ class Habit {
         }
     }
 
-    var currentStreak: Int
-    var longestStreak: Int
-    var createdDate: Date
+    var currentStreak: Int = 0
+    var longestStreak: Int = 0
+    var createdDate: Date = Date()
     var modifiedDate: Date = Date()
     var lastCompletedDate: Date?
 
@@ -62,33 +63,65 @@ class Habit {
     /// Custom sort order for manual habit arrangement (lower values appear first)
     var habitOrder: Int = 0
 
-    // MARK: - Relationships
+    // MARK: - Relationships (CloudKit-compatible: all optional)
 
     @Relationship(deleteRule: .nullify, inverse: \Tag.habits)
-    var tags: [Tag] = [] {
+    var tags: [Tag]? {
         didSet {
-            if tags.count > 5 {
-                tags = Array(tags.prefix(5))
+            if let tags = tags, tags.count > 5 {
+                self.tags = Array(tags.prefix(5))
             }
         }
     }
 
     /// Individual completion entries with detailed tracking
-    @Relationship(deleteRule: .cascade) var completionEntries: [HabitCompletion] = []
+    @Relationship(deleteRule: .cascade) var completionEntries: [HabitCompletion]?
 
     /// Streak history and management
-    @Relationship(deleteRule: .cascade) var streaks: [HabitStreak] = []
+    @Relationship(deleteRule: .cascade) var streaks: [HabitStreak]?
 
     /// Skip entries for tracking when habit was skipped
-    @Relationship(deleteRule: .cascade) var skips: [HabitSkip] = []
+    @Relationship(deleteRule: .cascade) var skips: [HabitSkip]?
 
     /// Attachments (photos, documents, etc.)
     @Relationship(deleteRule: .cascade, inverse: \HabitAttachment.habit)
-    var attachments: [HabitAttachment] = []
+    var attachments: [HabitAttachment]?
 
     /// Subtasks/checklist items for the habit
     @Relationship(deleteRule: .cascade)
-    var subtasks: [HabitSubtask] = []
+    var subtasks: [HabitSubtask]?
+
+    // MARK: - Computed Properties for Non-Optional Array Access
+
+    private var tagsArray: [Tag] {
+        get { tags ?? [] }
+        set { tags = newValue }
+    }
+
+    private var completionEntriesArray: [HabitCompletion] {
+        get { completionEntries ?? [] }
+        set { completionEntries = newValue }
+    }
+
+    private var streaksArray: [HabitStreak] {
+        get { streaks ?? [] }
+        set { streaks = newValue }
+    }
+
+    private var skipsArray: [HabitSkip] {
+        get { skips ?? [] }
+        set { skips = newValue }
+    }
+
+    private var attachmentsArray: [HabitAttachment] {
+        get { attachments ?? [] }
+        set { attachments = newValue }
+    }
+
+    private var subtasksArray: [HabitSubtask] {
+        get { subtasks ?? [] }
+        set { subtasks = newValue }
+    }
 
     init(title: String, habitDescription: String = "", recurrenceRule: RecurrenceRule? = nil, priority: Priority = .none) {
         self.id = UUID()
@@ -105,27 +138,27 @@ class Habit {
     }
 
     var tagCount: Int {
-        tags.count
+        tagsArray.count
     }
 
     var subtaskCount: Int {
-        subtasks.count
+        subtasksArray.count
     }
 
     var completedSubtaskCount: Int {
-        subtasks.filter(\.isCompletedToday).count
+        subtasksArray.filter(\.isCompletedToday).count
     }
 
     var hasSubtasks: Bool {
-        !subtasks.isEmpty
+        !subtasksArray.isEmpty
     }
 
     var hasAttachments: Bool {
-        !attachments.isEmpty
+        !attachmentsArray.isEmpty
     }
 
     var attachmentCount: Int {
-        attachments.count
+        attachmentsArray.count
     }
 
     var hasAlert: Bool {
@@ -145,17 +178,17 @@ class Habit {
     var orderedSubtasks: [HabitSubtask] {
         // Ensure order values are assigned for existing subtasks
         ensureSubtaskOrderValues()
-        return subtasks.sorted { $0.subtaskOrder < $1.subtaskOrder }
+        return subtasksArray.sorted { $0.subtaskOrder < $1.subtaskOrder }
     }
 
     /// Ensures all subtasks have proper order values assigned
     private func ensureSubtaskOrderValues() {
         // Check if all subtasks have the default order value (0)
-        let allHaveZeroOrder = subtasks.allSatisfy { $0.subtaskOrder == 0 }
+        let allHaveZeroOrder = subtasksArray.allSatisfy { $0.subtaskOrder == 0 }
 
-        if allHaveZeroOrder && subtasks.count > 1 {
+        if allHaveZeroOrder && subtasksArray.count > 1 {
             // Assign sequential order values to all subtasks
-            for (index, subtask) in subtasks.enumerated() {
+            for (index, subtask) in subtasksArray.enumerated() {
                 subtask.subtaskOrder = index
             }
         }
@@ -167,15 +200,15 @@ class Habit {
 
     func addTag(_ tag: Tag) -> Bool {
         guard canAddTag() else { return false }
-        if !tags.contains(tag) {
-            tags.append(tag)
+        if !tagsArray.contains(tag) {
+            tagsArray.append(tag)
             return true
         }
         return false
     }
 
     func removeTag(_ tag: Tag) {
-        tags.removeAll { $0 == tag }
+        tagsArray.removeAll { $0 == tag }
     }
 
     // MARK: - Subtask Management
@@ -186,17 +219,17 @@ class Habit {
         }
 
         // Assign the next order value
-        let maxOrder = subtasks.map(\.subtaskOrder).max() ?? -1
+        let maxOrder = subtasksArray.map(\.subtaskOrder).max() ?? -1
         subtask.subtaskOrder = maxOrder + 1
 
-        subtasks.append(subtask)
+        subtasksArray.append(subtask)
         subtask.parentHabit = self
         modifiedDate = Date()
         return true
     }
 
     func removeSubtask(_ subtask: HabitSubtask) {
-        subtasks.removeAll { $0 == subtask }
+        subtasksArray.removeAll { $0 == subtask }
         subtask.parentHabit = nil
         modifiedDate = Date()
     }
@@ -251,7 +284,7 @@ class Habit {
 
     /// Reset all subtask completion statuses (called when new day starts)
     func resetSubtaskCompletions() {
-        for subtask in subtasks {
+        for subtask in subtasksArray {
             subtask.resetDailyCompletion()
         }
         modifiedDate = Date()
@@ -306,8 +339,8 @@ class Habit {
         let today = Calendar.current.startOfDay(for: Date())
 
         // Remove today's completion entry
-        if let todaysCompletion = completionEntries.first(where: { Calendar.current.isDate($0.completedDate, inSameDayAs: today) }) {
-            completionEntries.removeAll { $0.id == todaysCompletion.id }
+        if let todaysCompletion = completionEntriesArray.first(where: { Calendar.current.isDate($0.completedDate, inSameDayAs: today) }) {
+            completionEntriesArray.removeAll { $0.id == todaysCompletion.id }
         }
 
         // Recalculate streak from completion history
@@ -318,7 +351,7 @@ class Habit {
 
     /// Recalculate current streak based on completion history
     private func recalculateStreakFromHistory() {
-        let sortedCompletions = completionEntries.sorted { $0.completedDate > $1.completedDate }
+        let sortedCompletions = completionEntriesArray.sorted { $0.completedDate > $1.completedDate }
 
         guard !sortedCompletions.isEmpty else {
             currentStreak = 0
@@ -356,7 +389,7 @@ class Habit {
 
     var isSkippedToday: Bool {
         let today = Calendar.current.startOfDay(for: Date())
-        return skips.contains { Calendar.current.isDate($0.skippedDate, inSameDayAs: today) }
+        return skipsArray.contains { Calendar.current.isDate($0.skippedDate, inSameDayAs: today) }
     }
 
     func canMarkCompleted() -> Bool {
@@ -387,7 +420,7 @@ class Habit {
         )
 
         // Add to completion entries
-        completionEntries.append(completion)
+        completionEntriesArray.append(completion)
 
         // Update streak with simple consecutive day logic
         updateStreak(completionDate: today)
@@ -409,7 +442,7 @@ class Habit {
         )
 
         // Add to skip entries
-        skips.append(skip)
+        skipsArray.append(skip)
 
         return skip
     }
@@ -441,7 +474,7 @@ class Habit {
             return 0.0
         }
 
-        let completedDays = completionEntries.filter { completion in
+        let completedDays = completionEntriesArray.filter { completion in
             completion.completedDate >= startDate && completion.completedDate <= endDate
         }.count
 
@@ -489,4 +522,19 @@ class Habit {
     }
 }
 
+// MARK: - Equatable Conformance
+
+extension Habit: Equatable {
+    static func == (lhs: Habit, rhs: Habit) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+// MARK: - Hashable Conformance
+
+extension Habit: Hashable {
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
 

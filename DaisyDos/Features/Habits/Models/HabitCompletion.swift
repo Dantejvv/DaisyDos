@@ -11,14 +11,14 @@ import SwiftData
 @Model
 class HabitCompletion {
 
-    // MARK: - Properties
+    // MARK: - Properties (CloudKit-compatible: all have defaults)
 
-    var id: UUID
-    var completedDate: Date
-    var notes: String
-    var mood: Mood
+    var id: UUID = UUID()
+    var completedDate: Date = Date()
+    var notes: String = ""
+    var mood: Mood = Mood.neutral
     var duration: TimeInterval?
-    var createdDate: Date
+    var createdDate: Date = Date()
 
     // MARK: - Relationships
 
@@ -123,7 +123,7 @@ class HabitCompletion {
         guard let habit = habit else { return 0 }
 
         let calendar = Calendar.current
-        let completions = habit.completionEntries
+        let completions = (habit.completionEntries ?? [])
             .sorted { $0.completedDate < $1.completedDate }
 
         guard let thisIndex = completions.firstIndex(where: { $0.id == self.id }) else {
