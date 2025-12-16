@@ -18,6 +18,7 @@ struct DaisyDosApp: App {
     let localOnlyModeManager = LocalOnlyModeManager()
     let appearanceManager = AppearanceManager()
     let navigationManager = NavigationManager()
+    let notificationPreferencesManager = NotificationPreferencesManager()
 
     // CloudKit and network managers
     @State private var cloudKitSyncManager: CloudKitSyncManager?
@@ -107,6 +108,7 @@ struct DaisyDosApp: App {
         .environment(navigationManager)
         .environment(localOnlyModeManager)
         .environment(appearanceManager)
+        .environment(notificationPreferencesManager)
         .environment(TaskManager(modelContext: sharedModelContainer.mainContext))
         .environment(TaskNotificationManager(modelContext: sharedModelContainer.mainContext))
         .environment(HabitManager(modelContext: sharedModelContainer.mainContext))

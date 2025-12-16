@@ -12,7 +12,7 @@ struct SettingsView: View {
     @Environment(LocalOnlyModeManager.self) private var localOnlyModeManager
     @Environment(AppearanceManager.self) private var appearanceManager
     @Environment(TagManager.self) private var tagManager
-    @Environment(HabitNotificationManager.self) private var habitNotificationManager
+    @Environment(NotificationPreferencesManager.self) private var notificationPreferencesManager
     @Environment(TaskNotificationManager.self) private var taskNotificationManager
     @Environment(CloudKitSyncManager.self) private var cloudKitSyncManager: CloudKitSyncManager?
 
@@ -20,8 +20,6 @@ struct SettingsView: View {
 
     @State private var showingAbout = false
     @State private var showingAppearanceSettings = false
-    @State private var showingHabitNotificationSettings = false
-    @State private var showingTaskNotificationSettings = false
     @State private var showingCloudKitStatus = false
     @State private var showingTagPicker = false
     @State private var showingImportExport = false
@@ -59,12 +57,6 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingAppearanceSettings) {
                 AppearanceSettingsView()
-            }
-            .sheet(isPresented: $showingHabitNotificationSettings) {
-                HabitNotificationSettingsView()
-            }
-            .sheet(isPresented: $showingTaskNotificationSettings) {
-                TaskNotificationSettingsView()
             }
             .sheet(isPresented: $showingCloudKitStatus) {
                 CloudKitSyncStatusView()
@@ -174,41 +166,50 @@ struct SettingsView: View {
 
     private var notificationsSection: some View {
         Section("Notifications") {
-            Button(action: { showingHabitNotificationSettings = true }) {
-                HStack {
-                    Label {
-                        Text("Habit Reminders")
-                            .foregroundColor(.daisyText)
-                    } icon: {
-                        Image(systemName: "bell.badge")
-                    }
-                    Spacer()
-                    Text(habitNotificationManager.isPermissionGranted ? "Enabled" : "Disabled")
-                        .foregroundColor(.daisyTextSecondary)
-                        .font(.caption)
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
+            Toggle(isOn: Binding(
+                get: { notificationPreferencesManager.isGlobalNotificationsEnabled },
+                set: { notificationPreferencesManager.isGlobalNotificationsEnabled = $0 }
+            )) {
+                Label {
+                    Text("Enable Notifications")
+                        .foregroundColor(.daisyText)
+                } icon: {
+                    Image(systemName: "bell")
                 }
             }
 
-            Button(action: { showingTaskNotificationSettings = true }) {
-                HStack {
-                    Label {
-                        Text("Task Reminders")
-                            .foregroundColor(.daisyText)
-                    } icon: {
-                        Image(systemName: "bell")
-                    }
-                    Spacer()
-                    Text(taskNotificationManager.isPermissionGranted ? "Enabled" : "Disabled")
-                        .foregroundColor(.daisyTextSecondary)
-                        .font(.caption)
-                    Image(systemName: "chevron.right")
+            // Permission status
+            HStack {
+                Image(systemName: taskNotificationManager.isPermissionGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    .foregroundColor(taskNotificationManager.isPermissionGranted ? .daisySuccess : .orange)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Notification Permission")
+                        .font(.subheadline)
+                        .foregroundColor(.daisyText)
+
+                    Text(taskNotificationManager.isPermissionGranted ? "Granted" : "Not Granted")
                         .font(.caption)
                         .foregroundColor(.daisyTextSecondary)
                 }
+
+                Spacer()
+
+                if !taskNotificationManager.isPermissionGranted {
+                    Button("Grant") {
+                        _Concurrency.Task {
+                            await taskNotificationManager.requestNotificationPermissions()
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                }
             }
+
+            // Info text
+            Text("Notifications are set individually for each task and habit using the alert button in the edit view.")
+                .font(.caption)
+                .foregroundColor(.daisyTextSecondary)
         }
     }
 

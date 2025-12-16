@@ -35,9 +35,6 @@ class TaskNotificationManager: BaseNotificationManager {
 
     // MARK: - Task-Specific Settings
 
-    // Default alert time before due date (1 hour = -3600 seconds)
-    var defaultAlertTimeInterval: TimeInterval = -3600
-
     // Overdue reminder settings
     var enableOverdueReminders: Bool = true
     var overdueReminderInterval: TimeInterval = 3600 // 1 hour after due
@@ -76,6 +73,14 @@ class TaskNotificationManager: BaseNotificationManager {
             self,
             selector: #selector(taskWasCompleted(_:)),
             name: .taskWasCompleted,
+            object: nil
+        )
+
+        // Observe global notification setting changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(globalNotificationSettingChanged(_:)),
+            name: .globalNotificationSettingChanged,
             object: nil
         )
     }
@@ -119,6 +124,16 @@ class TaskNotificationManager: BaseNotificationManager {
         #endif
     }
 
+    @objc private func globalNotificationSettingChanged(_ notification: Foundation.Notification) {
+        guard let enabled = notification.userInfo?["enabled"] as? Bool else { return }
+
+        isNotificationsEnabled = enabled
+
+        #if DEBUG
+        print("Global notification setting changed to: \(enabled ? "enabled" : "disabled")")
+        #endif
+    }
+
     // MARK: - Action Registration
 
     func registerNotificationActions() async {
@@ -156,6 +171,15 @@ class TaskNotificationManager: BaseNotificationManager {
         // Only schedule if task has a due date
         guard let dueDate = task.dueDate else { return }
 
+        // Only schedule if task has an alert time interval set
+        guard let alertInterval = task.alertTimeInterval else {
+            // No alert set for this task, but still check for overdue reminders
+            if enableOverdueReminders {
+                scheduleOverdueReminder(for: task)
+            }
+            return
+        }
+
         let identifier = "task_\(task.id.uuidString)"
 
         // Create notification content
@@ -170,8 +194,7 @@ class TaskNotificationManager: BaseNotificationManager {
         ]
         content.badge = NSNumber(value: getPendingTasksCount())
 
-        // Determine alert time
-        let alertInterval = task.alertTimeInterval ?? defaultAlertTimeInterval
+        // Calculate alert time using task's specific alert interval
         let alertDate = dueDate.addingTimeInterval(alertInterval)
 
         // Only schedule if alert date is in the future
@@ -342,15 +365,6 @@ class TaskNotificationManager: BaseNotificationManager {
     }
 
     // MARK: - Settings Management
-
-    func updateDefaultAlertTimeInterval(_ interval: TimeInterval) {
-        defaultAlertTimeInterval = interval
-
-        // Reschedule all task notifications with new default
-        if isNotificationsEnabled {
-            scheduleAllTaskNotifications()
-        }
-    }
 
     func getScheduledNotificationsCount() async -> Int {
         // Use base protocol's getScheduledNotificationsCount method

@@ -34,14 +34,7 @@ class HabitNotificationManager: BaseNotificationManager {
     }
 
     // MARK: - Habit-Specific Settings
-
-    // Default reminder time (9:00 AM)
-    var defaultReminderTime: DateComponents = {
-        var components = DateComponents()
-        components.hour = 9
-        components.minute = 0
-        return components
-    }()
+    // (No defaults - habits use individual alertTimeInterval settings)
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -70,6 +63,14 @@ class HabitNotificationManager: BaseNotificationManager {
             self,
             selector: #selector(habitWasDeleted(_:)),
             name: .habitWasDeleted,
+            object: nil
+        )
+
+        // Observe global notification setting changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(globalNotificationSettingChanged(_:)),
+            name: .globalNotificationSettingChanged,
             object: nil
         )
     }
@@ -106,6 +107,16 @@ class HabitNotificationManager: BaseNotificationManager {
         #endif
     }
 
+    @objc private func globalNotificationSettingChanged(_ notification: Foundation.Notification) {
+        guard let enabled = notification.userInfo?["enabled"] as? Bool else { return }
+
+        isNotificationsEnabled = enabled
+
+        #if DEBUG
+        print("Global notification setting changed to: \(enabled ? "enabled" : "disabled")")
+        #endif
+    }
+
     // MARK: - Action Registration
 
     func registerNotificationActions() async {
@@ -133,10 +144,24 @@ class HabitNotificationManager: BaseNotificationManager {
 
     // MARK: - Habit Notification Scheduling
 
-    func scheduleHabitReminder(for habit: Habit, at reminderTime: DateComponents? = nil) {
+    func scheduleHabitReminder(for habit: Habit) {
         guard isNotificationsEnabled && isPermissionGranted else { return }
 
-        let time = reminderTime ?? defaultReminderTime
+        // Only schedule if habit has an alert time interval set
+        guard let alertTimeInterval = habit.alertTimeInterval else { return }
+
+        // Convert alertTimeInterval to DateComponents (time of day)
+        // For habits, interpret as seconds-since-midnight (positive values only)
+        guard alertTimeInterval >= 0 && alertTimeInterval < 86400 else { return } // Must be within 24 hours
+
+        let totalSeconds = Int(alertTimeInterval)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+
+        var time = DateComponents()
+        time.hour = hours
+        time.minute = minutes
+
         let identifier = "habit_\(habit.id.uuidString)"
 
         // Remove existing notification
@@ -369,17 +394,6 @@ class HabitNotificationManager: BaseNotificationManager {
     }
 
     // MARK: - Settings Management
-
-    func updateDefaultReminderTime(hour: Int, minute: Int) {
-        defaultReminderTime.hour = hour
-        defaultReminderTime.minute = minute
-
-        // Reschedule all notifications with new time
-        if isNotificationsEnabled {
-            removeAllHabitNotifications()
-            scheduleAllHabitNotifications()
-        }
-    }
 
     func getScheduledNotificationsCount() async -> Int {
         // Use base protocol's getScheduledNotificationsCount method
