@@ -279,16 +279,28 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
   - [X] Data overview with counts
   - [X] Tag management integration
   - [X] About view
+  - [X] Habit notification settings access
+  - [X] Task notification settings access
+  - [X] CloudKit sync status view (when sync enabled)
 - [X] AppearanceSettingsView
   - [X] Theme controls (system/light/dark)
   - [X] Accent color selection (7 colors)
   - [X] Recent color history
+- [X] CloudKitSyncStatusView
+  - [X] Sync status display
+  - [X] Manual sync trigger
+  - [X] Pending changes view
+  - [X] Network status display
+- [X] TaskNotificationSettingsView
+  - [X] Permission management
+  - [X] Alert time configuration
+  - [X] Overdue reminder settings
+- [X] HabitNotificationSettingsView
+  - [X] Permission management
+  - [X] Reminder time configuration
 - [X] ImportExportView
   - [X] Data import functionality
   - [X] Data export functionality
-- [X] ResetDeleteView
-  - [X] Data deletion controls
-  - [X] Reset options
 - [X] ErrorMessageTestView (developer tool)
 - [X] TestDataGenerator (developer tool)
 
@@ -296,7 +308,8 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 - [X] Appearance customization (theme, accent color)
 - [X] Local-only mode controls
 - [X] Habit notification settings integration
-- [X] CloudKit toggle (disabled by default)
+- [X] Task notification settings integration
+- [X] CloudKit toggle with sync status view (disabled by default)
 - [X] Import/export functionality
 - [X] Data management (reset/delete)
 - [X] Tag management access
@@ -307,7 +320,7 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 
 **Testing Framework:**
 - [X] Swift Testing framework (@Test macro, #expect assertions)
-- [X] 190 tests with 100% pass rate
+- [X] 199 tests with 100% pass rate (exceeds initial goal of 190)
 - [X] Struct-based test suites for isolation
 - [X] Fresh ModelContainer per test
 
@@ -394,24 +407,28 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 
 ## 🔄 Partially Implemented Features
 
-### UserNotifications Integration (30% Complete)
+### UserNotifications Integration (90% Complete)
 
 **What Exists:**
-- [X] HabitNotificationManager @Observable class (~300 LOC)
-- [X] Basic notification service structure
+- [X] HabitNotificationManager @Observable class (388 LOC)
+- [X] TaskNotificationManager @Observable class
+- [X] Basic notification service structure with BaseNotificationManager
 - [X] HabitNotificationSettingsView with permission management UI
-- [X] Settings integration in main SettingsView
-- [X] UserNotifications framework imported
+- [X] TaskNotificationSettingsView with alert time and overdue reminder settings
+- [X] Full Settings integration for both habit and task notifications
+- [X] UserNotifications framework fully integrated
+- [X] Notification actions (Mark Complete, Skip Today for habits; Mark Complete, Snooze for tasks)
+- [X] Reactive scheduling on habit/task changes
+- [X] Permission management UI
+- [X] Recurrence-based scheduling (daily, weekly, monthly, yearly)
 
-**What's Missing:**
-- [ ] Smart scheduling for all recurrence patterns
-- [ ] Notification actions for quick completion/skip
-- [ ] Notification grouping and management
-- [ ] Notification analytics and optimization
-- [ ] Task reminder notifications
-- [ ] Comprehensive notification system
+**What's Missing (Edge Cases):**
+- [ ] Smart scheduling for complex timezone scenarios (DST transitions, user timezone changes)
+- [ ] Notification delivery optimization for battery/network
+- [ ] Notification grouping for multiple simultaneous reminders
+- [ ] Notification analytics and delivery history
 
-**Status:** Basic infrastructure exists, full feature set not complete.
+**Status:** Core notification system fully implemented and wired to UI. Only advanced edge cases remain.
 
 ---
 
@@ -436,25 +453,32 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 
 ---
 
-### Advanced Habit Analytics (20% Complete)
+### ✅ Habit Analytics (COMPLETE)
 
 **What Exists:**
-- [X] CompletionAggregate model defined (unused)
-- [X] Basic completion history in HabitDetailView
-- [X] Streak milestone tracking structure
-- [ ] Charts framework (planned for future analytics, not yet imported)
+- [X] AnalyticsManager @Observable class with caching (300 LOC)
+- [X] HabitManager+Analytics extension with data queries (250 LOC)
+- [X] Analytics data models (AnalyticsPeriod, HabitAnalytics, ChartData)
+- [X] Swift Charts integration (iOS 17+)
+- [X] Chart components:
+  - [X] WeeklyCompletionChart (bar chart with daily completions)
+  - [X] MoodTrendsChart (line chart with emoji mood indicators)
+  - [X] StreakDashboard (circular progress indicators)
+  - [X] CompletionRateChart (pie chart for today's progress)
+- [X] Supporting components (PeriodSelector, StatCard)
+- [X] UI integration in HabitDetailView
+- [X] Period selection (7D, 30D, 90D, Year)
+- [X] Performance optimization with 5-minute cache
+- [X] Empty states for no data
 
-**What's Missing:**
-- [ ] HabitProgressChart component
-- [ ] HabitHeatmapView component
-- [ ] StreakVisualizationView component
-- [ ] Comprehensive analytics UI with tabbed interface
-- [ ] Progress metrics dashboard
-- [ ] Completion rate calculations
-- [ ] Consistency scoring
-- [ ] Milestone progress tracking (7, 14, 21, 30, 50, 75, 100+ days)
+**Analytics Features:**
+- ✅ Daily completion trends over selected period
+- ✅ Average mood tracking with visual trends
+- ✅ Top 5 streaks with progress to next milestone
+- ✅ Completion rate pie chart for today
+- ✅ Time-of-day distribution (prepared, not displayed in MVP)
 
-**Status:** Framework prepared, visualization components not implemented.
+**Status:** 100% Complete - Production-ready habit analytics with charts integrated into detail view.
 
 ---
 
@@ -556,10 +580,10 @@ This section is intentionally left empty. Future features and development phases
 - `/DaisyDosTests/Documentation/TestingGuide.md` - Testing patterns and examples
 
 **Key Metrics:**
-- Tests: 190 passing
+- Tests: 199 passing (100% pass rate)
 - Performance: <2s launch, <100ms UI response
 - Accessibility: WCAG AA compliant
-- Code: Builds cleanly with minor warnings
+- Code: Builds cleanly (zero errors, minor warnings)
 
 **Architectural Principles:**
 - @Observable first (no ViewModels)
@@ -579,17 +603,17 @@ This section is intentionally left empty. Future features and development phases
   | Task Subtasks       | ✅    | ✅   | ✅        | ✅     | 100%   |
   | Task Attachments    | ✅    | ✅   | ✅        | ✅     | 100%   |
   | Task Recurrence     | ✅    | ✅   | ✅        | ✅     | 100%   |
-  | Task Notifications  | ❌    | ❌   | ❌        | ❌     | 0%     |
+  | Task Notifications  | ✅    | ✅   | ✅        | ❌     | 90%    |
   | Habits              | ✅    | ✅   | ✅        | ✅     | 100%   |
   | Habit Subtasks      | ✅    | ✅   | ✅        | ✅     | 100%   |
   | Habit Attachments   | ✅    | ✅   | ✅        | ✅     | 100%   |
-  | Habit Notifications | ✅    | ✅   | ⚠️       | ✅     | 70%    |
+  | Habit Notifications | ✅    | ✅   | ✅        | ❌     | 90%    |
   | Tags                | ✅    | ✅   | ✅        | ✅     | 100%   |
   | Logbook             | ✅    | ✅   | ✅        | ✅     | 100%   |
   | Today View          | ✅    | ✅   | ✅        | ✅     | 100%   |
   | Settings            | ✅    | ✅   | ✅        | ❌     | 100%   |
-  | Navigation          | ✅    | ✅   | ✅        | ❌     | 95%    |
-  | Import/Export       | ✅    | ✅   | ⚠️       | ❌     | 80%    |
-  | Calendar            | ❌    | ❌   | ❌        | ❌     | 5%     |
-  | Analytics           | ⚠️   | ❌   | ⚠️       | ❌     | 10%    |
+  | Navigation          | ✅    | ✅   | ✅        | ❌     | 100%   |
+  | Import/Export       | ✅    | ✅   | ✅        | ❌     | 100%   |
+  | Calendar            | ❌    | ❌   | ❌        | ❌     | 0%     |
+  | Habit Analytics     | ✅    | ✅   | ✅        | ❌     | 100%   |
   | CloudKit            | ✅    | ✅   | ✅        | ❌     | 100%   |

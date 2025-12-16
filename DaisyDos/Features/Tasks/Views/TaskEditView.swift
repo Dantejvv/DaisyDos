@@ -260,7 +260,7 @@ struct TaskEditView: View {
                             }
                         }
                         .listStyle(.plain)
-                        .frame(height: CGFloat(stagedSubtasks.count) * 44)
+                        .frame(height: CGFloat(stagedSubtasks.count) * 32)
                         .scrollDisabled(true)
                         .environment(\.editMode, .constant(.active))
                         .accentColor(.daisyTextSecondary)

@@ -588,7 +588,7 @@ struct TaskDetailView: View {
                             }
                         }
                         .listStyle(.plain)
-                        .frame(height: CGFloat((task.subtasks ?? []).count) * 44)
+                        .frame(height: CGFloat((task.subtasks ?? []).count) * 32)
                         .scrollDisabled(true)
                     }
 

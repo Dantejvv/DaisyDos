@@ -70,23 +70,21 @@ class HabitManager: EntityManagerProtocol {
     }
 
     var completedTodayHabits: [Habit] {
+        // Fetch all habits and filter in memory since isCompletedToday is a computed property
         let descriptor = FetchDescriptor<Habit>(
-            predicate: #Predicate<Habit> { habit in
-                habit.isCompletedToday == true
-            },
             sortBy: [SortDescriptor(\.currentStreak, order: .reverse)]
         )
-        return (try? modelContext.fetch(descriptor)) ?? []
+        let allHabits = (try? modelContext.fetch(descriptor)) ?? []
+        return allHabits.filter { $0.isCompletedToday }
     }
 
     var pendingTodayHabits: [Habit] {
+        // Fetch all habits and filter in memory since isCompletedToday is a computed property
         let descriptor = FetchDescriptor<Habit>(
-            predicate: #Predicate<Habit> { habit in
-                habit.isCompletedToday == false
-            },
             sortBy: [SortDescriptor(\.currentStreak, order: .reverse)]
         )
-        return (try? modelContext.fetch(descriptor)) ?? []
+        let allHabits = (try? modelContext.fetch(descriptor)) ?? []
+        return allHabits.filter { !$0.isCompletedToday }
     }
 
     var habitsByStreak: [Habit] {

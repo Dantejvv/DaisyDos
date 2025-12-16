@@ -12,16 +12,19 @@ struct SettingsView: View {
     @Environment(LocalOnlyModeManager.self) private var localOnlyModeManager
     @Environment(AppearanceManager.self) private var appearanceManager
     @Environment(TagManager.self) private var tagManager
-    @Environment(HabitNotificationManager.self) private var notificationManager: HabitNotificationManager?
+    @Environment(HabitNotificationManager.self) private var habitNotificationManager
+    @Environment(TaskNotificationManager.self) private var taskNotificationManager
+    @Environment(CloudKitSyncManager.self) private var cloudKitSyncManager: CloudKitSyncManager?
 
     @Query private var allTags: [Tag]
 
     @State private var showingAbout = false
     @State private var showingAppearanceSettings = false
-    @State private var showingNotificationSettings = false
+    @State private var showingHabitNotificationSettings = false
+    @State private var showingTaskNotificationSettings = false
+    @State private var showingCloudKitStatus = false
     @State private var showingTagPicker = false
     @State private var showingImportExport = false
-    @State private var showingResetDelete = false
     @State private var showingTestDataGenerator = false
     @State private var showingErrorMessageTest = false
     @State private var showingRestartAlert = false
@@ -57,19 +60,20 @@ struct SettingsView: View {
             .sheet(isPresented: $showingAppearanceSettings) {
                 AppearanceSettingsView()
             }
-            .sheet(isPresented: $showingNotificationSettings) {
-                if notificationManager != nil {
-                    HabitNotificationSettingsView()
-                }
+            .sheet(isPresented: $showingHabitNotificationSettings) {
+                HabitNotificationSettingsView()
+            }
+            .sheet(isPresented: $showingTaskNotificationSettings) {
+                TaskNotificationSettingsView()
+            }
+            .sheet(isPresented: $showingCloudKitStatus) {
+                CloudKitSyncStatusView()
             }
             .sheet(isPresented: $showingTagPicker) {
                 TagsView()
             }
             .sheet(isPresented: $showingImportExport) {
                 ImportExportView()
-            }
-            .sheet(isPresented: $showingResetDelete) {
-                ResetDeleteView()
             }
             .sheet(isPresented: $showingTestDataGenerator) {
                 TestDataGeneratorView()
@@ -115,13 +119,33 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundColor(.daisyTextSecondary)
 
-            HStack {
-                Text("iCloud Status:")
-                    .font(.caption)
-                Spacer()
-                Text(localOnlyModeManager.cloudKitStatusDescription)
-                    .font(.caption)
-                    .foregroundColor(.daisyTextSecondary)
+            if !localOnlyModeManager.isLocalOnlyMode {
+                Button(action: { showingCloudKitStatus = true }) {
+                    HStack {
+                        Label {
+                            Text("Sync Status")
+                                .foregroundColor(.daisyText)
+                        } icon: {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                        }
+                        Spacer()
+                        Text(cloudKitSyncManager?.syncStatus.displayText ?? "Unknown")
+                            .foregroundColor(.daisyTextSecondary)
+                            .font(.caption)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.daisyTextSecondary)
+                    }
+                }
+            } else {
+                HStack {
+                    Text("iCloud Status:")
+                        .font(.caption)
+                    Spacer()
+                    Text(localOnlyModeManager.cloudKitStatusDescription)
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                }
             }
         }
     }
@@ -150,20 +174,36 @@ struct SettingsView: View {
 
     private var notificationsSection: some View {
         Section("Notifications") {
-            Button(action: { showingNotificationSettings = true }) {
+            Button(action: { showingHabitNotificationSettings = true }) {
                 HStack {
                     Label {
                         Text("Habit Reminders")
                             .foregroundColor(.daisyText)
                     } icon: {
+                        Image(systemName: "bell.badge")
+                    }
+                    Spacer()
+                    Text(habitNotificationManager.isPermissionGranted ? "Enabled" : "Disabled")
+                        .foregroundColor(.daisyTextSecondary)
+                        .font(.caption)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+            }
+
+            Button(action: { showingTaskNotificationSettings = true }) {
+                HStack {
+                    Label {
+                        Text("Task Reminders")
+                            .foregroundColor(.daisyText)
+                    } icon: {
                         Image(systemName: "bell")
                     }
                     Spacer()
-                    if let notificationManager = notificationManager {
-                        Text(notificationManager.isPermissionGranted ? "Enabled" : "Disabled")
-                            .foregroundColor(.daisyTextSecondary)
-                            .font(.caption)
-                    }
+                    Text(taskNotificationManager.isPermissionGranted ? "Enabled" : "Disabled")
+                        .foregroundColor(.daisyTextSecondary)
+                        .font(.caption)
                     Image(systemName: "chevron.right")
                         .font(.caption)
                         .foregroundColor(.daisyTextSecondary)
@@ -202,21 +242,6 @@ struct SettingsView: View {
                             .foregroundColor(.daisyText)
                     } icon: {
                         Image(systemName: "arrow.up.arrow.down.circle")
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
-                }
-            }
-
-            Button(action: { showingResetDelete = true }) {
-                HStack {
-                    Label {
-                        Text("Reset & Delete")
-                            .foregroundColor(.daisyText)
-                    } icon: {
-                        Image(systemName: "trash.circle")
                     }
                     Spacer()
                     Image(systemName: "chevron.right")

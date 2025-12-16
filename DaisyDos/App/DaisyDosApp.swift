@@ -8,7 +8,6 @@
 import SwiftUI
 import SwiftData
 import CloudKit
-import EventKit
 #if canImport(PhotoKit)
 import PhotoKit
 #endif
@@ -84,11 +83,11 @@ struct DaisyDosApp: App {
 
                     // Create and set up notification delegate (stored to prevent deallocation)
                     let taskManager = TaskManager(modelContext: sharedModelContainer.mainContext)
-                    let habitManager = HabitManager(modelContext: sharedModelContainer.mainContext)
+                    let habitMgr = HabitManager(modelContext: sharedModelContainer.mainContext)
                     let taskNotificationManager = TaskNotificationManager(modelContext: sharedModelContainer.mainContext)
                     let delegate = NotificationDelegate(
                         navigationManager: navigationManager,
-                        habitManager: habitManager,
+                        habitManager: habitMgr,
                         taskManager: taskManager,
                         taskNotificationManager: taskNotificationManager
                     )
@@ -111,6 +110,7 @@ struct DaisyDosApp: App {
         .environment(TaskManager(modelContext: sharedModelContainer.mainContext))
         .environment(TaskNotificationManager(modelContext: sharedModelContainer.mainContext))
         .environment(HabitManager(modelContext: sharedModelContainer.mainContext))
+        .environment(AnalyticsManager(modelContext: sharedModelContainer.mainContext))
         .environment(TagManager(modelContext: sharedModelContainer.mainContext))
         .environment(HabitNotificationManager(modelContext: sharedModelContainer.mainContext))
         .environment(LogbookManager(modelContext: sharedModelContainer.mainContext))

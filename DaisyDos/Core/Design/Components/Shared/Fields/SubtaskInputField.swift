@@ -104,8 +104,9 @@ struct SubtaskInputField: View {
                 .transition(.scale.combined(with: .opacity))
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
         .padding(.horizontal, Spacing.medium)
+        .frame(height: 32)
         .animation(.easeInOut(duration: 0.2), value: hasText)
     }
 }

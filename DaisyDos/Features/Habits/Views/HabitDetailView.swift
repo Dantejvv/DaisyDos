@@ -42,6 +42,7 @@ struct HabitDetailView: View {
     // MARK: - Properties
 
     @Environment(HabitManager.self) private var habitManager
+    @Environment(AnalyticsManager.self) private var analyticsManager: AnalyticsManager?
     @Environment(\.dismiss) private var dismiss
     @Environment(HabitCompletionToastManager.self) private var toastManager
 
@@ -58,6 +59,7 @@ struct HabitDetailView: View {
     @State private var showSubtaskField = false
     @FocusState private var newSubtaskFocused: Bool
     @State private var attachmentToPreview: URL?
+    @State private var selectedPeriod: AnalyticsPeriod = .sevenDays
 
     // MARK: - Body
 
@@ -85,6 +87,9 @@ struct HabitDetailView: View {
 
                     // History Card (created, modified, completion history)
                     historyCard
+
+                    // Analytics Card (habit-specific analytics)
+                    analyticsCard
                 }
                 .padding()
             }
@@ -479,7 +484,7 @@ struct HabitDetailView: View {
                             }
                         }
                         .listStyle(.plain)
-                        .frame(height: CGFloat((habit.subtasks ?? []).count) * 44)
+                        .frame(height: CGFloat((habit.subtasks ?? []).count) * 32)
                         .scrollDisabled(true)
                     }
 
@@ -576,6 +581,85 @@ struct HabitDetailView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // MARK: - Analytics Card
+
+    @ViewBuilder
+    private var analyticsCard: some View {
+        if let analyticsManager = analyticsManager {
+            let analytics = analyticsManager.getHabitAnalytics(for: selectedPeriod)
+
+            VStack(spacing: Spacing.medium) {
+            // Header with period selector
+            VStack(spacing: Spacing.small) {
+                HStack {
+                    Text("Analytics")
+                        .font(.title2.weight(.bold))
+                        .foregroundColor(.daisyText)
+
+                    Spacer()
+                }
+
+                PeriodSelector(selectedPeriod: $selectedPeriod)
+            }
+
+            // Summary stats
+            HStack(spacing: Spacing.small) {
+                StatCard(
+                    title: "Current Streak",
+                    value: "\(habit.currentStreak)",
+                    subtitle: "Best: \(habit.longestStreak)",
+                    icon: "flame.fill",
+                    accentColor: .orange
+                )
+
+                StatCard(
+                    title: "Completion Rate",
+                    value: String(format: "%.0f%%", habit.completionRate(over: selectedPeriod.days) * 100),
+                    subtitle: "Last \(selectedPeriod.days) days",
+                    icon: "chart.bar.fill",
+                    accentColor: .green
+                )
+            }
+
+            // Charts
+            if analytics.hasData {
+                VStack(spacing: Spacing.medium) {
+                    WeeklyCompletionChart(
+                        data: analytics.weeklyCompletions,
+                        period: selectedPeriod
+                    )
+
+                    if !analytics.moodTrends.isEmpty {
+                        MoodTrendsChart(
+                            data: analytics.moodTrends,
+                            period: selectedPeriod,
+                            averageMood: analytics.averageMood
+                        )
+                    }
+                }
+            } else {
+                // Empty state
+                VStack(spacing: Spacing.medium) {
+                    Image(systemName: "chart.xyaxis.line")
+                        .font(.system(size: 48))
+                        .foregroundColor(.daisyTextSecondary.opacity(0.5))
+
+                    Text("No analytics data yet")
+                        .font(.headline)
+                        .foregroundColor(.daisyTextSecondary)
+
+                    Text("Complete this habit to start seeing analytics")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.extraLarge)
+            }
             }
         }
     }

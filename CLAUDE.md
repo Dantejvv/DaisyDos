@@ -137,8 +137,9 @@ DaisyDosTests/                    # Swift Testing framework, 190 tests
 - **Subtasks**: One-level hierarchy with order-based management
 - **Attachments**: Full PhotoKit integration, 50MB/file, 200MB/task limits
 - **Recurrence**: Daily/weekly/monthly/yearly patterns with dynamic calculations
+- **Notifications**: Alert reminders before due date, overdue reminders, snooze functionality
 - Advanced filtering, multi-select, bulk operations, search
-- UI: TaskRowView, TaskDetailView, TaskEditView, TasksView (all production-ready)
+- UI: TaskRowView, TaskDetailView, TaskEditView, TasksView, TaskNotificationSettingsView (all production-ready)
 
 ### Habit Tracking System - FULLY IMPLEMENTED
 - Complete CRUD operations with completion tracking and streak management
@@ -164,10 +165,11 @@ DaisyDosTests/                    # Swift Testing framework, 190 tests
 
 ### Settings - FULLY IMPLEMENTED
 - **Appearance settings**: Theme (system/light/dark), accent color selection (7 colors)
-- Local-only mode controls, habit notification settings
+- **Privacy controls**: Local-only mode toggle with CloudKit sync status view
+- **Notification settings**: Habit and task reminder configuration
 - Data overview (counts), tag management, about view
 - Import/export functionality, reset/delete options
-- CloudKit foundation prepared but disabled
+- CloudKit sync status and controls (when enabled)
 
 ### Today View - FULLY IMPLEMENTED
 - Unified task/habit list with TodayItem model and TodayViewModel
@@ -190,21 +192,29 @@ DaisyDosTests/                    # Swift Testing framework, 190 tests
 - **Network Monitoring**: Real-time connectivity tracking with Network framework
 - **CloudKit Schema**: Removed `#Unique` constraints for CloudKit compatibility
 - **Managers**: CloudKitSyncManager, OfflineQueueManager, NetworkMonitor
-- **Settings UI**: CloudKit toggle, sync status view, iCloud account status
+- **Settings UI**: CloudKit toggle, CloudKitSyncStatusView with manual sync, iCloud account status
 - **Error Handling**: User-friendly CloudKit error messages with actionable guidance
 - **Note**: Requires app restart when changing sync mode
 
-### Incomplete Features
-- **Calendar Integration**: EventKit permissions only, no UI
-- **Analytics**: Data models exist, no visualization components
-- **Advanced Notifications**: Smart scheduling edge cases
+### Habit Analytics - FULLY IMPLEMENTED
+- **Analytics Manager**: Centralized analytics with caching for performance
+- **Data Aggregation**: Weekly completions, mood trends, streak data, time-of-day distribution
+- **Chart Components**: Weekly completion chart, mood trends chart, streak dashboard, completion rate pie chart
+- **Period Selection**: 7D, 30D, 90D, Year views with dynamic data
+- **UI Integration**: Analytics section in HabitDetailView with period selector and summary stats
+- **Performance**: Cached queries, optimized for 90+ day periods
+
+### Incomplete Features (Future Development)
+- **Calendar Integration**: EventKit permissions removed for MVP (can add post-launch if requested)
+- **Task Analytics**: Habit analytics complete, task analytics deferred to post-MVP
+- **Advanced Notification Scheduling**: Basic scheduling complete (90%), edge cases remain (timezone changes, DST transitions, conflict resolution)
 
 
 ## Testing Infrastructure
 
 **Framework:** Swift Testing (modern @Test macro, #expect assertions)
 
-**Coverage:** 190 tests, 100% pass rate
+**Coverage:** 199 tests, 100% pass rate
 - Domain models (Task, Habit, RecurrenceRule, etc.)
 - Manager services (CRUD operations, business logic)
 - Infrastructure validation (container isolation, data integrity)

@@ -19,10 +19,6 @@
 			</array>
 		</dict>
 	</array>
-	<key>NSCalendarsUsageDescription</key>
-	<string>DaisyDos needs access to your calendar to show your events alongside tasks and habits for better daily planning.</string>
-	<key>NSRemindersUsageDescription</key>
-	<string>DaisyDos needs access to your reminders to integrate them with your tasks and habits for complete productivity management.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>DaisyDos needs access to your photo library to allow you to attach photos to your tasks and habits.</string>
 	<key>NSCameraUsageDescription</key>

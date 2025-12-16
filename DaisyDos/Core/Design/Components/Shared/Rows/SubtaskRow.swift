@@ -82,8 +82,9 @@ struct SubtaskRow<T: SubtaskDisplayable>: View {
 
             Spacer()
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 0)
         .padding(.horizontal, Spacing.medium)
+        .frame(height: 32)
         .contentShape(Rectangle())
     }
 }
