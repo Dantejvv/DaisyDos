@@ -29,6 +29,15 @@ class AppearanceManager {
         didSet {
             UserDefaults.standard.set(accentColor.rawValue, forKey: "accentColor")
             recentColorsManager.recordColor(accentColor, for: .accent)
+            // Clear custom color when preset is selected
+            clearCustomAccentColor()
+        }
+    }
+
+    /// User's custom accent color (takes precedence over accentColor if set)
+    var customAccentColor: Color? {
+        didSet {
+            saveCustomAccentColor(customAccentColor)
         }
     }
 
@@ -87,6 +96,9 @@ class AppearanceManager {
 
         let lowRaw = UserDefaults.standard.string(forKey: "lowPriorityColor") ?? "blue"
         self.lowPriorityColor = AccentColorOption(rawValue: lowRaw) ?? .blue
+
+        // Load custom accent color
+        self.customAccentColor = loadCustomAccentColor()
     }
 
     // MARK: - Types
@@ -186,9 +198,9 @@ class AppearanceManager {
         preferredColorScheme.swiftUIColorScheme
     }
 
-    /// Returns the current accent Color
+    /// Returns the current accent Color (custom color if set, otherwise preset)
     var currentAccentColor: Color {
-        accentColor.color
+        customAccentColor ?? accentColor.color
     }
 
     /// Returns the color for high priority
@@ -204,5 +216,60 @@ class AppearanceManager {
     /// Returns the color for low priority
     var lowPriorityDisplayColor: Color {
         lowPriorityColor.color
+    }
+
+    // MARK: - Custom Color Persistence
+
+    /// UserDefaults keys for custom color storage
+    private enum UserDefaultsKeys {
+        static let customAccentColorRed = "customAccentColorRed"
+        static let customAccentColorGreen = "customAccentColorGreen"
+        static let customAccentColorBlue = "customAccentColorBlue"
+        static let hasCustomAccentColor = "hasCustomAccentColor"
+    }
+
+    /// Saves a custom color to UserDefaults as RGB components
+    private func saveCustomAccentColor(_ color: Color?) {
+        guard let color = color else {
+            // Clear custom color
+            UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.hasCustomAccentColor)
+            UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.customAccentColorRed)
+            UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.customAccentColorGreen)
+            UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.customAccentColorBlue)
+            return
+        }
+
+        // Extract RGB components from UIColor
+        let uiColor = UIColor(color)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+
+        uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+
+        // Save components
+        UserDefaults.standard.set(true, forKey: UserDefaultsKeys.hasCustomAccentColor)
+        UserDefaults.standard.set(Double(red), forKey: UserDefaultsKeys.customAccentColorRed)
+        UserDefaults.standard.set(Double(green), forKey: UserDefaultsKeys.customAccentColorGreen)
+        UserDefaults.standard.set(Double(blue), forKey: UserDefaultsKeys.customAccentColorBlue)
+    }
+
+    /// Loads a custom color from UserDefaults RGB components
+    private func loadCustomAccentColor() -> Color? {
+        guard UserDefaults.standard.bool(forKey: UserDefaultsKeys.hasCustomAccentColor) else {
+            return nil
+        }
+
+        let red = UserDefaults.standard.double(forKey: UserDefaultsKeys.customAccentColorRed)
+        let green = UserDefaults.standard.double(forKey: UserDefaultsKeys.customAccentColorGreen)
+        let blue = UserDefaults.standard.double(forKey: UserDefaultsKeys.customAccentColorBlue)
+
+        return Color(red: red, green: green, blue: blue)
+    }
+
+    /// Clears the custom accent color
+    func clearCustomAccentColor() {
+        customAccentColor = nil
     }
 }

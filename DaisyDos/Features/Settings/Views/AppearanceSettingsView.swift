@@ -56,10 +56,19 @@ struct AppearanceSettingsView: View {
 
                             Spacer()
 
-                            // Current color preview
-                            Circle()
-                                .fill(appearanceManager.accentColor.color)
-                                .frame(width: 28, height: 28)
+                            // Current color preview with custom indicator
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Circle()
+                                    .fill(appearanceManager.currentAccentColor)
+                                    .frame(width: 28, height: 28)
+
+                                // Show "Custom" label if using custom color
+                                if appearanceManager.customAccentColor != nil {
+                                    Text("Custom")
+                                        .font(.caption2)
+                                        .foregroundColor(.daisyTextSecondary)
+                                }
+                            }
 
                             Image(systemName: "chevron.right")
                                 .foregroundColor(.daisyTextSecondary)
@@ -68,7 +77,9 @@ struct AppearanceSettingsView: View {
                     }
                     .buttonStyle(.plain)
                 } footer: {
-                    Text("Choose your preferred accent color for interactive elements.")
+                    Text(appearanceManager.customAccentColor != nil
+                        ? "Using a custom accent color. Tap to change or select a preset."
+                        : "Choose your preferred accent color for interactive elements.")
                         .foregroundColor(.daisyTextSecondary)
                 }
 

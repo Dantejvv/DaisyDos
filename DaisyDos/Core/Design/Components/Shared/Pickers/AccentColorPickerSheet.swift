@@ -14,8 +14,8 @@ struct AccentColorPickerSheet: View {
     @Environment(AppearanceManager.self) private var appearanceManager
 
     @State private var selectedColor: AppearanceManager.AccentColorOption
-    @State private var showingCustomColorPicker = false
-    @State private var customColor = Color.blue
+    @State private var customColor: Color
+    @State private var isUsingCustomColor: Bool
 
     // Preset color options (excluding .none for accent colors)
     private let presetColors: [AppearanceManager.AccentColorOption] = [
@@ -28,6 +28,15 @@ struct AccentColorPickerSheet: View {
         // Initialize with current accent color
         let manager = AppearanceManager()
         _selectedColor = State(initialValue: manager.accentColor)
+
+        // Initialize custom color state
+        if let customColor = manager.customAccentColor {
+            _customColor = State(initialValue: customColor)
+            _isUsingCustomColor = State(initialValue: true)
+        } else {
+            _customColor = State(initialValue: manager.accentColor.color)
+            _isUsingCustomColor = State(initialValue: false)
+        }
     }
 
     var body: some View {
@@ -61,7 +70,13 @@ struct AccentColorPickerSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        appearanceManager.accentColor = selectedColor
+                        if isUsingCustomColor {
+                            // Save custom color
+                            appearanceManager.customAccentColor = customColor
+                        } else {
+                            // Save preset color (this will auto-clear custom color via didSet)
+                            appearanceManager.accentColor = selectedColor
+                        }
                         dismiss()
                     }
                     .fontWeight(.semibold)
@@ -70,9 +85,6 @@ struct AccentColorPickerSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-        .sheet(isPresented: $showingCustomColorPicker) {
-            customColorPickerView
-        }
     }
 
     // MARK: - Preview Section
@@ -91,7 +103,7 @@ struct AccentColorPickerSheet: View {
                     Label("Sample Button", systemImage: "star.fill")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(selectedColor.color)
+                        .background(isUsingCustomColor ? customColor : selectedColor.color)
                         .foregroundColor(.white)
                         .cornerRadius(12)
                 }
@@ -102,7 +114,7 @@ struct AccentColorPickerSheet: View {
                     Text("Toolbar Icon:")
                         .foregroundColor(.daisyTextSecondary)
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(selectedColor.color)
+                        .foregroundColor(isUsingCustomColor ? customColor : selectedColor.color)
                         .font(.title2)
                     Spacer()
                 }
@@ -128,11 +140,12 @@ struct AccentColorPickerSheet: View {
                     ForEach(recentColors, id: \.rawValue) { color in
                         ColorSwatchView(
                             colorOption: color,
-                            isSelected: selectedColor == color,
+                            isSelected: !isUsingCustomColor && selectedColor == color,
                             showLabel: false,
                             size: .medium
                         ) {
                             selectedColor = color
+                            isUsingCustomColor = false
                         }
                     }
                 }
@@ -163,11 +176,12 @@ struct AccentColorPickerSheet: View {
                 ForEach(presetColors, id: \.rawValue) { color in
                     ColorSwatchView(
                         colorOption: color,
-                        isSelected: selectedColor == color,
+                        isSelected: !isUsingCustomColor && selectedColor == color,
                         showLabel: true,
                         size: .medium
                     ) {
                         selectedColor = color
+                        isUsingCustomColor = false
                     }
                 }
             }
@@ -184,64 +198,68 @@ struct AccentColorPickerSheet: View {
                 .foregroundColor(.daisyTextSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button(action: {
-                customColor = selectedColor.color
-                showingCustomColorPicker = true
-            }) {
-                HStack {
-                    Image(systemName: "paintpalette.fill")
-                        .foregroundColor(selectedColor.color)
-                    Text("Choose Custom Color")
-                        .foregroundColor(.daisyText)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(.daisyTextSecondary)
-                        .font(.caption)
+            VStack(spacing: 12) {
+                // Show custom color swatch if active
+                if isUsingCustomColor {
+                    HStack(spacing: 16) {
+                        // Custom color swatch
+                        Button(action: {
+                            // Tapping the swatch deselects it (reverts to last preset)
+                            isUsingCustomColor = false
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(customColor)
+                                    .frame(width: 44, height: 44)
+
+                                // Selection indicator
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.white)
+                                    .font(.body.weight(.bold))
+                                    .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Custom Color")
+                                .font(.body)
+                                .foregroundColor(.daisyText)
+                            Text("Tap to deselect")
+                                .font(.caption2)
+                                .foregroundColor(.daisyTextSecondary)
+                        }
+
+                        Spacer()
+                    }
+                    .padding()
+                    .background(Color.daisySurface)
+                    .cornerRadius(12)
+                }
+
+                // ColorPicker button (always visible)
+                ColorPicker(
+                    selection: $customColor,
+                    supportsOpacity: false,
+                    label: {
+                        HStack {
+                            Image(systemName: "paintpalette.fill")
+                                .foregroundColor(isUsingCustomColor ? customColor : selectedColor.color)
+                            Text(isUsingCustomColor ? "Edit Custom Color" : "Choose Custom Color")
+                                .foregroundColor(.daisyText)
+                            Spacer()
+                        }
+                    }
+                )
+                .onChange(of: customColor) { oldValue, newValue in
+                    // When user selects a color, mark as using custom
+                    isUsingCustomColor = true
                 }
                 .padding()
                 .background(Color.daisySurface)
                 .cornerRadius(12)
             }
-            .buttonStyle(.plain)
         }
-    }
-
-    // MARK: - Custom Color Picker View
-
-    @ViewBuilder
-    private var customColorPickerView: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
-                ColorPicker("Select Color", selection: $customColor, supportsOpacity: false)
-                    .padding()
-
-                Text("Note: Custom colors are converted to the nearest preset color.")
-                    .font(.caption)
-                    .foregroundColor(.daisyTextSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-
-                Spacer()
-            }
-            .navigationTitle("Custom Color")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        showingCustomColorPicker = false
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Choose") {
-                        // Convert custom color to nearest preset
-                        selectedColor = nearestPresetColor(to: customColor)
-                        showingCustomColorPicker = false
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
-        }
-        .presentationDetents([.medium])
     }
 
     // MARK: - Computed Properties
@@ -251,33 +269,6 @@ struct AccentColorPickerSheet: View {
             .filter { presetColors.contains($0) }
     }
 
-    // MARK: - Helper Methods
-
-    /// Finds the nearest preset color to a custom color
-    private func nearestPresetColor(to color: Color) -> AppearanceManager.AccentColorOption {
-        // Simple heuristic: find closest by comparing hue
-        // In a production app, you'd use proper color space conversion
-        let uiColor = UIColor(color)
-        var hue: CGFloat = 0
-        var saturation: CGFloat = 0
-        var brightness: CGFloat = 0
-        uiColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
-
-        // Map hue to closest color
-        switch hue {
-        case 0.0..<0.05: return .red
-        case 0.05..<0.1: return .orange
-        case 0.1..<0.2: return .yellow
-        case 0.2..<0.4: return .green
-        case 0.4..<0.5: return .mint
-        case 0.5..<0.55: return .cyan
-        case 0.55..<0.65: return .blue
-        case 0.65..<0.75: return .indigo
-        case 0.75..<0.85: return .purple
-        case 0.85..<0.95: return .pink
-        default: return .blue
-        }
-    }
 }
 
 #Preview {
