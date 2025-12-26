@@ -86,11 +86,13 @@ struct DaisyDosApp: App {
                     let taskManager = TaskManager(modelContext: sharedModelContainer.mainContext)
                     let habitMgr = HabitManager(modelContext: sharedModelContainer.mainContext)
                     let taskNotificationManager = TaskNotificationManager(modelContext: sharedModelContainer.mainContext)
+                    let habitNotificationManager = HabitNotificationManager(modelContext: sharedModelContainer.mainContext)
                     let delegate = NotificationDelegate(
                         navigationManager: navigationManager,
                         habitManager: habitMgr,
                         taskManager: taskManager,
-                        taskNotificationManager: taskNotificationManager
+                        taskNotificationManager: taskNotificationManager,
+                        habitNotificationManager: habitNotificationManager
                     )
                     notificationDelegate = delegate
                     UNUserNotificationCenter.current().delegate = delegate

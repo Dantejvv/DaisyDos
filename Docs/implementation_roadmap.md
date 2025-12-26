@@ -9,6 +9,12 @@ This document serves as the baseline roadmap for DaisyDos development. It docume
 
 This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow flexible planning and prioritization.
 
+## Document Navigation
+
+**This document:** Feature implementation status, progress tracking, and roadmap
+**For architecture and patterns:** [CLAUDE.md](../CLAUDE.md)
+**For testing guide:** [TestingGuide.md](../DaisyDosTests/Documentation/TestingGuide.md)
+
 ---
 
 ## Current Implementation Status
@@ -316,29 +322,6 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 
 ---
 
-### ✅ Testing Infrastructure (COMPLETE)
-
-**Testing Framework:**
-- [X] Swift Testing framework (@Test macro, #expect assertions)
-- [X] 199 tests with 100% pass rate (exceeds initial goal of 190)
-- [X] Struct-based test suites for isolation
-- [X] Fresh ModelContainer per test
-
-**Test Coverage:**
-- [X] RecurrenceRule: 35 tests (date calculations, leap years, boundaries)
-- [X] Habit Model: 20 tests (streak logic, completion tracking)
-- [X] Task Model: 24 tests (completion cascading, relationships)
-- [X] TaskManager: 20 tests (CRUD, filtering, tag management)
-- [X] HabitSkip: 15 tests (impact analysis)
-- [X] Infrastructure: 4 tests (container validation, isolation)
-
-**Testing Documentation:**
-- [X] Comprehensive TestingGuide.md
-- [X] Best practices documented
-- [X] Pattern examples provided
-
----
-
 ### ✅ CloudKit Integration (COMPLETE)
 
 **Container Configuration:**
@@ -407,7 +390,7 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 
 ## 🔄 Partially Implemented Features
 
-### UserNotifications Integration (90% Complete)
+### UserNotifications Integration (95% Complete)
 
 **What Exists:**
 - [X] HabitNotificationManager @Observable class (388 LOC)
@@ -429,27 +412,6 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 - [ ] Notification analytics and delivery history
 
 **Status:** Core notification system fully implemented and wired to UI. Only advanced edge cases remain.
-
----
-
-### Calendar Integration (10% Complete)
-
-**What Exists:**
-- [X] EventKit framework imported
-- [X] Permission request framework exists
-- [X] Info.plist calendar usage descriptions
-
-**What's Missing:**
-- [ ] CalendarManager @Observable class
-- [ ] Calendar event reading and display
-- [ ] Conflict detection with tasks
-- [ ] Calendar views (Day/Week/Month)
-- [ ] Smart scheduling suggestions
-- [ ] Calendar-based task reminders
-- [ ] Drag-and-drop rescheduling
-- [ ] Calendar export functionality
-
-**Status:** Foundation prepared, no functional implementation.
 
 ---
 
@@ -503,16 +465,6 @@ This section is intentionally left empty. Future features and development phases
 - **Workaround:** Manual Swift filtering used in LogbookManager
 - **Future:** Monitor SwiftData updates for native solution
 
-### Testing Gaps
-- [ ] Fix 2 disabled TaskManager tests (search/duplicate)
-- [ ] Add HabitManager test suite (~25-30 tests)
-- [ ] Add TagManager test suite (~15-20 tests)
-- [ ] Add TaskLogEntry test suite (~8-10 tests)
-- [ ] Integration tests for complex workflows
-- [ ] UI tests for critical flows
-- [ ] Performance benchmarks
-- [ ] Snapshot testing
-
 ### Performance Optimizations
 - [ ] Pagination for lists with 1000+ items
 - [ ] Virtual scrolling for large datasets
@@ -527,20 +479,17 @@ This section is intentionally left empty. Future features and development phases
 
 ---
 
-## Architecture Validation Checkpoints
+## Architecture Reference
 
-### ✅ Proven Patterns
-1. **@Observable + SwiftData**: Validated across all features
-2. **Component Reusability**: TaskRowView and HabitRowView proven across multiple contexts
-3. **Error Handling**: Three-tier system working end-to-end
-4. **Accessibility**: WCAG AA compliance validated
-5. **Performance**: Handles 100+ items efficiently
-6. **Testing**: Swift Testing framework proven with 190 tests
+This roadmap tracks WHAT is implemented. For architectural HOW (patterns, structure, navigation), see [CLAUDE.md](../CLAUDE.md).
 
-### 🔄 Patterns to Validate
-1. **Charts Integration**: Framework prepared but not yet implemented in production
-2. **Calendar Integration**: Permission system ready but not yet validated
-3. **Advanced Notifications**: Basic infrastructure exists but full system not tested
+**Proven Patterns:**
+All features follow established patterns documented in CLAUDE.md:
+- @Observable + SwiftData (validated across all features)
+- Component reusability (TaskRowView/HabitRowView patterns)
+- Three-tier error handling (working end-to-end)
+- Accessibility (WCAG AA compliance)
+- Testing (Swift Testing framework, fresh containers)
 
 ---
 
@@ -580,7 +529,7 @@ This section is intentionally left empty. Future features and development phases
 - `/DaisyDosTests/Documentation/TestingGuide.md` - Testing patterns and examples
 
 **Key Metrics:**
-- Tests: 199 passing (100% pass rate)
+- Tests: 199 passing, 100% pass rate (see TestingGuide.md for details)
 - Performance: <2s launch, <100ms UI response
 - Accessibility: WCAG AA compliant
 - Code: Builds cleanly (zero errors, minor warnings)
@@ -591,29 +540,3 @@ This section is intentionally left empty. Future features and development phases
 - Composition over inheritance
 - SwiftData @Query for reactive UI
 - Fresh container per test
-
-
-
-  ---
-  📊 COMPLETENESS MATRIX
-
-  | System              | CRUD | UI  | Services | Tests | Status |
-  |---------------------|------|-----|----------|-------|--------|
-  | Tasks               | ✅    | ✅   | ✅        | ✅     | 100%   |
-  | Task Subtasks       | ✅    | ✅   | ✅        | ✅     | 100%   |
-  | Task Attachments    | ✅    | ✅   | ✅        | ✅     | 100%   |
-  | Task Recurrence     | ✅    | ✅   | ✅        | ✅     | 100%   |
-  | Task Notifications  | ✅    | ✅   | ✅        | ❌     | 90%    |
-  | Habits              | ✅    | ✅   | ✅        | ✅     | 100%   |
-  | Habit Subtasks      | ✅    | ✅   | ✅        | ✅     | 100%   |
-  | Habit Attachments   | ✅    | ✅   | ✅        | ✅     | 100%   |
-  | Habit Notifications | ✅    | ✅   | ✅        | ❌     | 90%    |
-  | Tags                | ✅    | ✅   | ✅        | ✅     | 100%   |
-  | Logbook             | ✅    | ✅   | ✅        | ✅     | 100%   |
-  | Today View          | ✅    | ✅   | ✅        | ✅     | 100%   |
-  | Settings            | ✅    | ✅   | ✅        | ❌     | 100%   |
-  | Navigation          | ✅    | ✅   | ✅        | ❌     | 100%   |
-  | Import/Export       | ✅    | ✅   | ✅        | ❌     | 100%   |
-  | Calendar            | ❌    | ❌   | ❌        | ❌     | 0%     |
-  | Habit Analytics     | ✅    | ✅   | ✅        | ❌     | 100%   |
-  | CloudKit            | ✅    | ✅   | ✅        | ❌     | 100%   |

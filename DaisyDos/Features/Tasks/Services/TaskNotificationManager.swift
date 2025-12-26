@@ -182,6 +182,9 @@ class TaskNotificationManager: BaseNotificationManager {
 
         let identifier = "task_\(task.id.uuidString)"
 
+        // Determine notification group for thread identifier
+        let group = NotificationGroup.forTask(task)
+
         // Create notification content
         let content = UNMutableNotificationContent()
         content.title = "Task Reminder"
@@ -193,6 +196,13 @@ class TaskNotificationManager: BaseNotificationManager {
             "task_title": task.title
         ]
         content.badge = NSNumber(value: getPendingTasksCount())
+
+        // Set thread identifier for notification grouping
+        if let threadIdentifier = group.threadIdentifier {
+            content.threadIdentifier = threadIdentifier
+            content.summaryArgument = task.title
+            content.summaryArgumentCount = 1
+        }
 
         // Calculate alert time using task's specific alert interval
         let alertDate = dueDate.addingTimeInterval(alertInterval)
@@ -240,6 +250,9 @@ class TaskNotificationManager: BaseNotificationManager {
 
         let identifier = "task_overdue_\(task.id.uuidString)"
 
+        // Use overdue group for thread identifier
+        let group = NotificationGroup.overdueReminder
+
         let content = UNMutableNotificationContent()
         content.title = "Task Overdue ⚠️"
         content.body = task.title
@@ -251,6 +264,13 @@ class TaskNotificationManager: BaseNotificationManager {
             "is_overdue": true
         ]
         content.badge = NSNumber(value: getPendingTasksCount())
+
+        // Set thread identifier for notification grouping
+        if let threadIdentifier = group.threadIdentifier {
+            content.threadIdentifier = threadIdentifier
+            content.summaryArgument = task.title
+            content.summaryArgumentCount = 1
+        }
 
         let trigger = UNTimeIntervalNotificationTrigger(
             timeInterval: overdueDate.timeIntervalSinceNow,

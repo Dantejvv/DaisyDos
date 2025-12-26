@@ -21,6 +21,7 @@ struct SettingsView: View {
     @State private var showingAbout = false
     @State private var showingAppearanceSettings = false
     @State private var showingCloudKitStatus = false
+    @State private var showingPrivacyPolicy = false
     @State private var showingTagPicker = false
     @State private var showingImportExport = false
     @State private var showingTestDataGenerator = false
@@ -60,6 +61,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingCloudKitStatus) {
                 CloudKitSyncStatusView()
+            }
+            .sheet(isPresented: $showingPrivacyPolicy) {
+                PrivacyPolicyView()
             }
             .sheet(isPresented: $showingTagPicker) {
                 TagsView()
@@ -135,6 +139,21 @@ struct SettingsView: View {
                         .font(.caption)
                     Spacer()
                     Text(localOnlyModeManager.cloudKitStatusDescription)
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+            }
+
+            Button(action: { showingPrivacyPolicy = true }) {
+                HStack {
+                    Label {
+                        Text("Privacy Policy")
+                            .foregroundColor(.daisyText)
+                    } icon: {
+                        Image(systemName: "hand.raised")
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
                         .font(.caption)
                         .foregroundColor(.daisyTextSecondary)
                 }

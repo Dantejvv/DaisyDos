@@ -17,7 +17,7 @@ struct TaskModelTests {
         #expect(task.title == "Test Task")
         #expect(task.isCompleted == false)
         #expect(task.completedDate == nil)
-        #expect(task.subtasks.isEmpty)
+        #expect((task.subtasks ?? []).isEmpty)
         #expect(task.parentTask == nil)
         #expect(task.priority == .none)
         #expect(task.dueDate == nil)
@@ -54,8 +54,8 @@ struct TaskModelTests {
         let subtask1 = Task(title: "Subtask 1")
         let subtask2 = Task(title: "Subtask 2")
 
-        parent.subtasks.append(subtask1)
-        parent.subtasks.append(subtask2)
+        parent.subtasks = (parent.subtasks ?? []) + [subtask1]
+        parent.subtasks = (parent.subtasks ?? []) + [subtask2]
 
         context.insert(parent)
 
@@ -76,7 +76,7 @@ struct TaskModelTests {
         let parent = Task(title: "Parent")
         let subtask = Task(title: "Subtask")
 
-        parent.subtasks.append(subtask)
+        parent.subtasks = (parent.subtasks ?? []) + [subtask]
         context.insert(parent)
 
         // Complete parent
@@ -95,8 +95,8 @@ struct TaskModelTests {
         let subtask1 = Task(title: "Subtask 1")
         let subtask2 = Task(title: "Subtask 2")
 
-        parent.subtasks.append(subtask1)
-        parent.subtasks.append(subtask2)
+        parent.subtasks = (parent.subtasks ?? []) + [subtask1]
+        parent.subtasks = (parent.subtasks ?? []) + [subtask2]
 
         context.insert(parent)
 
@@ -122,7 +122,7 @@ struct TaskModelTests {
         let parent = Task(title: "Parent")
         let subtask1 = Task(title: "Subtask 1")
 
-        parent.subtasks.append(subtask1)
+        parent.subtasks = (parent.subtasks ?? []) + [subtask1]
 
         context.insert(parent)
 
@@ -193,13 +193,13 @@ struct TaskModelTests {
         let subtask2 = Task(title: "Subtask 2")
         let subtask3 = Task(title: "Subtask 3")
 
-        parent.subtasks.append(subtask1)
-        parent.subtasks.append(subtask2)
-        parent.subtasks.append(subtask3)
+        parent.subtasks = (parent.subtasks ?? []) + [subtask1]
+        parent.subtasks = (parent.subtasks ?? []) + [subtask2]
+        parent.subtasks = (parent.subtasks ?? []) + [subtask3]
 
         context.insert(parent)
 
-        #expect(parent.subtasks.count == 3)
+        #expect((parent.subtasks ?? []).count == 3)
         #expect(parent.subtaskCount == 3)
     }
 
@@ -211,7 +211,7 @@ struct TaskModelTests {
         let parent = Task(title: "Parent")
         let subtask = Task(title: "Subtask")
 
-        parent.subtasks.append(subtask)
+        parent.subtasks = (parent.subtasks ?? []) + [subtask]
         context.insert(parent)
 
         #expect(subtask.parentTask == parent)
@@ -228,9 +228,9 @@ struct TaskModelTests {
         let subtask2 = Task(title: "Subtask 2")
         let subtask3 = Task(title: "Subtask 3")
 
-        parent.subtasks.append(subtask1)
-        parent.subtasks.append(subtask2)
-        parent.subtasks.append(subtask3)
+        parent.subtasks = (parent.subtasks ?? []) + [subtask1]
+        parent.subtasks = (parent.subtasks ?? []) + [subtask2]
+        parent.subtasks = (parent.subtasks ?? []) + [subtask3]
 
         context.insert(parent)
 
@@ -267,14 +267,14 @@ struct TaskModelTests {
         _ = task.addTag(tag4)
         _ = task.addTag(tag5)
 
-        #expect(task.tags.count == 5)
+        #expect((task.tags ?? []).count == 5)
         #expect(!task.canAddTag())
 
         let tag6 = Tag(name: "Tag6", sfSymbolName: "cloud", colorName: "gray")
         let added = task.addTag(tag6)
 
         #expect(added == false)
-        #expect(task.tags.count == 5)
+        #expect((task.tags ?? []).count == 5)
     }
 
     @Test("Task prevents duplicate tags")
@@ -284,11 +284,11 @@ struct TaskModelTests {
 
         let added1 = task.addTag(tag)
         #expect(added1 == true)
-        #expect(task.tags.count == 1)
+        #expect((task.tags ?? []).count == 1)
 
         let added2 = task.addTag(tag)
         #expect(added2 == false)
-        #expect(task.tags.count == 1)
+        #expect((task.tags ?? []).count == 1)
     }
 
     // MARK: - Due Date Tests
@@ -352,9 +352,9 @@ struct TaskModelTests {
         let subtask2 = Task(title: "Subtask 2")
         let subtask3 = Task(title: "Subtask 3")
 
-        parent.subtasks.append(subtask1)
-        parent.subtasks.append(subtask2)
-        parent.subtasks.append(subtask3)
+        parent.subtasks = (parent.subtasks ?? []) + [subtask1]
+        parent.subtasks = (parent.subtasks ?? []) + [subtask2]
+        parent.subtasks = (parent.subtasks ?? []) + [subtask3]
 
         context.insert(parent)
 
@@ -381,7 +381,7 @@ struct TaskModelTests {
         #expect(!parent.hasSubtasks)
 
         let subtask = Task(title: "Subtask")
-        parent.subtasks.append(subtask)
+        parent.subtasks = (parent.subtasks ?? []) + [subtask]
 
         #expect(parent.hasSubtasks)
     }

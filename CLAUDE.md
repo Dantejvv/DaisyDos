@@ -6,6 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 DaisyDos is a unified iOS productivity application built with SwiftUI that integrates task management and habit tracking. The app targets iOS 17.0+ and uses SwiftData for data persistence with CloudKit integration prepared but disabled by default for privacy.
 
+## Document Navigation
+
+**This document:** Architecture guide and AI assistant quick reference
+**For detailed feature checklists:** [implementation_roadmap.md](Docs/implementation_roadmap.md)
+**For testing guide:** [TestingGuide.md](DaisyDosTests/Documentation/TestingGuide.md)
+
 ## Build Commands
 
 This is a standard Xcode project. Use Xcode to build and run:
@@ -18,7 +24,7 @@ This is a standard Xcode project. Use Xcode to build and run:
 ### Framework Compatibility Notes
 
 - **PhotoKit**: Not available on iOS Simulator. Code uses conditional import `#if canImport(PhotoKit)` to handle simulator builds
-- **EventKit/UserNotifications/CloudKit**: Work on both simulator and device
+- **UserNotifications/CloudKit**: Work on both simulator and device
 
 
 ## Architecture Overview
@@ -131,125 +137,35 @@ DaisyDosTests/                    # Swift Testing framework, 190 tests
 
 ## Current Codebase Status
 
-### Task Management System - FULLY IMPLEMENTED
-- Complete CRUD operations with validation
-- Priority system (None/Low/Medium/High), due dates, rich text descriptions
-- **Subtasks**: One-level hierarchy with order-based management
-- **Attachments**: Full PhotoKit integration, 50MB/file, 200MB/task limits
-- **Recurrence**: Daily/weekly/monthly/yearly patterns with dynamic calculations
-- **Notifications**: Alert reminders before due date, overdue reminders, snooze functionality
-- Advanced filtering, multi-select, bulk operations, search
-- UI: TaskRowView, TaskDetailView, TaskEditView, TasksView, TaskNotificationSettingsView (all production-ready)
+All core features are production-ready. See [implementation_roadmap.md](Docs/implementation_roadmap.md) for detailed checklists.
 
-### Habit Tracking System - FULLY IMPLEMENTED
-- Complete CRUD operations with completion tracking and streak management
-- **Subtasks**: Daily-reset subtask system with completion tracking
-- **Attachments**: Full system identical to tasks (50MB/file, 200MB/habit)
-- Skip functionality with optional reason, undo completion with 5-second timer
-- RecurrenceRule integration, priority system, character limits (50 title, rich text description)
-- **Notifications**: Basic infrastructure complete (HabitNotificationManager, permissions, settings UI)
-  - *Not yet complete*: Full smart scheduling for all edge cases
-- UI: HabitRowView, HabitDetailView, HabitEditView, HabitsView (all production-ready)
+**Completed Systems:**
+- ✅ **Task Management** - Full CRUD, subtasks, attachments, recurrence, notifications
+- ✅ **Habit Tracking** - Completion tracking, streaks, analytics, notifications
+- ✅ **Tag System** - 5-tag per item limit, 30-tag system limit
+- ✅ **Logbook** - Tiered retention (90/365 days)
+- ✅ **Today View** - Unified task/habit overview
+- ✅ **Settings** - Appearance, privacy, notifications, CloudKit
+- ✅ **CloudKit Integration** - User-controlled sync with offline queue
+- ✅ **Habit Analytics** - Charts, trends, period selection
 
-### Tag System - FULLY IMPLEMENTED
-- **5-tag limit per item**, 30-tag system limit
-- SF Symbol icons, system colors, full CRUD operations
-- Tag deletion with usage validation, undo support
-- UI: TagsView, TagEditView, TagSelectionView with swipe-to-delete
+**Partially Complete:**
+- 🔄 **Advanced Notifications** - Core complete (95%), edge cases remain
 
-### Logbook System - FULLY IMPLEMENTED
-- Tiered retention: 0-90 days (full Task), 91-365 days (TaskLogEntry), 365+ (deleted)
-- Automatic archival every 24 hours on app launch
-- Period filtering (7/30/90 days, This Year), search by title/description
-- UI: LogbookView, LogEntryRow with @Query real-time updates
-
-### Settings - FULLY IMPLEMENTED
-- **Appearance settings**: Theme (system/light/dark), accent color selection (7 colors)
-- **Privacy controls**: Local-only mode toggle with CloudKit sync status view
-- **Notification settings**: Habit and task reminder configuration
-- Data overview (counts), tag management, about view
-- Import/export functionality, reset/delete options
-- CloudKit sync status and controls (when enabled)
-
-### Today View - FULLY IMPLEMENTED
-- Unified task/habit list with TodayItem model and TodayViewModel
-- Multiple sort options: time, priority, type, title
-- Show/hide completed items toggle
-- Multi-select mode with bulk completion and deletion
-- Search functionality across tasks and habits
-- Swipe actions: edit, delete, duplicate, skip (habits), reschedule (tasks)
-- Quick add menu for tasks and habits
-- Detail navigation for both tasks and habits
-- User accent color support via AppearanceManager
-- UI: TodayView, UnifiedTodayRow (production-ready)
-
-### CloudKit Integration - FULLY IMPLEMENTED
-- **Container ID**: `iCloud.com.BKD7HH7ZDH.DaisyDos`
-- **User-Controlled Toggle**: Privacy-first approach - local-only mode by default
-- **Dynamic ModelConfiguration**: Switches between `.none` and `.automatic` based on user preference
-- **Conflict Resolution**: Last-write-wins strategy using `modifiedDate` timestamps
-- **Offline Queue**: Pending changes queued and synced when connection returns
-- **Network Monitoring**: Real-time connectivity tracking with Network framework
-- **CloudKit Schema**: Removed `#Unique` constraints for CloudKit compatibility
-- **Managers**: CloudKitSyncManager, OfflineQueueManager, NetworkMonitor
-- **Settings UI**: CloudKit toggle, CloudKitSyncStatusView with manual sync, iCloud account status
-- **Error Handling**: User-friendly CloudKit error messages with actionable guidance
-- **Note**: Requires app restart when changing sync mode
-
-### Habit Analytics - FULLY IMPLEMENTED
-- **Analytics Manager**: Centralized analytics with caching for performance
-- **Data Aggregation**: Weekly completions, mood trends, streak data, time-of-day distribution
-- **Chart Components**: Weekly completion chart, mood trends chart, streak dashboard, completion rate pie chart
-- **Period Selection**: 7D, 30D, 90D, Year views with dynamic data
-- **UI Integration**: Analytics section in HabitDetailView with period selector and summary stats
-- **Performance**: Cached queries, optimized for 90+ day periods
-
-### Incomplete Features (Future Development)
-- **Calendar Integration**: EventKit permissions removed for MVP (can add post-launch if requested)
-- **Task Analytics**: Habit analytics complete, task analytics deferred to post-MVP
-- **Advanced Notification Scheduling**: Basic scheduling complete (90%), edge cases remain (timezone changes, DST transitions, conflict resolution)
+For granular implementation details and checkboxes, see [implementation_roadmap.md](Docs/implementation_roadmap.md).
 
 
 ## Testing Infrastructure
 
 **Framework:** Swift Testing (modern @Test macro, #expect assertions)
+**Status:** 199 tests, 100% pass rate, ~0.35s execution time
 
-**Coverage:** 199 tests, 100% pass rate
-- Domain models (Task, Habit, RecurrenceRule, etc.)
-- Manager services (CRUD operations, business logic)
-- Infrastructure validation (container isolation, data integrity)
+**Quick Reference:**
+- Run tests: `Cmd+U` in Xcode
+- Struct-based test suites with fresh container per test
+- Pattern match Result types: `guard case .success(let value)`
 
-**Key Testing Patterns:**
-```swift
-@Suite("Feature Tests")
-struct FeatureTests {
-    @Test("Test description")
-    func testFeature() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-
-        let manager = FeatureManager(modelContext: context)
-        let result = manager.performOperation()
-
-        guard case .success(let value) = result else {
-            Issue.record("Operation failed")
-            return
-        }
-
-        #expect(value.isValid)
-    }
-}
-```
-
-**Best Practices:**
-- ✅ Struct-based test suites for isolation
-- ✅ Fresh ModelContainer per test (no shared state)
-- ✅ Pattern match Result types (`guard case .success`)
-- ✅ Use #expect assertions (not XCTAssert)
-- ❌ Don't store containers in properties
-- ❌ Don't share state between tests
-
-**Documentation:** See `DaisyDosTests/Documentation/TestingGuide.md`
+**Complete testing guide:** See [TestingGuide.md](DaisyDosTests/Documentation/TestingGuide.md)
 
 ---
 

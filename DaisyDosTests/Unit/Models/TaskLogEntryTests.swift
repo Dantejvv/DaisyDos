@@ -61,7 +61,7 @@ struct TaskLogEntryTests {
 
         let parent = Task(title: "Parent Task")
         let subtask = Task(title: "Subtask")
-        parent.subtasks.append(subtask)
+        parent.subtasks = [subtask]
 
         subtask.setCompleted(true)
         context.insert(parent)
@@ -84,9 +84,7 @@ struct TaskLogEntryTests {
         let subtask2 = Task(title: "Subtask 2")
         let subtask3 = Task(title: "Subtask 3")
 
-        parent.subtasks.append(subtask1)
-        parent.subtasks.append(subtask2)
-        parent.subtasks.append(subtask3)
+        parent.subtasks = [subtask1, subtask2, subtask3]
 
         subtask1.setCompleted(true)
         subtask2.setCompleted(true)

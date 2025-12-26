@@ -177,7 +177,7 @@ struct TaskManagerTests {
             return
         }
 
-        #expect(task.tags.contains(tag))
+        #expect((task.tags ?? []).contains(tag))
     }
 
     @Test("Remove tag from task")
@@ -195,7 +195,7 @@ struct TaskManagerTests {
         context.insert(tag)
 
         _ = manager.addTag(tag, to: task)
-        #expect(task.tags.contains(tag))
+        #expect((task.tags ?? []).contains(tag))
 
         let result = manager.removeTag(tag, from: task)
 
@@ -204,7 +204,7 @@ struct TaskManagerTests {
             return
         }
 
-        #expect(!task.tags.contains(tag))
+        #expect(!(task.tags ?? []).contains(tag))
     }
 
     @Test("Enforce 5-tag limit")
@@ -236,7 +236,7 @@ struct TaskManagerTests {
         _ = manager.addTag(tag4, to: task)
         _ = manager.addTag(tag5, to: task)
 
-        #expect(task.tags.count == 5)
+        #expect((task.tags ?? []).count == 5)
 
         // Try to add 6th tag
         let tag6 = Tag(name: "Tag6", sfSymbolName: "cloud", colorName: "gray")
@@ -251,7 +251,7 @@ struct TaskManagerTests {
             Issue.record("Should have failed to add 6th tag")
         }
 
-        #expect(task.tags.count == 5)
+        #expect((task.tags ?? []).count == 5)
     }
 
     // MARK: - Search and Filter Tests
@@ -383,7 +383,7 @@ struct TaskManagerTests {
         }
 
         #expect(subtask.title == "Subtask")
-        #expect(parent.subtasks.contains(subtask))
+        #expect((parent.subtasks ?? []).contains(subtask))
         #expect(subtask.parentTask == parent)
     }
 

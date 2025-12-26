@@ -101,7 +101,7 @@ struct HabitSkipTests {
 
         // Add 1 skip in past 30 days (no reason) = ~3% skip rate
         let skip = HabitSkip(habit: habit, skippedDate: today)
-        habit.skips.append(skip)
+        habit.skips = (habit.skips ?? []) + [skip]
 
         let impact = skip.skipImpact()
 
@@ -121,7 +121,7 @@ struct HabitSkipTests {
 
         // Add 1 skip with reason in past 30 days = ~3% skip rate
         let skip = HabitSkip(habit: habit, skippedDate: today, reason: "Sick")
-        habit.skips.append(skip)
+        habit.skips = (habit.skips ?? []) + [skip]
 
         let impact = skip.skipImpact()
 
@@ -143,10 +143,13 @@ struct HabitSkipTests {
         for daysAgo in 0..<6 {
             let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
             let skip = HabitSkip(habit: habit, skippedDate: date)
-            habit.skips.append(skip)
+            habit.skips = (habit.skips ?? []) + [skip]
         }
 
-        let lastSkip = habit.skips.last!
+        guard let lastSkip = habit.skips?.last else {
+            Issue.record("Expected last skip to exist")
+            return
+        }
         let impact = lastSkip.skipImpact()
 
         #expect(impact == .worrying)
@@ -167,10 +170,13 @@ struct HabitSkipTests {
         for daysAgo in 0..<6 {
             let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
             let skip = HabitSkip(habit: habit, skippedDate: date, reason: "Busy")
-            habit.skips.append(skip)
+            habit.skips = (habit.skips ?? []) + [skip]
         }
 
-        let lastSkip = habit.skips.last!
+        guard let lastSkip = habit.skips?.last else {
+            Issue.record("Expected last skip to exist")
+            return
+        }
         let impact = lastSkip.skipImpact()
 
         #expect(impact == .concerning)
@@ -191,10 +197,13 @@ struct HabitSkipTests {
         for daysAgo in 0..<10 {
             let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
             let skip = HabitSkip(habit: habit, skippedDate: date)
-            habit.skips.append(skip)
+            habit.skips = (habit.skips ?? []) + [skip]
         }
 
-        let lastSkip = habit.skips.last!
+        guard let lastSkip = habit.skips?.last else {
+            Issue.record("Expected last skip to exist")
+            return
+        }
         let impact = lastSkip.skipImpact()
 
         #expect(impact == .alarming)
@@ -215,10 +224,13 @@ struct HabitSkipTests {
         for daysAgo in 0..<10 {
             let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
             let skip = HabitSkip(habit: habit, skippedDate: date, reason: "Too much")
-            habit.skips.append(skip)
+            habit.skips = (habit.skips ?? []) + [skip]
         }
 
-        let lastSkip = habit.skips.last!
+        guard let lastSkip = habit.skips?.last else {
+            Issue.record("Expected last skip to exist")
+            return
+        }
         let impact = lastSkip.skipImpact()
 
         #expect(impact == .problematic)
@@ -257,10 +269,13 @@ struct HabitSkipTests {
         for daysAgo in 0..<15 {
             let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
             let skip = HabitSkip(habit: habit, skippedDate: date)
-            habit.skips.append(skip)
+            habit.skips = (habit.skips ?? []) + [skip]
         }
 
-        let lastSkip = habit.skips.last!
+        guard let lastSkip = habit.skips?.last else {
+            Issue.record("Expected last skip to exist")
+            return
+        }
         let frequency = lastSkip.skipFrequencyInPast30Days()
 
         #expect(frequency >= 0.3) // Should be high frequency

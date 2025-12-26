@@ -216,7 +216,7 @@ struct TagManagerTests {
         manager.forceDeleteTag(tag)
 
         #expect(manager.allTags.isEmpty)
-        #expect(task.tags.isEmpty)
+        #expect(task.tags?.isEmpty == true)
     }
 
     @Test("Delete multiple tags")

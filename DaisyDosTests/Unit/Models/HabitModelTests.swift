@@ -18,8 +18,8 @@ struct HabitModelTests {
         #expect(habit.currentStreak == 0)
         #expect(habit.longestStreak == 0)
         #expect(habit.lastCompletedDate == nil)
-        #expect(habit.completionEntries.isEmpty)
-        #expect(habit.skips.isEmpty)
+        #expect((habit.completionEntries ?? []).isEmpty)
+        #expect((habit.skips ?? []).isEmpty)
         #expect(habit.priority == .none)
     }
 
@@ -67,14 +67,14 @@ struct HabitModelTests {
 
         // Create one completion
         let completion = HabitCompletion(habit: habit, completedDate: today)
-        habit.completionEntries.append(completion)
+        habit.completionEntries = (habit.completionEntries ?? []) + [completion]
 
         // Manually trigger recalculation (simulating what would happen in real code)
         _ = habit.undoTodaysCompletion()
-        habit.completionEntries.append(completion)
+        habit.completionEntries = (habit.completionEntries ?? []) + [completion]
 
         // Check via undoTodaysCompletion flow which calls recalculateStreakFromHistory
-        #expect(habit.completionEntries.count == 1)
+        #expect((habit.completionEntries ?? []).count == 1)
     }
 
     @Test("Consecutive day completions build streak")
@@ -92,21 +92,21 @@ struct HabitModelTests {
         for daysAgo in 0..<5 {
             let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
             let completion = HabitCompletion(habit: habit, completedDate: date)
-            habit.completionEntries.append(completion)
+            habit.completionEntries = (habit.completionEntries ?? []) + [completion]
         }
 
         // Trigger streak recalculation by calling undoTodaysCompletion and re-adding
-        let todayCompletion = habit.completionEntries.first { calendar.isDate($0.completedDate, inSameDayAs: today) }
+        let todayCompletion = (habit.completionEntries ?? []).first { calendar.isDate($0.completedDate, inSameDayAs: today) }
         if let todayCompletion = todayCompletion {
-            habit.completionEntries.removeAll { $0.id == todayCompletion.id }
-            habit.completionEntries.append(todayCompletion)
+            habit.completionEntries = (habit.completionEntries ?? []).filter { $0.id != todayCompletion.id }
+            habit.completionEntries = (habit.completionEntries ?? []) + [todayCompletion]
         }
 
         // Verify we have 5 completion entries
-        #expect(habit.completionEntries.count == 5)
+        #expect((habit.completionEntries ?? []).count == 5)
 
         // Test the streak calculation by examining sorted completions
-        let sortedCompletions = habit.completionEntries.sorted { $0.completedDate > $1.completedDate }
+        let sortedCompletions = (habit.completionEntries ?? []).sorted { $0.completedDate > $1.completedDate }
         var calculatedStreak = 1
 
         for i in 1..<sortedCompletions.count {
@@ -144,11 +144,11 @@ struct HabitModelTests {
 
         for date in dates {
             let completion = HabitCompletion(habit: habit, completedDate: date)
-            habit.completionEntries.append(completion)
+            habit.completionEntries = (habit.completionEntries ?? []) + [completion]
         }
 
         // Calculate expected streak (only today and yesterday = 2)
-        let sortedCompletions = habit.completionEntries.sorted { $0.completedDate > $1.completedDate }
+        let sortedCompletions = (habit.completionEntries ?? []).sorted { $0.completedDate > $1.completedDate }
         var calculatedStreak = 1
 
         for i in 1..<sortedCompletions.count {
@@ -180,14 +180,14 @@ struct HabitModelTests {
         // Create multiple completions for same day
         for _ in 0..<3 {
             let completion = HabitCompletion(habit: habit, completedDate: today)
-            habit.completionEntries.append(completion)
+            habit.completionEntries = (habit.completionEntries ?? []) + [completion]
         }
 
         // All completions are for same day
-        #expect(habit.completionEntries.count == 3)
+        #expect((habit.completionEntries ?? []).count == 3)
 
         // But in streak calculation, they should effectively count as 1 day
-        let sortedCompletions = habit.completionEntries.sorted { $0.completedDate > $1.completedDate }
+        let sortedCompletions = (habit.completionEntries ?? []).sorted { $0.completedDate > $1.completedDate }
         let uniqueDays = Set(sortedCompletions.map { calendar.startOfDay(for: $0.completedDate) })
         #expect(uniqueDays.count == 1)
     }
@@ -212,11 +212,11 @@ struct HabitModelTests {
 
         for date in dates {
             let completion = HabitCompletion(habit: habit, completedDate: date)
-            habit.completionEntries.append(completion)
+            habit.completionEntries = (habit.completionEntries ?? []) + [completion]
         }
 
         // Verify they get sorted correctly for streak calculation
-        let sortedCompletions = habit.completionEntries.sorted { $0.completedDate > $1.completedDate }
+        let sortedCompletions = (habit.completionEntries ?? []).sorted { $0.completedDate > $1.completedDate }
         #expect(sortedCompletions[0].completedDate == today)
         #expect(sortedCompletions[1].completedDate == calendar.date(byAdding: .day, value: -1, to: today)!)
         #expect(sortedCompletions[2].completedDate == calendar.date(byAdding: .day, value: -2, to: today)!)
@@ -240,11 +240,11 @@ struct HabitModelTests {
 
         for date in [feb2, feb1, jan31] {
             let completion = HabitCompletion(habit: habit, completedDate: date)
-            habit.completionEntries.append(completion)
+            habit.completionEntries = (habit.completionEntries ?? []) + [completion]
         }
 
         // Calculate streak
-        let sortedCompletions = habit.completionEntries.sorted { $0.completedDate > $1.completedDate }
+        let sortedCompletions = (habit.completionEntries ?? []).sorted { $0.completedDate > $1.completedDate }
         var calculatedStreak = 1
 
         for i in 1..<sortedCompletions.count {
@@ -279,11 +279,11 @@ struct HabitModelTests {
 
         for date in [jan2, jan1, dec31] {
             let completion = HabitCompletion(habit: habit, completedDate: date)
-            habit.completionEntries.append(completion)
+            habit.completionEntries = (habit.completionEntries ?? []) + [completion]
         }
 
         // Calculate streak
-        let sortedCompletions = habit.completionEntries.sorted { $0.completedDate > $1.completedDate }
+        let sortedCompletions = (habit.completionEntries ?? []).sorted { $0.completedDate > $1.completedDate }
         var calculatedStreak = 1
 
         for i in 1..<sortedCompletions.count {
@@ -335,7 +335,7 @@ struct HabitModelTests {
         habit.lastCompletedDate = Calendar.current.startOfDay(for: Date())
         let today = Calendar.current.startOfDay(for: Date())
         let completion = HabitCompletion(habit: habit, completedDate: today)
-        habit.completionEntries.append(completion)
+        habit.completionEntries = (habit.completionEntries ?? []) + [completion]
 
         // Now cannot mark complete again
         #expect(!habit.canMarkCompleted())
@@ -354,11 +354,11 @@ struct HabitModelTests {
 
         // Create today's completion
         let completion = HabitCompletion(habit: habit, completedDate: today)
-        habit.completionEntries.append(completion)
+        habit.completionEntries = (habit.completionEntries ?? []) + [completion]
         habit.lastCompletedDate = today
 
         // Verify completion exists
-        #expect(habit.completionEntries.count == 1)
+        #expect((habit.completionEntries ?? []).count == 1)
         #expect(habit.isCompletedToday)
 
         // Undo today's completion
@@ -366,7 +366,7 @@ struct HabitModelTests {
 
         // Verify undo succeeded
         #expect(result == true)
-        #expect(habit.completionEntries.isEmpty)
+        #expect((habit.completionEntries ?? []).isEmpty)
     }
 
     @Test("undoTodaysCompletion recalculates streak")
@@ -384,18 +384,18 @@ struct HabitModelTests {
         // Create 2-day streak
         let completion1 = HabitCompletion(habit: habit, completedDate: yesterday)
         let completion2 = HabitCompletion(habit: habit, completedDate: today)
-        habit.completionEntries.append(completion1)
-        habit.completionEntries.append(completion2)
+        habit.completionEntries = (habit.completionEntries ?? []) + [completion1]
+        habit.completionEntries = (habit.completionEntries ?? []) + [completion2]
         habit.lastCompletedDate = today
 
         // Verify 2 completions
-        #expect(habit.completionEntries.count == 2)
+        #expect((habit.completionEntries ?? []).count == 2)
 
         // Undo today's completion
         _ = habit.undoTodaysCompletion()
 
         // Verify only yesterday's completion remains
-        #expect(habit.completionEntries.count == 1)
+        #expect((habit.completionEntries ?? []).count == 1)
         #expect(habit.lastCompletedDate == yesterday)
     }
 
@@ -430,7 +430,7 @@ struct HabitModelTests {
         _ = habit.addTag(tag4)
         _ = habit.addTag(tag5)
 
-        #expect(habit.tags.count == 5)
+        #expect((habit.tags ?? []).count == 5)
         #expect(!habit.canAddTag())
 
         // Try to add 6th tag
@@ -438,7 +438,7 @@ struct HabitModelTests {
         let added = habit.addTag(tag6)
 
         #expect(added == false)
-        #expect(habit.tags.count == 5)
+        #expect((habit.tags ?? []).count == 5)
     }
 
     @Test("Habit prevents duplicate tags")
@@ -449,12 +449,12 @@ struct HabitModelTests {
         // Add tag first time
         let added1 = habit.addTag(tag)
         #expect(added1 == true)
-        #expect(habit.tags.count == 1)
+        #expect((habit.tags ?? []).count == 1)
 
         // Try to add same tag again
         let added2 = habit.addTag(tag)
         #expect(added2 == false)
-        #expect(habit.tags.count == 1)
+        #expect((habit.tags ?? []).count == 1)
     }
 
     @Test("Habit removes tag correctly")
@@ -463,10 +463,10 @@ struct HabitModelTests {
         let tag = Tag(name: "Tag1", sfSymbolName: "star", colorName: "blue")
 
         _ = habit.addTag(tag)
-        #expect(habit.tags.count == 1)
+        #expect((habit.tags ?? []).count == 1)
 
         habit.removeTag(tag)
-        #expect(habit.tags.isEmpty)
+        #expect((habit.tags ?? []).isEmpty)
     }
 
     // MARK: - Skip Functionality Tests
@@ -503,7 +503,7 @@ struct HabitModelTests {
         // Add skip for today
         let today = Calendar.current.startOfDay(for: Date())
         let skip = HabitSkip(habit: habit, skippedDate: today)
-        habit.skips.append(skip)
+        habit.skips = (habit.skips ?? []) + [skip]
 
         // Now should be skipped today
         #expect(habit.isSkippedToday)

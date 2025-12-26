@@ -19,6 +19,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     private let habitManager: HabitManager
     private let taskManager: TaskManager
     private let taskNotificationManager: TaskNotificationManager
+    private let habitNotificationManager: HabitNotificationManager
 
     // MARK: - Initialization
 
@@ -26,12 +27,14 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         navigationManager: NavigationManager,
         habitManager: HabitManager,
         taskManager: TaskManager,
-        taskNotificationManager: TaskNotificationManager
+        taskNotificationManager: TaskNotificationManager,
+        habitNotificationManager: HabitNotificationManager
     ) {
         self.navigationManager = navigationManager
         self.habitManager = habitManager
         self.taskManager = taskManager
         self.taskNotificationManager = taskNotificationManager
+        self.habitNotificationManager = habitNotificationManager
         super.init()
     }
 

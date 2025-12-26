@@ -295,8 +295,8 @@ struct HabitManagerTests {
             return
         }
 
-        #expect(habit.tags.count == 1)
-        #expect(habit.tags.first?.id == tag.id)
+        #expect((habit.tags ?? []).count == 1)
+        #expect((habit.tags ?? []).first?.id == tag.id)
     }
 
     @Test("Remove tag from habit")
@@ -314,7 +314,7 @@ struct HabitManagerTests {
         context.insert(tag)
 
         _ = manager.addTag(tag, to: habit)
-        #expect(habit.tags.count == 1)
+        #expect((habit.tags ?? []).count == 1)
 
         let result = manager.removeTag(tag, from: habit)
 
@@ -323,7 +323,7 @@ struct HabitManagerTests {
             return
         }
 
-        #expect(habit.tags.isEmpty)
+        #expect((habit.tags ?? []).isEmpty)
     }
 
     @Test("Habit enforces 5-tag limit")
@@ -364,7 +364,7 @@ struct HabitManagerTests {
             return
         }
 
-        #expect(habit.tags.count == 5)
+        #expect((habit.tags ?? []).count == 5)
     }
 
     // MARK: - Search and Filter Tests

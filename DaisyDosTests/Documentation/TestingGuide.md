@@ -1,8 +1,33 @@
 # DaisyDos Testing Guide
 
-**Last Updated:** October 25, 2025
+**Last Updated:** December 22, 2025
 **Testing Framework:** Swift Testing (modern @Test macro)
 **SwiftData Version:** iOS 17.0+
+
+## Document Navigation
+
+**This document:** Comprehensive testing guide and best practices
+**For architecture and patterns:** [CLAUDE.md](../../CLAUDE.md)
+**For feature implementation status:** [implementation_roadmap.md](../../Docs/implementation_roadmap.md)
+
+---
+
+## Table of Contents
+
+1. [Test Metrics](#test-metrics)
+2. [Overview](#overview)
+3. [Testing Philosophy](#testing-philosophy)
+4. [Quick Start](#quick-start)
+5. [Writing Tests](#writing-tests)
+6. [TestHelpers Usage](#testhelpers-usage)
+7. [Common Patterns](#common-patterns)
+8. [Advanced Patterns](#advanced-patterns)
+9. [Test Organization](#test-organization)
+10. [Troubleshooting](#troubleshooting)
+11. [Best Practices](#best-practices)
+12. [Examples from Codebase](#examples-from-codebase)
+13. [Key Learnings](#key-learnings)
+14. [Resources](#resources)
 
 ---
 
@@ -12,8 +37,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 190 |
-| Passing Tests | 190 |
+| Total Tests | 199 |
+| Passing Tests | 199 |
 | Pass Rate | 100% |
 | Execution Time | ~0.35 seconds |
 | Average per Test | ~1.8ms |
@@ -67,6 +92,45 @@ This guide covers how to write, run, and organize tests for the DaisyDos applica
 - Out-of-order completion entries
 - Tag limit enforcement (3 per item, 30 system-wide)
 - Skip impact calculation (6 severity levels)
+
+---
+
+## Testing Philosophy
+
+### What We Test
+
+- ✅ **Domain model logic** - Completion cascades, streak calculation, state transitions
+- ✅ **Manager services** - CRUD operations, validation, business rules, error handling
+- ✅ **Complex calculations** - RecurrenceRule date math, skip impact analysis
+- ✅ **Data integrity** - Relationships, cascading deletes, persistence
+
+### What We DON'T Test
+
+- ❌ **SwiftUI view rendering** - Too brittle, UI tests are manual
+- ❌ **Simple getters/setters** - Trivial logic, no value
+- ❌ **SwiftData framework behavior** - Trust Apple's framework
+- ❌ **Third-party library internals** - Test our integration points only
+
+### When to Write Tests
+
+- **Before merge:** All new business logic must have tests
+- **For bug fixes:** Add regression test that fails, then fix
+- **For refactoring:** Tests prove behavior unchanged
+- **Skip for:** UI-only changes, trivial updates, prototype code
+
+### Test Coverage Goals
+
+- **Domain models:** 100% (critical business logic)
+- **Managers/Services:** 100% (orchestration and validation)
+- **UI layer:** 0% automated (manual testing only)
+- **Infrastructure:** Validation tests only
+
+### Testing Principles
+
+1. **Test behavior, not implementation** - Focus on "what" not "how"
+2. **One concept per test** - Single assertion path per test
+3. **Obvious over clever** - Clear > concise
+4. **Fast over comprehensive** - 199 tests in 0.35s is the goal
 
 ---
 
@@ -403,11 +467,38 @@ DaisyDosTests/
 
 ## Examples from Codebase
 
-See `InfrastructureTests.swift` for working examples of:
+### Exemplary Test Files
+
+**InfrastructureTests.swift** - Foundation and isolation patterns
 - Container creation and validation
 - Context creation
-- Test isolation verification
+- Test isolation verification (proves each test gets fresh container)
 - Basic CRUD operations
+
+**RecurrenceRuleTests.swift** - Complex business logic (35 tests)
+- Comprehensive date calculation edge cases
+- Demonstrates parameterized testing with `arguments:` parameter
+- Month boundary handling (Jan 31 → Feb 28/29)
+- Leap year transitions (Feb 29 → Feb 28)
+- Year boundaries (Dec 31 → Jan 1)
+
+**TaskManagerTests.swift** - Service layer patterns (22 tests)
+- CRUD operations with validation
+- Result type pattern matching (`guard case .success`)
+- Duplicate detection logic
+- Database persistence verification
+
+**HabitManagerTests.swift** - Complete feature coverage (26 tests)
+- Completion tracking and streak calculation
+- Tag relationship management
+- Search and filtering operations
+- Error handling patterns
+
+**TaskModelTests.swift** - Domain model testing (24 tests)
+- Completion cascading (parent → subtasks)
+- Bidirectional relationship testing
+- State transition verification
+- Computed property validation
 
 ---
 
@@ -444,11 +535,22 @@ if result.isSuccess { }  // Property doesn't exist
 ```
 
 ### 4. Edge Cases Find Real Bugs
-Tests caught potential production bugs:
-- Feb 29 → Feb 28 transition (not Mar 1!)
-- Subtask completion inheritance
-- Multiple completions same day handling
-- Out-of-order entry sorting
+Tests prevented production bugs by catching edge cases:
+
+**Date Boundary Issues** (RecurrenceRuleTests.swift):
+- Feb 29 → Feb 28 transition (not Mar 1!) when moving from leap to non-leap year
+- Month boundaries: Jan 31 → Feb 28/29 handling
+- Year boundaries: Dec 31 → Jan 1 transitions
+
+**State Management Issues** (TaskModelTests.swift):
+- Subtask completion cascading (parent completion affects all children)
+- Bidirectional relationship integrity (parent ↔ subtask references)
+- Completion date inheritance across task hierarchy
+
+**Data Integrity Issues** (HabitModelTests.swift):
+- Multiple completions same day (don't extend streak multiple times)
+- Out-of-order completion entries (must sort before streak calculation)
+- Skip impact on active streaks (6 severity levels affect differently)
 
 ---
 

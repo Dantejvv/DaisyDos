@@ -167,6 +167,9 @@ class HabitNotificationManager: BaseNotificationManager {
         // Remove existing notification
         removeHabitNotification(for: habit)
 
+        // Determine notification group for thread identifier
+        let group = NotificationGroup.forHabit(habit)
+
         // Create new notification
         let content = UNMutableNotificationContent()
         content.title = "Time for your habit!"
@@ -180,6 +183,13 @@ class HabitNotificationManager: BaseNotificationManager {
 
         // Add badge and sound
         content.badge = NSNumber(value: getPendingHabitsCount())
+
+        // Set thread identifier for notification grouping
+        if let threadIdentifier = group.threadIdentifier {
+            content.threadIdentifier = threadIdentifier
+            content.summaryArgument = habit.title
+            content.summaryArgumentCount = 1
+        }
 
         // Schedule for recurring notification based on habit's recurrence rule
         if let recurrenceRule = habit.recurrenceRule {
