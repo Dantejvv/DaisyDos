@@ -412,11 +412,6 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
   - [X] Summary text generation for grouped notifications (4+ items)
   - [X] Comprehensive test coverage (NotificationGroupTests with 19 tests)
 
-**Future Enhancements (Not Blocking MVP):**
-- [ ] Smart scheduling for complex timezone scenarios (DST transitions, user timezone changes)
-- [ ] Notification delivery optimization for battery/network
-- [ ] Notification analytics and delivery history
-
 **Status:** Core notification system fully implemented, tested (218 tests passing), and production-ready.
 
 ---

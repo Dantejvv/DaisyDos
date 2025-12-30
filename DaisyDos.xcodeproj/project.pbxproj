@@ -10,6 +10,7 @@
 		FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */; };
 		FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537EC2E830555007B0F25 /* CLAUDE.md */; };
 		FE609CD02EFA8023004A2CFF /* privacy_policy.md in Resources */ = {isa = PBXBuildFile; fileRef = FE609CCF2EFA8023004A2CFF /* privacy_policy.md */; };
+		FE609CD22F036DA9004A2CFF /* support.md in Resources */ = {isa = PBXBuildFile; fileRef = FE609CD12F036DA9004A2CFF /* support.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -28,6 +29,7 @@
 		FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = implementation_roadmap.md; sourceTree = "<group>"; };
 		FE3537EC2E830555007B0F25 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 		FE609CCF2EFA8023004A2CFF /* privacy_policy.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = privacy_policy.md; sourceTree = "<group>"; };
+		FE609CD12F036DA9004A2CFF /* support.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = support.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -103,6 +105,7 @@
 		FE3537C62E8302B1007B0F25 /* Docs */ = {
 			isa = PBXGroup;
 			children = (
+				FE609CD12F036DA9004A2CFF /* support.md */,
 				FE609CCF2EFA8023004A2CFF /* privacy_policy.md */,
 				FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */,
 			);
@@ -202,6 +205,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE609CD22F036DA9004A2CFF /* support.md in Resources */,
 				FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */,
 				FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */,
 				FE609CD02EFA8023004A2CFF /* privacy_policy.md in Resources */,
