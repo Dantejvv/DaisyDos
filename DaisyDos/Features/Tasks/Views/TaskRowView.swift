@@ -15,6 +15,7 @@ struct TaskRowView: View {
     // MARK: - Properties
 
     @Environment(AppearanceManager.self) private var appearanceManager
+    @Environment(\.colorScheme) private var colorScheme
 
     let task: Task
     let onToggleCompletion: () -> Void
@@ -153,26 +154,29 @@ struct TaskRowView: View {
 
     // MARK: Priority Background
     private var priorityBackgroundColor: Color {
+        // Use higher opacity in dark mode for better visibility
+        let baseOpacity = colorScheme == .dark ? 0.15 : 0.08
+
         // Completed tasks: all use gray
         if task.isCompleted {
-            return Color.daisyTextSecondary.opacity(0.08)
+            return Color.daisyTextSecondary.opacity(baseOpacity)
         }
 
         // If priority backgrounds are disabled, use default gray
         guard appearanceManager.showPriorityBackgrounds else {
-            return Color.daisyTextSecondary.opacity(0.08)
+            return Color.daisyTextSecondary.opacity(baseOpacity)
         }
 
         // Uncompleted tasks: priority-based colors
         switch task.priority {
         case .none:
-            return Color.daisyTextSecondary.opacity(0.08)
+            return Color.daisyTextSecondary.opacity(baseOpacity)
         case .low:
-            return appearanceManager.lowPriorityDisplayColor.opacity(0.08)
+            return appearanceManager.lowPriorityDisplayColor.opacity(baseOpacity)
         case .medium:
-            return appearanceManager.mediumPriorityDisplayColor.opacity(0.08)
+            return appearanceManager.mediumPriorityDisplayColor.opacity(baseOpacity)
         case .high:
-            return appearanceManager.highPriorityDisplayColor.opacity(0.08)
+            return appearanceManager.highPriorityDisplayColor.opacity(baseOpacity)
         }
     }
 

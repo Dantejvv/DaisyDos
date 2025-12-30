@@ -264,7 +264,7 @@ struct PrivacyPolicyView: View {
                 Link("daisydosprivacy@gmail.com", destination: URL(string: "mailto:daisydosprivacy@gmail.com")!)
                     .font(.subheadline)
 
-                Link(destination: URL(string: "https://dantejvv.github.io/")!) {
+                Link(destination: URL(string: "https://dantejvv.github.io/privacy")!) {
                     HStack {
                         Text("View Full Policy Online")
                         Image(systemName: "arrow.up.right.square")

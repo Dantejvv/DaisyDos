@@ -15,6 +15,7 @@ struct HabitRowView: View {
     // MARK: - Properties
 
     @Environment(AppearanceManager.self) private var appearanceManager
+    @Environment(\.colorScheme) private var colorScheme
 
     let habit: Habit
     let onMarkComplete: () -> Void
@@ -187,31 +188,34 @@ struct HabitRowView: View {
     // MARK: Background Color
 
     private var habitBackgroundColor: Color {
+        // Use higher opacity in dark mode for better visibility
+        let baseOpacity = colorScheme == .dark ? 0.15 : 0.08
+
         // Completed today: green background
         if habit.isCompletedToday {
-            return Color.green.opacity(0.08)
+            return Color.green.opacity(baseOpacity)
         }
 
         // Skipped today: orange background
         if habit.isSkippedToday {
-            return Color.orange.opacity(0.08)
+            return Color.orange.opacity(baseOpacity)
         }
 
         // If priority backgrounds are disabled, use default gray
         guard appearanceManager.showPriorityBackgrounds else {
-            return Color.daisyTextSecondary.opacity(0.08)
+            return Color.daisyTextSecondary.opacity(baseOpacity)
         }
 
         // Active habits: priority-based colors
         switch habit.priority {
         case .none:
-            return Color.daisyTextSecondary.opacity(0.08)
+            return Color.daisyTextSecondary.opacity(baseOpacity)
         case .low:
-            return appearanceManager.lowPriorityDisplayColor.opacity(0.08)
+            return appearanceManager.lowPriorityDisplayColor.opacity(baseOpacity)
         case .medium:
-            return appearanceManager.mediumPriorityDisplayColor.opacity(0.08)
+            return appearanceManager.mediumPriorityDisplayColor.opacity(baseOpacity)
         case .high:
-            return appearanceManager.highPriorityDisplayColor.opacity(0.08)
+            return appearanceManager.highPriorityDisplayColor.opacity(baseOpacity)
         }
     }
 

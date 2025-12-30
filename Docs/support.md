@@ -39,4 +39,4 @@ No. Deleted items are removed permanently. Consider exporting your data regularl
 
 ## Privacy
 
-DaisyDos is privacy-first. We don't collect your data, show ads, or track you. [Read our Privacy Policy](privacy_policy.md)
+DaisyDos is privacy-first. We don't collect your data, show ads, or track you. [Read our Privacy Policy](https://dantejvv.github.io/privacy)

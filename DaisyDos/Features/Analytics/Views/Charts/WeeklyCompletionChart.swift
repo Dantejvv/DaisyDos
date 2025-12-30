@@ -21,7 +21,7 @@ struct WeeklyCompletionChart: View {
                         .font(.headline)
                         .foregroundColor(.daisyText)
 
-                    Text("Daily completions over \(period.displayName.lowercased())")
+                    Text(chartSubtitle)
                         .font(.caption)
                         .foregroundColor(.daisyTextSecondary)
                 }
@@ -57,16 +57,16 @@ struct WeeklyCompletionChart: View {
     }
 
     private var chart: some View {
-        Chart(data) { dataPoint in
+        Chart(aggregatedData) { dataPoint in
             BarMark(
-                x: .value("Date", dataPoint.date, unit: .day),
+                x: .value("Date", dataPoint.date, unit: chartUnit),
                 y: .value("Completions", dataPoint.count)
             )
             .foregroundStyle(Color.accentColor.gradient)
             .cornerRadius(DesignSystem.cornerRadius * 0.5)
         }
         .chartXAxis {
-            AxisMarks(values: .stride(by: .day, count: xAxisStride)) { value in
+            AxisMarks(values: xAxisValues) { value in
                 if let date = value.as(Date.self) {
                     AxisValueLabel {
                         Text(formatAxisDate(date))
@@ -119,12 +119,66 @@ struct WeeklyCompletionChart: View {
         data.reduce(0) { $0 + $1.count }
     }
 
-    private var xAxisStride: Int {
+    private var chartSubtitle: String {
         switch period {
-        case .sevenDays: return 1
-        case .thirtyDays: return 5
-        case .ninetyDays: return 15
-        case .year: return 30
+        case .sevenDays, .thirtyDays, .ninetyDays:
+            return "Daily completions over \(period.displayName.lowercased())"
+        case .year:
+            return "Weekly completions this year"
+        }
+    }
+
+    /// The calendar unit for bar width based on period
+    private var chartUnit: Calendar.Component {
+        switch period {
+        case .sevenDays, .thirtyDays, .ninetyDays:
+            return .day
+        case .year:
+            return .weekOfYear
+        }
+    }
+
+    /// Aggregate data based on the period (weekly for year, daily otherwise)
+    private var aggregatedData: [CompletionDataPoint] {
+        switch period {
+        case .sevenDays, .thirtyDays, .ninetyDays:
+            return data
+        case .year:
+            return aggregateByWeek(data)
+        }
+    }
+
+    /// Aggregate daily data points into weekly totals
+    private func aggregateByWeek(_ dailyData: [CompletionDataPoint]) -> [CompletionDataPoint] {
+        let calendar = Calendar.current
+        var weeklyTotals: [Date: Int] = [:]
+
+        for point in dailyData {
+            // Get the start of the week for this date
+            let weekStart = calendar.dateInterval(of: .weekOfYear, for: point.date)?.start ?? point.date
+            weeklyTotals[weekStart, default: 0] += point.count
+        }
+
+        return weeklyTotals
+            .sorted { $0.key < $1.key }
+            .map { CompletionDataPoint(date: $0.key, count: $0.value) }
+    }
+
+    /// X-axis values configuration based on period
+    private var xAxisValues: AxisMarkValues {
+        switch period {
+        case .sevenDays:
+            // Show all 7 days
+            return .stride(by: .day, count: 1)
+        case .thirtyDays:
+            // Show ~6 labels evenly distributed
+            return .stride(by: .day, count: 5)
+        case .ninetyDays:
+            // Show ~6 labels (every 2 weeks)
+            return .stride(by: .day, count: 14)
+        case .year:
+            // Show monthly labels for weekly aggregated data
+            return .stride(by: .month, count: 1)
         }
     }
 
@@ -134,9 +188,11 @@ struct WeeklyCompletionChart: View {
         case .sevenDays:
             formatter.dateFormat = "EEE"
         case .thirtyDays:
+            formatter.dateFormat = "d"
+        case .ninetyDays:
             formatter.dateFormat = "M/d"
-        case .ninetyDays, .year:
-            formatter.dateFormat = "MMM d"
+        case .year:
+            formatter.dateFormat = "MMM"
         }
         return formatter.string(from: date)
     }
