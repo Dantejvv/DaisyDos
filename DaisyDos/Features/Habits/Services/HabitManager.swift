@@ -459,10 +459,56 @@ class HabitManager: EntityManagerProtocol {
                 throw DaisyDosError.validationFailed("title")
             }
 
-            let subtask = habit.createSubtask(title: title.trimmingCharacters(in: .whitespacesAndNewlines))
+            // Create subtask object
+            let subtask = HabitSubtask(title: title.trimmingCharacters(in: .whitespacesAndNewlines))
+
+            // Inherit parent's creation date
+            subtask.createdDate = habit.createdDate
+
+            // Insert into context FIRST so SwiftData can track the relationship
             modelContext.insert(subtask)
+
+            // THEN establish the relationship (this is now tracked by SwiftData)
+            _ = habit.addSubtask(subtask)
+
             try modelContext.save()
             return subtask
+        }
+    }
+
+    /// Batch create multiple habit subtasks - follows SwiftData best practice of inserting all objects before manipulating relationships
+    func createHabitSubtasks(
+        for habit: Habit,
+        titles: [(title: String, order: Int)]
+    ) -> Result<[HabitSubtask], AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "create habit subtasks",
+            entityType: "subtask"
+        ) {
+            var createdSubtasks: [HabitSubtask] = []
+
+            // Step 1: Create and insert ALL subtask objects FIRST
+            for (title, order) in titles {
+                let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmedTitle.isEmpty else { continue }
+
+                let subtask = HabitSubtask(title: trimmedTitle)
+                subtask.createdDate = habit.createdDate
+                subtask.subtaskOrder = order
+
+                modelContext.insert(subtask)
+                createdSubtasks.append(subtask)
+            }
+
+            // Step 2: THEN establish relationships after all are inserted
+            for subtask in createdSubtasks {
+                _ = habit.addSubtask(subtask)
+            }
+
+            // Step 3: Save once at the end
+            try modelContext.save()
+
+            return createdSubtasks
         }
     }
 

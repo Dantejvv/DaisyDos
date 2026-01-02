@@ -259,6 +259,12 @@ private struct TagPreview: View {
         case "pink": return Color(.systemPink)
         case "brown": return Color(.systemBrown)
         case "gray": return Color(.systemGray)
+        case "teal": return Color(.systemTeal)
+        case "indigo": return Color(.systemIndigo)
+        case "cyan": return Color(.systemCyan)
+        case "mint": return Color(.systemMint)
+        case "lightgray": return Color(.systemGray3)
+        case "black": return Color.black
         default: return Color(.systemBlue)
         }
     }

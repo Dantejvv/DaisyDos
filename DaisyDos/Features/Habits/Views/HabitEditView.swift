@@ -223,37 +223,47 @@ struct HabitEditView: View {
                 VStack(spacing: 0) {
                     // Existing subtasks in List for reordering
                     if !stagedSubtasks.isEmpty {
-                        List {
-                            ForEach(stagedSubtasks) { subtask in
-                                SubtaskRowStaging(
-                                    subtask: subtask,
-                                    onToggle: {
-                                        toggleSubtask(subtask)
-                                    }
-                                )
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .contextMenu {
-                                    Button(role: .destructive) {
-                                        withAnimation {
-                                            deleteSubtask(subtask)
+                        ScrollViewReader { proxy in
+                            List {
+                                ForEach(stagedSubtasks) { subtask in
+                                    SubtaskRowStaging(
+                                        subtask: subtask,
+                                        onToggle: {
+                                            toggleSubtask(subtask)
                                         }
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
+                                    )
+                                    .id(subtask.id)
+                                    .listRowInsets(EdgeInsets())
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            withAnimation {
+                                                deleteSubtask(subtask)
+                                            }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                }
+                                .onMove { from, to in
+                                    moveSubtasks(from: from, to: to)
+                                }
+                            }
+                            .listStyle(.plain)
+                            .frame(height: CGFloat(min(stagedSubtasks.count, 6)) * 50)
+                            .scrollDisabled(stagedSubtasks.count <= 6)
+                            .environment(\.editMode, .constant(.active))
+                            .accentColor(.daisyTextSecondary)
+                            .font(.caption2)
+                            .onChange(of: stagedSubtasks.count) { oldValue, newValue in
+                                if newValue > 6, let lastSubtask = stagedSubtasks.last {
+                                    withAnimation {
+                                        proxy.scrollTo(lastSubtask.id, anchor: .bottom)
                                     }
                                 }
                             }
-                            .onMove { from, to in
-                                moveSubtasks(from: from, to: to)
-                            }
                         }
-                        .listStyle(.plain)
-                        .frame(height: CGFloat(stagedSubtasks.count) * 32)
-                        .scrollDisabled(true)
-                        .environment(\.editMode, .constant(.active))
-                        .accentColor(.daisyTextSecondary)
-                        .font(.caption2)
                     }
 
                     // Add new subtask field

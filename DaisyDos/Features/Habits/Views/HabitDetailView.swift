@@ -48,6 +48,9 @@ struct HabitDetailView: View {
 
     let habit: Habit
 
+    // Query subtasks directly from database to work around SwiftData relationship observation issues
+    @Query private var allSubtasks: [HabitSubtask]
+
     @State private var showingEditView = false
     @State private var showingDeleteAlert = false
     @State private var showingSkipView = false
@@ -60,6 +63,14 @@ struct HabitDetailView: View {
     @FocusState private var newSubtaskFocused: Bool
     @State private var attachmentToPreview: URL?
     @State private var selectedPeriod: AnalyticsPeriod = .sevenDays
+
+    // MARK: - Computed Properties
+
+    // Get subtasks for this specific habit from the query results
+    private var habitSubtasks: [HabitSubtask] {
+        allSubtasks.filter { $0.parentHabit?.id == habit.id }
+            .sorted { $0.subtaskOrder < $1.subtaskOrder }
+    }
 
     // MARK: - Body
 
@@ -454,7 +465,7 @@ struct HabitDetailView: View {
                 .font(.headline)
                 .foregroundColor(.daisyText)
 
-            if (habit.subtasks ?? []).isEmpty && !showSubtaskField {
+            if habitSubtasks.isEmpty && !showSubtaskField {
                 // Empty state - button to show field
                 SubtaskAddButton {
                     showSubtaskField = true
@@ -465,27 +476,37 @@ struct HabitDetailView: View {
             }
 
             // Subtasks list or field showing
-            if !(habit.subtasks ?? []).isEmpty || showSubtaskField {
+            if !habitSubtasks.isEmpty || showSubtaskField {
                 VStack(spacing: 0) {
                     // Existing subtasks list
-                    if !(habit.subtasks ?? []).isEmpty {
-                        List {
-                            ForEach(habit.orderedSubtasks) { subtask in
-                                SubtaskRow(
-                                    subtask: subtask,
-                                    accentColor: .daisyHabit,
-                                    onToggle: {
-                                        toggleSubtask(subtask)
+                    if !habitSubtasks.isEmpty {
+                        ScrollViewReader { proxy in
+                            List {
+                                ForEach(habitSubtasks) { subtask in
+                                    SubtaskRow(
+                                        subtask: subtask,
+                                        accentColor: .daisyHabit,
+                                        onToggle: {
+                                            toggleSubtask(subtask)
+                                        }
+                                    )
+                                    .id(subtask.id)
+                                    .listRowInsets(EdgeInsets())
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                }
+                            }
+                            .listStyle(.plain)
+                            .frame(height: CGFloat(min(habitSubtasks.count, 6)) * 50)
+                            .scrollDisabled(habitSubtasks.count <= 6)
+                            .onChange(of: habitSubtasks.count) { oldValue, newValue in
+                                if newValue > 6, let lastSubtask = habitSubtasks.last {
+                                    withAnimation {
+                                        proxy.scrollTo(lastSubtask.id, anchor: .bottom)
                                     }
-                                )
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
+                                }
                             }
                         }
-                        .listStyle(.plain)
-                        .frame(height: CGFloat((habit.subtasks ?? []).count) * 32)
-                        .scrollDisabled(true)
                     }
 
                     // Add new subtask field

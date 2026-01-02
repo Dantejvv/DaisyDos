@@ -81,6 +81,12 @@ class Tag: Identifiable {
         case "pink": return Color(.systemPink)
         case "brown": return Color(.systemBrown)
         case "gray": return Color(.systemGray)
+        case "teal": return Color(.systemTeal)
+        case "indigo": return Color(.systemIndigo)
+        case "cyan": return Color(.systemCyan)
+        case "mint": return Color(.systemMint)
+        case "lightgray": return Color(.systemGray3)
+        case "black": return Color.black
         default: return Color(.systemBlue)
         }
     }
@@ -104,16 +110,93 @@ class Tag: Identifiable {
     }
 
     static func availableColors() -> [String] {
-        return ["red", "orange", "yellow", "green", "blue", "purple", "pink", "brown", "gray"]
+        return ["red", "orange", "yellow", "green", "blue", "purple", "pink", "brown", "gray", "teal", "indigo", "cyan", "mint", "lightGray", "black"]
+    }
+
+    enum SymbolCategory: String, CaseIterable, Identifiable {
+        case work = "Work"
+        case life = "Life"
+        case nature = "Nature"
+        case creative = "Creative"
+        case tools = "Tools"
+
+        var id: String { rawValue }
+
+        var icon: String {
+            switch self {
+            case .work: return "briefcase"
+            case .life: return "house"
+            case .nature: return "leaf"
+            case .creative: return "paintbrush"
+            case .tools: return "hammer"
+            }
+        }
+
+        var symbols: [String] {
+            switch self {
+            case .work:
+                return [
+                    "folder", "paperclip", "envelope", "calendar", "clock", "bell",
+                    "book", "pencil", "gear", "tag", "briefcase", "doc.text",
+                    "checkmark.circle", "building.2", "chart.bar", "tray",
+                    "paperplane", "at", "printer", "network", "server.rack",
+                    "clipboard", "square.and.pencil", "doc.on.clipboard", "archivebox",
+                    "magazine", "newspaper", "books.vertical", "studentdesk",
+                    "list.clipboard", "note.text", "text.alignleft", "rectangle.and.pencil.and.ellipsis"
+                ]
+            case .life:
+                return [
+                    "house", "car", "airplane", "phone", "heart", "star",
+                    "flag", "bookmark", "gift", "cart", "balloon", "figure.walk",
+                    "person.2", "cup.and.saucer", "fork.knife", "bed.double",
+                    "creditcard", "bag", "handbag", "stroller", "bicycle",
+                    "scooter", "skateboard", "tennisball", "football", "basketball",
+                    "dumbbell", "figure.run", "figure.yoga", "soccerball", "baseball",
+                    "party.popper", "wineglass", "mug", "takeoutbag.and.cup.and.straw"
+                ]
+            case .nature:
+                return [
+                    "leaf", "flame", "drop", "snowflake", "sun.max", "moon",
+                    "cloud", "tree", "pawprint", "mountain.2", "wind",
+                    "bolt", "sparkles", "globe",
+                    "cloud.rain", "cloud.snow", "cloud.sun", "cloud.moon", "tornado",
+                    "rainbow", "sunset", "moonphase.full.moon", "moon.stars",
+                    "ladybug", "ant", "hare", "tortoise",
+                    "bird", "fish", "cat", "dog", "lizard"
+                ]
+            case .creative:
+                return [
+                    "paintbrush", "camera", "music.note", "gamecontroller", "lightbulb",
+                    "film", "photo", "mic", "theatermasks", "guitars", "headphones",
+                    "tv", "movieclapper",
+                    "paintpalette", "photo.on.rectangle", "photo.stack", "rectangle.stack",
+                    "video", "playpause", "play.circle", "pianokeys",
+                    "metronome", "music.mic", "hifispeaker", "radio",
+                    "speaker.wave.2", "books.vertical", "book.closed", "eyeglasses"
+                ]
+            case .tools:
+                return [
+                    "hammer", "wrench", "pin", "scissors", "ruler",
+                    "magnifyingglass", "key", "lock", "shield", "bandage",
+                    "battery.100",
+                    "screwdriver", "wrench.and.screwdriver", "level", "latch.2.case",
+                    "shippingbox", "cube", "point.3.filled.connected.trianglepath.dotted",
+                    "gearshape.2", "checklist", "slider.horizontal.3", "location",
+                    "mappin", "map", "binoculars"
+                ]
+            }
+        }
+    }
+
+    static func availableSymbols(for category: SymbolCategory? = nil) -> [String] {
+        if let category = category {
+            return category.symbols
+        }
+        // Return all symbols when no category specified
+        return SymbolCategory.allCases.flatMap { $0.symbols }
     }
 
     static func availableSymbols() -> [String] {
-        return [
-            "tag", "star", "heart", "bookmark", "flag", "pin", "paperclip",
-            "folder", "house", "car", "airplane", "phone", "envelope", "calendar",
-            "clock", "bell", "camera", "music.note", "gamecontroller", "book",
-            "pencil", "paintbrush", "hammer", "wrench", "gear", "lightbulb",
-            "leaf", "flame", "drop", "snowflake", "sun.max", "moon", "cloud"
-        ]
+        return availableSymbols(for: nil)
     }
 }

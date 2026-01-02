@@ -418,15 +418,70 @@ class TaskManager: EntityManagerProtocol {
                 throw DaisyDosError.circularReference
             }
 
-            let subtask = parentTask.createSubtask(
+            // Create subtask object
+            let subtask = Task(
                 title: title.trimmingCharacters(in: .whitespacesAndNewlines),
                 taskDescription: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),
-                priority: priority
+                priority: priority,
+                dueDate: parentTask.dueDate // Inherit due date by default
             )
 
+            // Inherit parent's creation date for age-based housekeeping
+            subtask.createdDate = parentTask.createdDate
+
+            // Insert into context FIRST so SwiftData can track the relationship
             modelContext.insert(subtask)
+
+            // THEN establish the relationship (this is now tracked by SwiftData)
+            _ = parentTask.addSubtask(subtask)
+
             try modelContext.save()
             return subtask
+        }
+    }
+
+    /// Batch create multiple subtasks - follows SwiftData best practice of inserting all objects before manipulating relationships
+    func createSubtasks(
+        for parentTask: Task,
+        titles: [(title: String, order: Int)]
+    ) -> Result<[Task], AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "create subtasks",
+            entityType: "task"
+        ) {
+            guard parentTask.parentTask == nil else {
+                throw DaisyDosError.circularReference
+            }
+
+            var createdSubtasks: [Task] = []
+
+            // Step 1: Create and insert ALL subtask objects FIRST
+            for (title, order) in titles {
+                let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmedTitle.isEmpty else { continue }
+
+                let subtask = Task(
+                    title: trimmedTitle,
+                    taskDescription: "",
+                    priority: .none,
+                    dueDate: parentTask.dueDate
+                )
+                subtask.createdDate = parentTask.createdDate
+                subtask.subtaskOrder = order
+
+                modelContext.insert(subtask)
+                createdSubtasks.append(subtask)
+            }
+
+            // Step 2: THEN establish relationships after all are inserted
+            for subtask in createdSubtasks {
+                _ = parentTask.addSubtask(subtask)
+            }
+
+            // Step 3: Save once at the end
+            try modelContext.save()
+
+            return createdSubtasks
         }
     }
 

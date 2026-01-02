@@ -27,13 +27,17 @@ struct SettingsView: View {
     @State private var showingTestDataGenerator = false
     @State private var showingErrorMessageTest = false
     @State private var showingRestartAlert = false
-    @State private var enableSync = false
+    @State private var pendingLocalOnlyMode: Bool?
 
     private var localOnlyModeBinding: Binding<Bool> {
         Binding(
-            get: { localOnlyModeManager.isLocalOnlyMode },
+            get: {
+                // If we have a pending change, show that, otherwise show actual value
+                pendingLocalOnlyMode ?? localOnlyModeManager.isLocalOnlyMode
+            },
             set: { newValue in
-                enableSync = !newValue
+                // Store pending value and show alert
+                pendingLocalOnlyMode = newValue
                 showingRestartAlert = true
             }
         )
@@ -83,13 +87,18 @@ struct SettingsView: View {
             #endif
             .alert("Restart Required", isPresented: $showingRestartAlert) {
                 Button("Cancel", role: .cancel) {
-                    localOnlyModeManager.isLocalOnlyMode = !enableSync
+                    // Revert to original value by clearing pending change
+                    pendingLocalOnlyMode = nil
                 }
                 Button("OK") {
-                    print("⚠️ Please restart the app for changes to take effect")
+                    // Apply the pending change
+                    if let pending = pendingLocalOnlyMode {
+                        localOnlyModeManager.isLocalOnlyMode = pending
+                    }
+                    pendingLocalOnlyMode = nil
                 }
             } message: {
-                Text(enableSync
+                Text(pendingLocalOnlyMode == false
                     ? "Enabling iCloud sync requires restarting DaisyDos."
                     : "Switching to local-only mode requires restarting DaisyDos.")
             }
@@ -329,22 +338,74 @@ private struct AboutView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    Image(systemName: "flower")
-                        .font(.system(size: 64))
+                VStack(spacing: 32) {
+                    // App Header
+                    VStack(spacing: 16) {
+                        Image(systemName: "flower")
+                            .font(.system(size: 72))
+                            .foregroundColor(.accentColor)
 
-                    Text("DaisyDos")
-                        .font(.largeTitle.bold())
+                        Text("DaisyDos")
+                            .font(.largeTitle.bold())
 
-                    Text("A unified productivity app for tasks and habits")
-                        .font(.body)
-                        .foregroundColor(.daisyTextSecondary)
-                        .multilineTextAlignment(.center)
+                        Text("A unified productivity app for tasks and habits")
+                            .font(.body)
+                            .foregroundColor(.daisyTextSecondary)
+                            .multilineTextAlignment(.center)
+                    }
 
-                    Text("DaisyDos combines task management and habit tracking in a single, privacy-first application. Built with SwiftUI and SwiftData, it focuses on simplicity, accessibility, and keeping your data private.")
-                        .font(.body)
-                        .foregroundColor(.daisyTextSecondary)
-                        .padding()
+                    // Features Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Features")
+                            .font(.title2.bold())
+                            .padding(.bottom, 4)
+
+                        FeatureRow(
+                            icon: "checkmark.circle.fill",
+                            title: "Task Management",
+                            description: "Create tasks with subtasks, due dates, priorities, and recurrence patterns"
+                        )
+
+                        FeatureRow(
+                            icon: "calendar.badge.checkmark",
+                            title: "Habit Tracking",
+                            description: "Build healthy habits with streak tracking and detailed analytics"
+                        )
+
+                        FeatureRow(
+                            icon: "tag.fill",
+                            title: "Smart Organization",
+                            description: "Tag and categorize tasks and habits for easy filtering"
+                        )
+
+                        FeatureRow(
+                            icon: "bell.fill",
+                            title: "Notifications",
+                            description: "Get reminded about tasks and habits at the right time"
+                        )
+
+                        FeatureRow(
+                            icon: "arrow.up.arrow.down.circle.fill",
+                            title: "Import & Export",
+                            description: "Backup your data or move it between devices with JSON export"
+                        )
+
+                        FeatureRow(
+                            icon: "lock.shield.fill",
+                            title: "Privacy First",
+                            description: "Your data stays private with local-only mode, or sync via iCloud"
+                        )
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    // Privacy Statement
+                    VStack(spacing: 8) {
+                        Text("Built with privacy in mind. DaisyDos keeps your data secure and never shares it with third parties.")
+                            .font(.callout)
+                            .foregroundColor(.daisyTextSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 8)
                 }
                 .padding()
             }
@@ -359,6 +420,33 @@ private struct AboutView: View {
             }
         }
         .applyAppearance(appearanceManager)
+    }
+}
+
+// MARK: - Feature Row Component
+
+private struct FeatureRow: View {
+    let icon: String
+    let title: String
+    let description: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(.accentColor)
+                .frame(width: 32)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.daisyText)
+
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+            }
+        }
     }
 }
 

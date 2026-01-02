@@ -297,39 +297,49 @@ struct AddTaskView: View {
                 VStack(spacing: 0) {
                     // Existing subtasks in List for reordering
                     if !subtasks.isEmpty {
-                        List {
-                            ForEach(subtasks) { subtask in
-                                SubtaskRowStaging(
-                                    subtask: subtask,
-                                    onToggle: {
-                                        if let index = subtasks.firstIndex(where: { $0.id == subtask.id }) {
-                                            subtasks[index].isCompleted.toggle()
+                        ScrollViewReader { proxy in
+                            List {
+                                ForEach(subtasks) { subtask in
+                                    SubtaskRowStaging(
+                                        subtask: subtask,
+                                        onToggle: {
+                                            if let index = subtasks.firstIndex(where: { $0.id == subtask.id }) {
+                                                subtasks[index].isCompleted.toggle()
+                                            }
+                                        }
+                                    )
+                                    .id(subtask.id)
+                                    .listRowInsets(EdgeInsets())
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            withAnimation {
+                                                subtasks.removeAll { $0.id == subtask.id }
+                                            }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
                                         }
                                     }
-                                )
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .contextMenu {
-                                    Button(role: .destructive) {
-                                        withAnimation {
-                                            subtasks.removeAll { $0.id == subtask.id }
-                                        }
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
+                                }
+                                .onMove { from, to in
+                                    subtasks.move(fromOffsets: from, toOffset: to)
+                                }
+                            }
+                            .listStyle(.plain)
+                            .frame(height: CGFloat(min(subtasks.count, 6)) * 50)
+                            .scrollDisabled(subtasks.count <= 6)
+                            .environment(\.editMode, .constant(.active))
+                            .accentColor(.daisyTextSecondary)
+                            .font(.caption2)
+                            .onChange(of: subtasks.count) { oldValue, newValue in
+                                if newValue > 6, let lastSubtask = subtasks.last {
+                                    withAnimation {
+                                        proxy.scrollTo(lastSubtask.id, anchor: .bottom)
                                     }
                                 }
                             }
-                            .onMove { from, to in
-                                subtasks.move(fromOffsets: from, toOffset: to)
-                            }
                         }
-                        .listStyle(.plain)
-                        .frame(height: CGFloat(subtasks.count) * 44)
-                        .scrollDisabled(true)
-                        .environment(\.editMode, .constant(.active))
-                        .accentColor(.daisyTextSecondary)
-                        .font(.caption2)
                     }
 
                     // Add new subtask field
@@ -418,14 +428,12 @@ struct AddTaskView: View {
                 task.alertTimeInterval = alertInterval
             }
 
-            // Add subtasks
-            for (index, subtaskItem) in subtasks.enumerated() {
-                if case .success(let subtask) = taskManager.createSubtask(
-                    for: task,
-                    title: subtaskItem.title
-                ) {
-                    subtask.subtaskOrder = index
+            // Add subtasks using batch method (follows SwiftData best practices)
+            if !subtasks.isEmpty {
+                let subtaskTitles = subtasks.enumerated().map { (index, item) in
+                    (title: item.title, order: index)
                 }
+                _ = taskManager.createSubtasks(for: task, titles: subtaskTitles)
             }
 
             // Add attachments

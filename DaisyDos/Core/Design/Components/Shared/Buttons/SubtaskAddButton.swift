@@ -41,8 +41,8 @@ struct SubtaskAddButton: View {
             }
             .font(.body)
             .foregroundColor(accentColor)
-            .padding(.vertical, 8)
             .padding(.horizontal, 16)
+            .frame(height: 50)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

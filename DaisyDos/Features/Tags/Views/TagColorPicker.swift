@@ -46,7 +46,23 @@ private struct ColorOption: View {
         case "pink": return Color(.systemPink)
         case "brown": return Color(.systemBrown)
         case "gray": return Color(.systemGray)
+        case "teal": return Color(.systemTeal)
+        case "indigo": return Color(.systemIndigo)
+        case "cyan": return Color(.systemCyan)
+        case "mint": return Color(.systemMint)
+        case "lightgray": return Color(.systemGray3)
+        case "black": return Color.black
         default: return Color(.systemBlue)
+        }
+    }
+
+    private var checkmarkColor: Color {
+        // Use black checkmark for light colors, white for others
+        switch colorName.lowercased() {
+        case "lightgray", "yellow", "mint", "cyan":
+            return Color.black
+        default:
+            return Color.white
         }
     }
 
@@ -63,7 +79,7 @@ private struct ColorOption: View {
                     .overlay(
                         Image(systemName: "checkmark")
                             .font(.caption.bold())
-                            .foregroundColor(.white)
+                            .foregroundColor(checkmarkColor)
                             .opacity(isSelected ? 1 : 0)
                     )
 

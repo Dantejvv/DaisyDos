@@ -43,6 +43,9 @@ struct TaskDetailView: View {
     let task: Task
     let isLogbookMode: Bool
 
+    // Query subtasks directly from database to work around SwiftData relationship observation issues
+    @Query private var allSubtasks: [Task]
+
     @State private var showingEditView = false
     @State private var showingTagAssignment = false
     @State private var showingDeleteConfirmation = false
@@ -61,6 +64,12 @@ struct TaskDetailView: View {
 
     private var canModify: Bool {
         !task.isCompleted || !isLogbookMode
+    }
+
+    // Get subtasks for this specific task from the query results
+    private var taskSubtasks: [Task] {
+        allSubtasks.filter { $0.parentTask?.id == task.id }
+            .sorted { $0.subtaskOrder < $1.subtaskOrder }
     }
 
     // MARK: - Body
@@ -545,7 +554,7 @@ struct TaskDetailView: View {
                 .font(.headline)
                 .foregroundColor(.daisyText)
 
-            if (task.subtasks ?? []).isEmpty && !showSubtaskField {
+            if taskSubtasks.isEmpty && !showSubtaskField {
                 // Empty state - button to show field
                 if canModify {
                     SubtaskAddButton {
@@ -569,27 +578,37 @@ struct TaskDetailView: View {
             }
 
             // Subtasks list or field showing
-            if !(task.subtasks ?? []).isEmpty || showSubtaskField {
+            if !taskSubtasks.isEmpty || showSubtaskField {
                 VStack(spacing: 0) {
                     // Existing subtasks list
-                    if !(task.subtasks ?? []).isEmpty {
-                        List {
-                            ForEach(task.orderedSubtasks) { subtask in
-                                SubtaskRow(
-                                    subtask: subtask,
-                                    accentColor: .daisyTask,
-                                    onToggle: {
-                                        toggleSubtask(subtask)
+                    if !taskSubtasks.isEmpty {
+                        ScrollViewReader { proxy in
+                            List {
+                                ForEach(taskSubtasks) { subtask in
+                                    SubtaskRow(
+                                        subtask: subtask,
+                                        accentColor: .daisyTask,
+                                        onToggle: {
+                                            toggleSubtask(subtask)
+                                        }
+                                    )
+                                    .id(subtask.id)
+                                    .listRowInsets(EdgeInsets())
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                }
+                            }
+                            .listStyle(.plain)
+                            .frame(height: CGFloat(min(taskSubtasks.count, 6)) * 50)
+                            .scrollDisabled(taskSubtasks.count <= 6)
+                            .onChange(of: taskSubtasks.count) { oldValue, newValue in
+                                if newValue > 6, let lastSubtask = taskSubtasks.last {
+                                    withAnimation {
+                                        proxy.scrollTo(lastSubtask.id, anchor: .bottom)
                                     }
-                                )
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
+                                }
                             }
                         }
-                        .listStyle(.plain)
-                        .frame(height: CGFloat((task.subtasks ?? []).count) * 32)
-                        .scrollDisabled(true)
                     }
 
                     // Add new subtask field

@@ -9,26 +9,45 @@ import SwiftUI
 
 struct TagSymbolPicker: View {
     @Binding var selectedSymbol: String
-    let availableSymbols: [String] = Tag.availableSymbols()
+    @State private var selectedCategory: Tag.SymbolCategory = .work
+
+    private var filteredSymbols: [String] {
+        Tag.availableSymbols(for: selectedCategory)
+    }
 
     var body: some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible())
-        ], spacing: 16) {
-            ForEach(availableSymbols, id: \.self) { symbolName in
-                SymbolOption(
-                    symbolName: symbolName,
-                    isSelected: selectedSymbol == symbolName
-                ) {
-                    selectedSymbol = symbolName
+        VStack(spacing: 12) {
+            // Category Picker
+            Picker("Category", selection: $selectedCategory) {
+                ForEach(Tag.SymbolCategory.allCases) { category in
+                    Label(category.rawValue, systemImage: category.icon)
+                        .tag(category)
                 }
             }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+
+            // Symbol Grid
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 16) {
+                ForEach(filteredSymbols, id: \.self) { symbolName in
+                    SymbolOption(
+                        symbolName: symbolName,
+                        isSelected: selectedSymbol == symbolName
+                    ) {
+                        selectedSymbol = symbolName
+                    }
+                }
+            }
+            .padding(.horizontal)
+            .animation(.easeInOut(duration: 0.2), value: selectedCategory)
         }
-        .padding()
+        .padding(.vertical)
     }
 }
 

@@ -354,9 +354,7 @@ class ImportExportManager {
     }
 
     private func importTask(from export: ExportData.TaskExport) -> Bool {
-        // Note: This is a simplified import - doesn't recreate attachments
-        // or handle complex relationships. Full implementation would require
-        // more sophisticated logic.
+        // Note: Attachments are not recreated as they're stored separately
 
         let task = Task(
             title: export.title,
@@ -365,21 +363,110 @@ class ImportExportManager {
             dueDate: export.dueDate
         )
 
+        // Restore completion state
         task.isCompleted = export.isCompleted
         task.completedDate = export.completedAt
 
+        // Restore creation date
+        task.createdDate = export.createdAt
+
+        // Restore recurrence rule if present
+        if let recurrenceExport = export.recurrenceRule {
+            task.recurrenceRule = RecurrenceRule(
+                frequency: RecurrenceRule.Frequency(rawValue: recurrenceExport.frequency) ?? .daily,
+                interval: recurrenceExport.interval,
+                daysOfWeek: recurrenceExport.daysOfWeek.map { Set($0) }
+            )
+        }
+
         modelContext.insert(task)
+
+        // Restore tags by finding existing tags with matching names
+        var taskTags: [Tag] = []
+        for tagName in export.tags {
+            let descriptor = FetchDescriptor<Tag>(
+                predicate: #Predicate { $0.name == tagName }
+            )
+            if let existingTag = try? modelContext.fetch(descriptor).first {
+                taskTags.append(existingTag)
+            }
+        }
+        if !taskTags.isEmpty {
+            task.tags = taskTags
+        }
+
+        // Restore subtasks
+        if !export.subtasks.isEmpty {
+            var subtasks: [Task] = []
+            for subtaskExport in export.subtasks {
+                let subtask = Task(title: subtaskExport.title)
+                subtask.isCompleted = subtaskExport.isCompleted
+                subtask.subtaskOrder = subtaskExport.order
+                modelContext.insert(subtask)
+                subtasks.append(subtask)
+            }
+            task.subtasks = subtasks
+        }
+
         return true
     }
 
     private func importHabit(from export: ExportData.HabitExport) -> Bool {
-        // Note: Simplified import - doesn't recreate completion history
+        // Note: Completion history is not recreated, only streak counts are preserved
+
         let habit = Habit(
             title: export.title,
             priority: Priority(rawValue: export.priority) ?? .none
         )
 
+        // Restore description
+        habit.habitDescription = export.habitDescription ?? ""
+
+        // Restore creation date
+        habit.createdDate = export.createdAt
+
+        // Restore streak data
+        habit.currentStreak = export.currentStreak
+        habit.longestStreak = export.longestStreak
+
+        // Restore recurrence rule if present
+        if let recurrenceExport = export.recurrenceRule {
+            habit.recurrenceRule = RecurrenceRule(
+                frequency: RecurrenceRule.Frequency(rawValue: recurrenceExport.frequency) ?? .daily,
+                interval: recurrenceExport.interval,
+                daysOfWeek: recurrenceExport.daysOfWeek.map { Set($0) }
+            )
+        }
+
         modelContext.insert(habit)
+
+        // Restore tags by finding existing tags with matching names
+        var habitTags: [Tag] = []
+        for tagName in export.tags {
+            let descriptor = FetchDescriptor<Tag>(
+                predicate: #Predicate { $0.name == tagName }
+            )
+            if let existingTag = try? modelContext.fetch(descriptor).first {
+                habitTags.append(existingTag)
+            }
+        }
+        if !habitTags.isEmpty {
+            habit.tags = habitTags
+        }
+
+        // Restore subtasks
+        if !export.subtasks.isEmpty {
+            var subtasks: [HabitSubtask] = []
+            for subtaskExport in export.subtasks {
+                let subtask = HabitSubtask(title: subtaskExport.title)
+                subtask.isCompletedToday = subtaskExport.isCompleted
+                subtask.subtaskOrder = subtaskExport.order
+                modelContext.insert(subtask)
+                subtasks.append(subtask)
+            }
+            habit.subtasks = subtasks
+        }
+
         return true
     }
 

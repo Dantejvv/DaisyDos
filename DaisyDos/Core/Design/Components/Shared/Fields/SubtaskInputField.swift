@@ -106,7 +106,7 @@ struct SubtaskInputField: View {
         }
         .padding(.vertical, 4)
         .padding(.horizontal, Spacing.medium)
-        .frame(height: 32)
+        .frame(height: 50)
         .animation(.easeInOut(duration: 0.2), value: hasText)
     }
 }
