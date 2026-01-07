@@ -451,4 +451,456 @@ struct RecurrenceRuleTests {
 
         #expect(rule1.interval != rule3.interval)
     }
+
+    // MARK: - maxOccurrences + endDate Combination Tests
+
+    @Test("maxOccurrences alone limits occurrences")
+    func testMaxOccurrencesAlone() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1))!
+        let rule = RecurrenceRule(frequency: .daily, interval: 1, maxOccurrences: 5)
+
+        let occurrences = rule.occurrences(from: startDate, limit: 100)
+        #expect(occurrences.count == 5, "Should stop at maxOccurrences")
+    }
+
+    @Test("endDate alone limits occurrences")
+    func testEndDateAlone() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1))!
+        let endDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 5))!
+        let rule = RecurrenceRule.daily(endDate: endDate)
+
+        let occurrences = rule.occurrences(from: startDate, limit: 100)
+        #expect(occurrences.count == 4, "Should stop at endDate")
+        #expect(occurrences.allSatisfy { $0 <= endDate })
+    }
+
+    @Test("maxOccurrences reached before endDate - maxOccurrences wins")
+    func testMaxOccurrencesBeforeEndDate() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1))!
+        let endDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 10))!
+        let rule = RecurrenceRule(frequency: .daily, interval: 1, endDate: endDate, maxOccurrences: 3)
+
+        let occurrences = rule.occurrences(from: startDate, limit: 100)
+        #expect(occurrences.count == 3, "Should stop at maxOccurrences (3) before endDate allows 9")
+    }
+
+    @Test("endDate reached before maxOccurrences - endDate wins")
+    func testEndDateBeforeMaxOccurrences() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1))!
+        let endDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 3))!
+        let rule = RecurrenceRule(frequency: .daily, interval: 1, endDate: endDate, maxOccurrences: 10)
+
+        let occurrences = rule.occurrences(from: startDate, limit: 100)
+        #expect(occurrences.count == 2, "Should stop at endDate (2 days) before maxOccurrences allows 10")
+        #expect(occurrences.allSatisfy { $0 <= endDate })
+    }
+
+    @Test("maxOccurrences=1 creates single occurrence")
+    func testMaxOccurrencesSingle() {
+        let rule = RecurrenceRule(frequency: .daily, maxOccurrences: 1)
+        let startDate = Date()
+
+        let occurrences = rule.occurrences(from: startDate, limit: 100)
+        #expect(occurrences.count == 1, "maxOccurrences=1 should create only one occurrence")
+    }
+
+    @Test("maxOccurrences with weekly recurrence")
+    func testMaxOccurrencesWeekly() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 6))! // Monday
+        let rule = RecurrenceRule.weekly(daysOfWeek: [2, 4], interval: 1) // Mon, Wed
+        let ruleWithMax = RecurrenceRule(
+            frequency: rule.frequency,
+            interval: rule.interval,
+            daysOfWeek: rule.daysOfWeek,
+            maxOccurrences: 5
+        )
+
+        let occurrences = ruleWithMax.occurrences(from: startDate, limit: 100)
+        #expect(occurrences.count == 5, "Should create exactly 5 occurrences across Mon/Wed pattern")
+    }
+
+    @Test("maxOccurrences with monthly recurrence")
+    func testMaxOccurrencesMonthly() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 15))!
+        let rule = RecurrenceRule(frequency: .monthly, dayOfMonth: 15, maxOccurrences: 3)
+
+        let occurrences = rule.occurrences(from: startDate, limit: 100)
+        #expect(occurrences.count == 3, "Should create 3 monthly occurrences")
+
+        // Verify dates are Feb 15, Mar 15, Apr 15
+        let months = occurrences.map { calendar.component(.month, from: $0) }
+        #expect(months == [2, 3, 4])
+    }
+
+    // MARK: - Time/DST Edge Case Tests
+
+    @Test("Time at midnight (00:00)")
+    func testTimeMidnight() {
+        let rule = RecurrenceRule.daily(time: "00:00")
+        #expect(rule.preferredTimeHour == 0)
+        #expect(rule.preferredTimeMinute == 0)
+
+        let calendar = Calendar.current
+        let start = calendar.date(from: DateComponents(year: 2025, month: 1, day: 6, hour: 12))!
+        let next = rule.nextOccurrence(after: start)
+        #expect(next != nil)
+
+        let hour = calendar.component(.hour, from: next!)
+        #expect(hour == 0, "Should be midnight")
+    }
+
+    @Test("Time at end of day (23:59)")
+    func testTimeEndOfDay() {
+        let rule = RecurrenceRule.daily(time: "23:59")
+        #expect(rule.preferredTimeHour == 23)
+        #expect(rule.preferredTimeMinute == 59)
+
+        let calendar = Calendar.current
+        let start = calendar.date(from: DateComponents(year: 2025, month: 1, day: 6, hour: 12))!
+        let next = rule.nextOccurrence(after: start)
+        #expect(next != nil)
+
+        let hour = calendar.component(.hour, from: next!)
+        let minute = calendar.component(.minute, from: next!)
+        #expect(hour == 23)
+        #expect(minute == 59)
+    }
+
+    @Test("Invalid time formats return nil")
+    func testInvalidTimeFormats() {
+        let invalidFormats = ["9am", "25:00", "9:70", "midnight", "12:00:00", "abc", "12", ":30"]
+
+        for format in invalidFormats {
+            let rule = RecurrenceRule.daily(time: format)
+            #expect(rule.preferredTime == nil, "Format '\(format)' should be invalid")
+        }
+    }
+
+    @Test("Time preservation across DST - spring forward")
+    func testDSTSpringForward() {
+        // DST in US: March 9, 2025 at 2:00 AM → 3:00 AM
+        let calendar = Calendar.current
+        let pst = TimeZone(identifier: "America/Los_Angeles")!
+        let rule = RecurrenceRule(frequency: .daily, timeZone: pst, preferredTime: DateComponents(hour: 9, minute: 0))
+
+        var pstCalendar = Calendar.current
+        pstCalendar.timeZone = pst
+
+        // March 8, 2025 at 9 AM PST (before DST)
+        let beforeDST = pstCalendar.date(from: DateComponents(
+            timeZone: pst,
+            year: 2025,
+            month: 3,
+            day: 8,
+            hour: 9
+        ))!
+
+        // Get next occurrence (should be March 9 at 9 AM PDT)
+        let next = rule.nextOccurrence(after: beforeDST)
+        #expect(next != nil)
+
+        let components = pstCalendar.dateComponents([.hour, .minute], from: next!)
+        #expect(components.hour == 9, "Hour should remain 9 despite DST")
+        #expect(components.minute == 0)
+    }
+
+    @Test("Time preservation across DST - fall back")
+    func testDSTFallBack() {
+        // DST ends in US: November 2, 2025 at 2:00 AM → 1:00 AM
+        let pst = TimeZone(identifier: "America/Los_Angeles")!
+        let rule = RecurrenceRule(frequency: .daily, timeZone: pst, preferredTime: DateComponents(hour: 9, minute: 0))
+
+        var pstCalendar = Calendar.current
+        pstCalendar.timeZone = pst
+
+        // November 1, 2025 at 9 AM PDT (before DST ends)
+        let beforeDST = pstCalendar.date(from: DateComponents(
+            timeZone: pst,
+            year: 2025,
+            month: 11,
+            day: 1,
+            hour: 9
+        ))!
+
+        let next = rule.nextOccurrence(after: beforeDST)
+        #expect(next != nil)
+
+        let components = pstCalendar.dateComponents([.hour, .minute], from: next!)
+        #expect(components.hour == 9, "Hour should remain 9 despite DST")
+    }
+
+    @Test("Weekly recurrence across DST boundary")
+    func testWeeklyAcrossDST() {
+        let pst = TimeZone(identifier: "America/Los_Angeles")!
+        let rule = RecurrenceRule.weekly(
+            daysOfWeek: [2], // Monday
+            time: "09:00"
+        )
+
+        var pstCalendar = Calendar.current
+        pstCalendar.timeZone = pst
+
+        // Monday March 2, 2025 (before DST)
+        let monday1 = pstCalendar.date(from: DateComponents(
+            timeZone: pst,
+            year: 2025,
+            month: 3,
+            day: 2,
+            hour: 9
+        ))!
+
+        // Next should be Monday March 9 (after DST)
+        let monday2 = rule.nextOccurrence(after: monday1)
+        #expect(monday2 != nil)
+
+        let components = pstCalendar.dateComponents([.weekday, .hour], from: monday2!)
+        #expect(components.weekday == 2, "Should be Monday")
+        #expect(components.hour == 9, "Should preserve 9 AM")
+    }
+
+    @Test("International timezone - Pacific/Auckland")
+    func testInternationalTimezone() {
+        let nzt = TimeZone(identifier: "Pacific/Auckland")!
+        let rule = RecurrenceRule(frequency: .daily, timeZone: nzt)
+
+        #expect(rule.timeZoneIdentifier == "Pacific/Auckland")
+        #expect(rule.timeZone == nzt)
+
+        let startDate = Date()
+        let next = rule.nextOccurrence(after: startDate)
+        #expect(next != nil, "Should work with NZ timezone")
+    }
+
+    // MARK: - Monthly Day Transition Tests
+
+    @Test("Monthly 29th through February non-leap year")
+    func testMonthly29thThroughFebruary() {
+        let calendar = Calendar.current
+        let rule = RecurrenceRule.monthly(dayOfMonth: 29)
+
+        // Start Jan 29, 2025
+        let jan29 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 29))!
+        let feb = rule.nextOccurrence(after: jan29)
+        #expect(feb != nil)
+
+        let febComponents = calendar.dateComponents([.month, .day], from: feb!)
+        #expect(febComponents.month == 2)
+        #expect(febComponents.day == 28, "Feb 2025 only has 28 days, should clamp to 28")
+
+        // Next should be Mar 29
+        let mar = rule.nextOccurrence(after: feb!)
+        let marComponents = calendar.dateComponents([.month, .day], from: mar!)
+        #expect(marComponents.month == 3)
+        #expect(marComponents.day == 29, "March has 29th")
+    }
+
+    @Test("Monthly 30th through February")
+    func testMonthly30thThroughFebruary() {
+        let calendar = Calendar.current
+        let rule = RecurrenceRule.monthly(dayOfMonth: 30)
+
+        let jan30 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 30))!
+        let feb = rule.nextOccurrence(after: jan30)
+        #expect(feb != nil)
+
+        let febComponents = calendar.dateComponents([.month, .day], from: feb!)
+        #expect(febComponents.day == 28, "Feb only has 28 days")
+    }
+
+    @Test("Monthly 31st consecutive transitions")
+    func testMonthly31stConsecutiveTransitions() {
+        let calendar = Calendar.current
+        let rule = RecurrenceRule.monthly(dayOfMonth: 31)
+
+        let jan31 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 31))!
+
+        // Generate 6 months of occurrences
+        let occurrences = rule.occurrences(from: jan31, limit: 6)
+        #expect(occurrences.count == 6)
+
+        // Verify each month
+        let expectedDays = [28, 31, 30, 31, 30, 31] // Feb, Mar, Apr, May, Jun, Jul
+        for (index, date) in occurrences.enumerated() {
+            let day = calendar.component(.day, from: date)
+            #expect(day == expectedDays[index], "Month \(index + 2) should have day \(expectedDays[index])")
+        }
+    }
+
+    @Test("Monthly 31st full year cycle")
+    func testMonthly31stFullYear() {
+        let calendar = Calendar.current
+        let rule = RecurrenceRule.monthly(dayOfMonth: 31)
+
+        let jan31 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 31))!
+        let occurrences = rule.occurrences(from: jan31, limit: 12)
+
+        // Expected last days: Feb=28, Mar=31, Apr=30, May=31, Jun=30, Jul=31, Aug=31, Sep=30, Oct=31, Nov=30, Dec=31, Jan=31
+        let expectedDays = [28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 31]
+
+        for (index, date) in occurrences.enumerated() {
+            let day = calendar.component(.day, from: date)
+            #expect(day == expectedDays[index], "Occurrence \(index) should have day \(expectedDays[index])")
+        }
+    }
+
+    @Test("Monthly 29th leap year transition")
+    func testMonthly29thLeapYear() {
+        let calendar = Calendar.current
+        let rule = RecurrenceRule.monthly(dayOfMonth: 29)
+
+        // Jan 29, 2024 (leap year)
+        let jan29_2024 = calendar.date(from: DateComponents(year: 2024, month: 1, day: 29))!
+        let feb = rule.nextOccurrence(after: jan29_2024)
+        #expect(feb != nil)
+
+        let febComponents = calendar.dateComponents([.year, .month, .day], from: feb!)
+        #expect(febComponents.year == 2024)
+        #expect(febComponents.month == 2)
+        #expect(febComponents.day == 29, "Feb 2024 is leap year with 29 days")
+    }
+
+    @Test("Monthly with multi-month interval and day clamping")
+    func testMonthlyMultiIntervalClamping() {
+        let calendar = Calendar.current
+        let rule = RecurrenceRule.monthly(dayOfMonth: 31, interval: 3) // Every 3 months on 31st
+
+        let jan31 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 31))!
+        let occurrences = rule.occurrences(from: jan31, limit: 4)
+
+        // Jan → Apr (30) → Jul (31) → Oct (31) → Jan (31)
+        let expectedDays = [30, 31, 31, 31]
+        for (index, date) in occurrences.enumerated() {
+            let day = calendar.component(.day, from: date)
+            #expect(day == expectedDays[index])
+        }
+    }
+
+    // MARK: - Pattern Matching Tests
+
+    @Test("Pattern matching - monthly on specific day")
+    func testMonthlyPatternMatching() {
+        let calendar = Calendar.current
+        let baseDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 15))!
+        let rule = RecurrenceRule.monthly(dayOfMonth: 15)
+
+        // Match: Feb 15
+        let feb15 = calendar.date(from: DateComponents(year: 2025, month: 2, day: 15))!
+        #expect(rule.matches(date: feb15, relativeTo: baseDate))
+
+        // Match: Mar 15
+        let mar15 = calendar.date(from: DateComponents(year: 2025, month: 3, day: 15))!
+        #expect(rule.matches(date: mar15, relativeTo: baseDate))
+
+        // Non-match: Feb 14
+        let feb14 = calendar.date(from: DateComponents(year: 2025, month: 2, day: 14))!
+        #expect(!rule.matches(date: feb14, relativeTo: baseDate))
+    }
+
+    @Test("Pattern matching - monthly with clamping")
+    func testMonthlyPatternMatchingWithClamping() {
+        let calendar = Calendar.current
+        let baseDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 31))!
+        let rule = RecurrenceRule.monthly(dayOfMonth: 31)
+
+        // Should match Feb 28 (clamped from 31)
+        let feb28 = calendar.date(from: DateComponents(year: 2025, month: 2, day: 28))!
+        #expect(rule.matches(date: feb28, relativeTo: baseDate), "Should match clamped day")
+
+        // Should NOT match Feb 27
+        let feb27 = calendar.date(from: DateComponents(year: 2025, month: 2, day: 27))!
+        #expect(!rule.matches(date: feb27, relativeTo: baseDate))
+
+        // Should match Mar 31
+        let mar31 = calendar.date(from: DateComponents(year: 2025, month: 3, day: 31))!
+        #expect(rule.matches(date: mar31, relativeTo: baseDate))
+    }
+
+    @Test("Pattern matching - yearly")
+    func testYearlyPatternMatching() {
+        let calendar = Calendar.current
+        let baseDate = calendar.date(from: DateComponents(year: 2025, month: 6, day: 15))!
+        let rule = RecurrenceRule.yearly()
+
+        // Match: Jun 15, 2026
+        let year2 = calendar.date(from: DateComponents(year: 2026, month: 6, day: 15))!
+        #expect(rule.matches(date: year2, relativeTo: baseDate))
+
+        // Match: Jun 15, 2027
+        let year3 = calendar.date(from: DateComponents(year: 2027, month: 6, day: 15))!
+        #expect(rule.matches(date: year3, relativeTo: baseDate))
+
+        // Non-match: Jun 16, 2026
+        let wrong = calendar.date(from: DateComponents(year: 2026, month: 6, day: 16))!
+        #expect(!rule.matches(date: wrong, relativeTo: baseDate))
+    }
+
+    @Test("Pattern matching - yearly with leap day")
+    func testYearlyPatternMatchingLeapDay() {
+        let calendar = Calendar.current
+        let baseDate = calendar.date(from: DateComponents(year: 2024, month: 2, day: 29))! // Leap day
+        let rule = RecurrenceRule.yearly()
+
+        // 2025 is not leap year - should match Feb 28 (clamped)
+        let feb28_2025 = calendar.date(from: DateComponents(year: 2025, month: 2, day: 28))!
+        #expect(rule.matches(date: feb28_2025, relativeTo: baseDate), "Should match clamped leap day")
+
+        // 2028 is leap year - should match Feb 29
+        let feb29_2028 = calendar.date(from: DateComponents(year: 2028, month: 2, day: 29))!
+        #expect(rule.matches(date: feb29_2028, relativeTo: baseDate))
+    }
+
+    @Test("Pattern matching - weekly with interval")
+    func testWeeklyPatternMatchingWithInterval() {
+        let calendar = Calendar.current
+        let baseDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 6))! // Monday
+        let rule = RecurrenceRule.weekly(daysOfWeek: [2], interval: 2) // Every 2 weeks on Monday
+
+        // Match: Monday 2 weeks later
+        let monday2 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 20))!
+        #expect(rule.matches(date: monday2, relativeTo: baseDate))
+
+        // Non-match: Monday 1 week later (wrong interval)
+        let monday1 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 13))!
+        #expect(!rule.matches(date: monday1, relativeTo: baseDate))
+
+        // Match: Monday 4 weeks later
+        let monday4 = calendar.date(from: DateComponents(year: 2025, month: 2, day: 3))!
+        #expect(rule.matches(date: monday4, relativeTo: baseDate))
+    }
+
+    @Test("Pattern matching - date before baseDate")
+    func testPatternMatchingBeforeBaseDate() {
+        let calendar = Calendar.current
+        let baseDate = calendar.date(from: DateComponents(year: 2025, month: 6, day: 1))!
+        let rule = RecurrenceRule.daily()
+
+        // Date before baseDate should not match
+        let before = calendar.date(from: DateComponents(year: 2025, month: 5, day: 31))!
+        #expect(!rule.matches(date: before, relativeTo: baseDate))
+    }
+
+    @Test("Pattern matching - custom frequency")
+    func testCustomFrequencyPatternMatching() {
+        let calendar = Calendar.current
+        let baseDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1))!
+        let rule = RecurrenceRule(frequency: .custom, interval: 7) // Every 7 days
+
+        // Match: +7 days
+        let day7 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 8))!
+        #expect(rule.matches(date: day7, relativeTo: baseDate))
+
+        // Match: +14 days
+        let day14 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 15))!
+        #expect(rule.matches(date: day14, relativeTo: baseDate))
+
+        // Non-match: +10 days
+        let day10 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 11))!
+        #expect(!rule.matches(date: day10, relativeTo: baseDate))
+    }
 }

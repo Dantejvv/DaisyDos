@@ -359,7 +359,10 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         var occurrences: [Date] = []
         var currentDate = startDate
 
-        for _ in 0..<limit {
+        // Apply maxOccurrences limit if specified
+        let effectiveLimit = maxOccurrences.map { min($0, limit) } ?? limit
+
+        for _ in 0..<effectiveLimit {
             guard let nextDate = nextOccurrence(after: currentDate) else {
                 break
             }

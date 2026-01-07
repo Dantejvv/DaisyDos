@@ -53,7 +53,7 @@ struct TaskDetailView: View {
     @State private var showingRecurrencePicker = false
     @State private var showingRecoverConfirmation = false
     @State private var showingDatePicker = false
-    @State private var showingAlertPicker = false
+    @State private var showingReminderPicker = false
     @State private var showingPriorityPicker = false
     @State private var newSubtaskTitle = ""
     @State private var showSubtaskField = false
@@ -220,23 +220,18 @@ struct TaskDetailView: View {
             )
             .presentationDetents([.large])
         }
-        .sheet(isPresented: $showingAlertPicker) {
-            AlertPickerSheet(
-                selectedAlert: .init(
-                    get: {
-                        if let interval = task.alertTimeInterval {
-                            return AlertOption.allCases.first { $0.timeInterval == interval }
-                        }
-                        return nil
-                    },
-                    set: { newAlert in
-                        task.alertTimeInterval = newAlert?.timeInterval
+        .sheet(isPresented: $showingReminderPicker) {
+            ReminderPickerSheet(
+                reminderDate: .init(
+                    get: { task.reminderDate },
+                    set: { newDate in
+                        task.reminderDate = newDate
                         task.modifiedDate = Date()
                     }
                 ),
                 accentColor: .daisyTask
             )
-            .presentationDetents([.medium])
+            .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showingPriorityPicker) {
             PriorityPickerSheet(
@@ -471,20 +466,20 @@ struct TaskDetailView: View {
 
                 Divider()
 
-                // Alert - Always shown
+                // Reminder - Always shown
                 Button(action: {
                     if canModify {
-                        showingAlertPicker = true
+                        showingReminderPicker = true
                     }
                 }) {
                     HStack {
-                        Label("Alert", systemImage: "bell.fill")
+                        Label("Reminder", systemImage: "bell.fill")
                             .font(.subheadline)
                             .foregroundColor(.daisyTextSecondary)
                         Spacer()
                         HStack(spacing: 4) {
-                            if let alertInterval = task.alertTimeInterval {
-                                Text(formatAlertInterval(alertInterval))
+                            if let reminderDate = task.reminderDate {
+                                Text(formatReminderDate(reminderDate))
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.daisyText)
                             } else {
@@ -695,8 +690,21 @@ struct TaskDetailView: View {
     // MARK: - Helper Methods
     // Note: Formatting methods now use DetailViewHelpers for consistency
 
-    private func formatAlertInterval(_ interval: TimeInterval) -> String {
-        DetailViewHelpers.formatAlertInterval(interval)
+    private func formatReminderDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+
+        if calendar.isDateInToday(date) {
+            formatter.dateFormat = "'Today at' h:mm a"
+        } else if calendar.isDateInTomorrow(date) {
+            formatter.dateFormat = "'Tomorrow at' h:mm a"
+        } else if calendar.isDate(date, equalTo: Date(), toGranularity: .weekOfYear) {
+            formatter.dateFormat = "EEEE 'at' h:mm a"
+        } else {
+            formatter.dateFormat = "MMM d 'at' h:mm a"
+        }
+
+        return formatter.string(from: date)
     }
 
     private func formatRelativeDate(_ date: Date) -> String {

@@ -494,20 +494,67 @@ class Habit {
         }
 
         let calendar = Calendar.current
-        let daysBetween = calendar.dateComponents([.day], from: lastCompleted, to: completionDate).day ?? 0
 
-        if daysBetween == 1 {
-            // Consecutive day
+        // No recurrence rule = simple consecutive day logic
+        guard let recurrenceRule = recurrenceRule else {
+            let daysBetween = calendar.dateComponents([.day], from: lastCompleted, to: completionDate).day ?? 0
+
+            if daysBetween == 1 {
+                currentStreak += 1
+            } else {
+                currentStreak = 1
+            }
+
+            if currentStreak > longestStreak {
+                longestStreak = currentStreak
+            }
+            return
+        }
+
+        // WITH RECURRENCE: Check if we missed any SCHEDULED occurrences
+        let missedScheduledDays = countMissedScheduledDays(
+            from: lastCompleted,
+            to: completionDate,
+            rule: recurrenceRule
+        )
+
+        if missedScheduledDays == 0 {
+            // No missed scheduled days - streak continues
             currentStreak += 1
         } else {
-            // Gap in days, restart streak
+            // Missed scheduled days - restart streak
             currentStreak = 1
         }
 
-        // Update longest streak
         if currentStreak > longestStreak {
             longestStreak = currentStreak
         }
+    }
+
+    /// Counts how many SCHEDULED occurrences were missed
+    /// For M/W/F habit: Tuesday doesn't count, but skipping Monday does
+    private func countMissedScheduledDays(from startDate: Date, to endDate: Date, rule: RecurrenceRule) -> Int {
+        let calendar = Calendar.current
+
+        // Get scheduled occurrences between dates
+        let scheduledOccurrences = rule.occurrences(from: startDate, limit: 100)
+            .filter { occurrence in
+                occurrence > startDate && occurrence < endDate
+            }
+
+        // Count scheduled days with NO completion entry
+        var missedCount = 0
+        for scheduledDate in scheduledOccurrences {
+            let hasCompletion = completionEntriesArray.contains { completion in
+                calendar.isDate(completion.completedDate, inSameDayAs: scheduledDate)
+            }
+
+            if !hasCompletion {
+                missedCount += 1
+            }
+        }
+
+        return missedCount
     }
 
     private func dueDaysInPeriod(from startDate: Date, to endDate: Date) -> Int {

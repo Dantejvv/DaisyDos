@@ -16,10 +16,22 @@ DaisyDos is a unified iOS productivity application built with SwiftUI that integ
 
 This is a standard Xcode project. Use Xcode to build and run:
 
-- **Build**: Cmd+B in Xcode or `xcodebuild build -scheme DaisyDos -destination 'platform=iOS Simulator,name=iPhone 16'`
+- **Build**: Cmd+B in Xcode or `xcodebuild build -scheme DaisyDos -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`
 - **Run**: Cmd+R in Xcode to run on simulator/device
-- **Test**: Cmd+U in Xcode or `xcodebuild test -scheme DaisyDos -destination 'platform=iOS Simulator,name=iPhone 16'`
+- **Test**: Cmd+U in Xcode or `xcodebuild test -scheme DaisyDos -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`
 - **Archive**: Product → Archive in Xcode for distribution
+
+### Simulator Destination Notes
+
+When running xcodebuild from CLI, use a specific simulator name. If there are multiple simulators with the same name (different iOS versions), you may need to specify by ID:
+
+```bash
+# List available simulators
+xcrun simctl list devices available | grep iPhone
+
+# Use specific simulator by ID if name is ambiguous
+xcodebuild build -scheme DaisyDos -destination 'platform=iOS Simulator,id=05C5E451-7DF0-4243-9E28-9B5D6641EC77'
+```
 
 ### Framework Compatibility Notes
 

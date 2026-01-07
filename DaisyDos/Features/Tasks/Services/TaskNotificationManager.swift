@@ -168,15 +168,18 @@ class TaskNotificationManager: BaseNotificationManager {
         // Remove existing notifications
         removeTaskNotification(taskId: task.id.uuidString)
 
-        // Only schedule if task has a due date
-        guard let dueDate = task.dueDate else { return }
+        // Schedule overdue reminder if enabled and task has due date
+        if enableOverdueReminders && task.dueDate != nil {
+            scheduleOverdueReminder(for: task)
+        }
 
-        // Only schedule if task has an alert time interval set
-        guard let alertInterval = task.alertTimeInterval else {
-            // No alert set for this task, but still check for overdue reminders
-            if enableOverdueReminders {
-                scheduleOverdueReminder(for: task)
-            }
+        // Only schedule if task has a reminder date set
+        guard let reminderDate = task.reminderDate else {
+            return
+        }
+
+        // Only schedule if reminder date is in the future
+        guard reminderDate > Date() else {
             return
         }
 
@@ -204,19 +207,9 @@ class TaskNotificationManager: BaseNotificationManager {
             content.summaryArgumentCount = 1
         }
 
-        // Calculate alert time using task's specific alert interval
-        let alertDate = dueDate.addingTimeInterval(alertInterval)
-
-        // Only schedule if alert date is in the future
-        guard alertDate > Date() else {
-            // Task alert time has passed, check if we should schedule overdue reminder
-            scheduleOverdueReminder(for: task)
-            return
-        }
-
-        // Schedule the notification
+        // Schedule the notification using the absolute reminder date
         let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: alertDate.timeIntervalSinceNow,
+            timeInterval: reminderDate.timeIntervalSinceNow,
             repeats: false
         )
 
@@ -230,11 +223,6 @@ class TaskNotificationManager: BaseNotificationManager {
             if let error = error {
                 print("Failed to schedule task notification: \(error)")
             }
-        }
-
-        // Schedule overdue reminder if enabled
-        if enableOverdueReminders {
-            scheduleOverdueReminder(for: task)
         }
     }
 

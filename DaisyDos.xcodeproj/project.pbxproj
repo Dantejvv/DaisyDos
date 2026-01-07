@@ -11,6 +11,7 @@
 		FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = FE3537EC2E830555007B0F25 /* CLAUDE.md */; };
 		FE609CD02EFA8023004A2CFF /* privacy_policy.md in Resources */ = {isa = PBXBuildFile; fileRef = FE609CCF2EFA8023004A2CFF /* privacy_policy.md */; };
 		FE609CD22F036DA9004A2CFF /* support.md in Resources */ = {isa = PBXBuildFile; fileRef = FE609CD12F036DA9004A2CFF /* support.md */; };
+		FE609CE22F0E40F1004A2CFF /* Recurrence.md in Resources */ = {isa = PBXBuildFile; fileRef = FE609CE12F0E40F1004A2CFF /* Recurrence.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -30,6 +31,7 @@
 		FE3537EC2E830555007B0F25 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 		FE609CCF2EFA8023004A2CFF /* privacy_policy.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = privacy_policy.md; sourceTree = "<group>"; };
 		FE609CD12F036DA9004A2CFF /* support.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = support.md; sourceTree = "<group>"; };
+		FE609CE12F0E40F1004A2CFF /* Recurrence.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = Recurrence.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -105,6 +107,7 @@
 		FE3537C62E8302B1007B0F25 /* Docs */ = {
 			isa = PBXGroup;
 			children = (
+				FE609CE12F0E40F1004A2CFF /* Recurrence.md */,
 				FE609CD12F036DA9004A2CFF /* support.md */,
 				FE609CCF2EFA8023004A2CFF /* privacy_policy.md */,
 				FE3537C52E8302B1007B0F25 /* implementation_roadmap.md */,
@@ -206,6 +209,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FE609CD22F036DA9004A2CFF /* support.md in Resources */,
+				FE609CE22F0E40F1004A2CFF /* Recurrence.md in Resources */,
 				FE3537ED2E830555007B0F25 /* CLAUDE.md in Resources */,
 				FE3537C92E8302B1007B0F25 /* implementation_roadmap.md in Resources */,
 				FE609CD02EFA8023004A2CFF /* privacy_policy.md in Resources */,
@@ -254,7 +258,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = DaisyDos/DaisyDos.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 1.1;
 				DEVELOPMENT_TEAM = BKD7HH7ZDH;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -285,7 +289,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = DaisyDos/DaisyDos.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 1.1;
 				DEVELOPMENT_TEAM = BKD7HH7ZDH;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

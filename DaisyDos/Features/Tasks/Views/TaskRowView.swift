@@ -63,7 +63,7 @@ struct TaskRowView: View {
                     // UNCOMPLETED TASKS: Inline Layout
 
                     // ROW 2: Metadata • Tags (LEFT/MIDDLE) | Due Date (RIGHT)
-                    if task.hasSubtasks || task.hasAlert || task.hasRecurrence || !(task.tags ?? []).isEmpty || task.dueDate != nil {
+                    if task.hasSubtasks || task.hasReminder || task.hasRecurrence || !(task.tags ?? []).isEmpty || task.dueDate != nil {
                         HStack(spacing: 4) {
                             // Left side: Subtasks
                             if let progressText = task.subtaskProgressText {
@@ -71,7 +71,7 @@ struct TaskRowView: View {
                             }
 
                             // Combined Alert/Recurrence indicator
-                            if task.hasAlert || task.hasRecurrence {
+                            if task.hasReminder || task.hasRecurrence {
                                 alertRecurrenceIndicator
                             }
 
@@ -184,12 +184,12 @@ struct TaskRowView: View {
 
     @ViewBuilder
     private var alertRecurrenceIndicator: some View {
-        if task.hasAlert && task.hasRecurrence {
+        if task.hasReminder && task.hasRecurrence {
             Image(systemName: "bell.badge.fill")
                 .font(.body)
                 .foregroundColor(.daisyWarning)
                 .accessibilityLabel("Has reminder and recurring")
-        } else if task.hasAlert {
+        } else if task.hasReminder {
             Image(systemName: "bell.fill")
                 .font(.body)
                 .foregroundColor(.daisyWarning)
@@ -302,7 +302,7 @@ struct TaskRowView: View {
             label += ", overdue"
         }
 
-        if task.hasAlert {
+        if task.hasReminder {
             label += ", has reminder"
         }
 

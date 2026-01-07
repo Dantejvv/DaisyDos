@@ -240,7 +240,7 @@ class ImportExportManager {
             priority: task.priority.rawValue,
             dueDate: task.dueDate,
             startDate: nil, // Not currently in model
-            alertDate: nil, // alertTimeInterval is stored differently
+            alertDate: task.reminderDate, // Absolute reminder date/time
             createdAt: task.createdDate,
             completedAt: task.completedDate,
             tags: (task.tags ?? []).map { $0.name },
