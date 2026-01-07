@@ -27,8 +27,8 @@ struct AddTaskView: View {
     @State private var showingRecurrencePicker = false
     @State private var showingDatePicker = false
     @State private var showingPriorityPicker = false
-    @State private var showingAlertPicker = false
-    @State private var selectedAlert: AlertOption?
+    @State private var showingReminderPicker = false
+    @State private var reminderDate: Date?
     @State private var showingUnsavedChangesAlert = false
     @State private var subtasks: [SubtaskItem] = []
     @State private var newSubtaskTitle = ""
@@ -94,7 +94,7 @@ struct AddTaskView: View {
                hasDueDate ||
                !selectedTags.isEmpty ||
                recurrenceRule != nil ||
-               selectedAlert != nil ||
+               reminderDate != nil ||
                !subtasks.isEmpty ||
                !attachments.isEmpty
     }
@@ -119,12 +119,12 @@ struct AddTaskView: View {
                         config: .task,
                         dueDate: dueDate,
                         recurrenceRule: recurrenceRule,
-                        alert: selectedAlert,
+                        reminderDate: reminderDate,
                         priority: priority,
                         accentColor: .daisyTask,
                         onDateTap: { showingDatePicker = true },
                         onRecurrenceTap: { showingRecurrencePicker = true },
-                        onAlertTap: { showingAlertPicker = true },
+                        onReminderTap: { showingReminderPicker = true },
                         onPriorityTap: { showingPriorityPicker = true }
                     )
                     .padding(.horizontal)
@@ -201,11 +201,11 @@ struct AddTaskView: View {
                 RecurrenceRulePickerView(
                     recurrenceRule: $recurrenceRule
                 )
-                .presentationDetents([.medium])
+                .presentationDetents([.large])
             }
-            .sheet(isPresented: $showingAlertPicker) {
-                AlertPickerSheet(
-                    selectedAlert: $selectedAlert,
+            .sheet(isPresented: $showingReminderPicker) {
+                ReminderPickerSheet(
+                    reminderDate: $reminderDate,
                     accentColor: .daisyTask
                 )
                 .presentationDetents([.medium, .large])
@@ -423,10 +423,8 @@ struct AddTaskView: View {
                 }
             }
 
-            // Add alert if set
-            if let alertInterval = selectedAlert?.timeInterval {
-                task.alertTimeInterval = alertInterval
-            }
+            // Add reminder if set
+            task.reminderDate = reminderDate
 
             // Add subtasks using batch method (follows SwiftData best practices)
             if !subtasks.isEmpty {

@@ -27,8 +27,8 @@ struct TaskEditView: View {
     @State private var showingRecurrencePicker = false
     @State private var showingDatePicker = false
     @State private var showingPriorityPicker = false
-    @State private var showingAlertPicker = false
-    @State private var selectedAlert: AlertOption?
+    @State private var showingReminderPicker = false
+    @State private var reminderDate: Date?
     @State private var showingUnsavedChangesAlert = false
     @State private var showingAttachmentSourcePicker = false
     @State private var showingPhotoPicker = false
@@ -87,13 +87,7 @@ struct TaskEditView: View {
         self._hasDueDate = State(initialValue: task.dueDate != nil)
         self._selectedTags = State(initialValue: task.tags ?? [])
         self._recurrenceRule = State(initialValue: task.recurrenceRule)
-
-        // Initialize alert from time interval
-        if let timeInterval = task.alertTimeInterval {
-            self._selectedAlert = State(initialValue: AlertOption.from(timeInterval: timeInterval))
-        } else {
-            self._selectedAlert = State(initialValue: nil)
-        }
+        self._reminderDate = State(initialValue: task.reminderDate)
 
         // Initialize staged attachments from existing task attachments
         // Convert existing attachments to temporary URLs for staging
@@ -171,7 +165,7 @@ struct TaskEditView: View {
                priority != task.priority ||
                (hasDueDate ? dueDate : nil) != task.dueDate ||
                recurrenceRule != task.recurrenceRule ||
-               selectedAlert?.timeInterval != task.alertTimeInterval ||
+               reminderDate != task.reminderDate ||
                Set(selectedTags.map(\.id)) != Set((task.tags ?? []).map(\.id)) ||
                subtasksChanged ||
                attachmentsChanged
@@ -314,12 +308,12 @@ struct TaskEditView: View {
             config: .task,
             dueDate: dueDate,
             recurrenceRule: recurrenceRule,
-            alert: selectedAlert,
+            reminderDate: reminderDate,
             priority: priority,
             accentColor: .daisyTask,
             onDateTap: { showingDatePicker = true },
             onRecurrenceTap: { showingRecurrencePicker = true },
-            onAlertTap: { showingAlertPicker = true },
+            onReminderTap: { showingReminderPicker = true },
             onPriorityTap: { showingPriorityPicker = true }
         )
         .padding(.horizontal)
@@ -396,16 +390,16 @@ struct TaskEditView: View {
                 )
                 .presentationDetents([.medium])
             }
-            .sheet(isPresented: $showingAlertPicker) {
-                AlertPickerSheet(
-                    selectedAlert: $selectedAlert,
+            .sheet(isPresented: $showingReminderPicker) {
+                ReminderPickerSheet(
+                    reminderDate: $reminderDate,
                     accentColor: .daisyTask
                 )
                 .presentationDetents([.medium, .large])
             }
             .sheet(isPresented: $showingRecurrencePicker) {
                 RecurrenceRulePickerView(recurrenceRule: $recurrenceRule)
-                    .presentationDetents([.medium])
+                    .presentationDetents([.large])
             }
             .confirmationDialog("Add Attachment", isPresented: $showingAttachmentSourcePicker, titleVisibility: .visible) {
                 #if canImport(PhotosUI)
@@ -468,7 +462,7 @@ struct TaskEditView: View {
         task.priority = priority
         task.dueDate = hasDueDate ? dueDate : nil
         task.recurrenceRule = recurrenceRule
-        task.alertTimeInterval = selectedAlert?.timeInterval
+        task.reminderDate = reminderDate
         task.modifiedDate = Date()
 
         // Update tags

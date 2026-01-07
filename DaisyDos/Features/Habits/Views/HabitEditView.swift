@@ -378,7 +378,7 @@ struct HabitEditView: View {
             }
             .sheet(isPresented: $showingRecurrencePicker) {
                 RecurrenceRulePickerView(recurrenceRule: $recurrenceRule)
-                    .presentationDetents([.medium])
+                    .presentationDetents([.large])
             }
             .sheet(isPresented: $showingAlertPicker) {
                 AlertPickerSheet(
