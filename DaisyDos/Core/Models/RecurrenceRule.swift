@@ -377,37 +377,57 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
     }
 
     /// Checks if a given date matches this recurrence pattern
+    /// UNIFIED: Uses component-based matching without frequency branching
     func matches(date: Date, relativeTo baseDate: Date) -> Bool {
         var calendar = Calendar.current
         calendar.timeZone = timeZone
 
-        switch frequency {
-        case .daily:
-            let daysBetween = calendar.dateComponents([.day], from: baseDate, to: date).day ?? 0
-            return daysBetween >= 0 && daysBetween % interval == 0
+        // Calculate difference in appropriate units using unified component mapping
+        let component = RecurrenceCalculationContext(
+            frequency: frequency,
+            interval: interval,
+            daysOfWeek: daysOfWeek,
+            dayOfMonth: dayOfMonth,
+            calendar: calendar,
+            baseDate: baseDate
+        ).calendarComponent
 
-        case .weekly:
-            guard let daysOfWeek = daysOfWeek else { return false }
-            let weekday = calendar.component(.weekday, from: date)
-            let weeksBetween = calendar.dateComponents([.weekOfYear], from: baseDate, to: date).weekOfYear ?? 0
-            return weeksBetween >= 0 && weeksBetween % interval == 0 && daysOfWeek.contains(weekday)
-
-        case .monthly:
-            let monthsBetween = calendar.dateComponents([.month], from: baseDate, to: date).month ?? 0
-            let day = calendar.component(.day, from: date)
-            return monthsBetween >= 0 && monthsBetween % interval == 0 && day == (dayOfMonth ?? calendar.component(.day, from: baseDate))
-
-        case .yearly:
-            let yearsBetween = calendar.dateComponents([.year], from: baseDate, to: date).year ?? 0
-            let baseComponents = calendar.dateComponents([.month, .day], from: baseDate)
-            let dateComponents = calendar.dateComponents([.month, .day], from: date)
-            return yearsBetween >= 0 && yearsBetween % interval == 0 &&
-                   baseComponents.month == dateComponents.month &&
-                   baseComponents.day == dateComponents.day
-
-        case .custom:
-            // Custom logic would need additional parameters
+        // Extract unit difference
+        let unitsBetween: Int?
+        switch component {
+        case .day:
+            unitsBetween = calendar.dateComponents([.day], from: baseDate, to: date).day
+        case .weekOfYear:
+            unitsBetween = calendar.dateComponents([.weekOfYear], from: baseDate, to: date).weekOfYear
+        case .month:
+            unitsBetween = calendar.dateComponents([.month], from: baseDate, to: date).month
+        case .year:
+            unitsBetween = calendar.dateComponents([.year], from: baseDate, to: date).year
+        default:
             return false
+        }
+
+        guard let units = unitsBetween, units >= 0 else { return false }
+
+        // Check interval alignment
+        guard units % interval == 0 else { return false }
+
+        // Apply frequency-specific constraints
+        switch frequency {
+        case .weekly:
+            guard let daysOfWeek = daysOfWeek else { return true }
+            let weekday = calendar.component(.weekday, from: date)
+            return daysOfWeek.contains(weekday)
+
+        case .monthly, .yearly:
+            let day = calendar.component(.day, from: date)
+            let expectedDay = dayOfMonth ?? calendar.component(.day, from: baseDate)
+            // Handle month-end clamping
+            let lastDayOfMonth = calendar.range(of: .day, in: .month, for: date)?.count ?? 31
+            return day == min(expectedDay, lastDayOfMonth)
+
+        default:
+            return true
         }
     }
 
