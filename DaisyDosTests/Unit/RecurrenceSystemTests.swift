@@ -672,4 +672,137 @@ struct RecurrenceSystemTests {
         #expect(decoded.frequency == .daily, "Frequency should persist")
         #expect(decoded.interval == 1, "Interval should persist")
     }
+
+    // MARK: - maxOccurrences Tests
+
+    @Test("maxOccurrences stops creating instances after limit reached")
+    func testMaxOccurrencesLimitEnforcement() async throws {
+        let container = try TestHelpers.createTestContainer()
+        let context = ModelContext(container)
+        let manager = TaskManager(modelContext: context)
+
+        // Create daily recurring task with maxOccurrences=3
+        let rule = RecurrenceRule.daily(interval: 1)
+        let ruleWithMax = RecurrenceRule(
+            frequency: rule.frequency,
+            interval: rule.interval,
+            maxOccurrences: 3,
+            preferredTime: rule.preferredTime
+        )
+
+        let task = Task(
+            title: "Limited Daily Task",
+            priority: .medium,
+            dueDate: Date(),
+            recurrenceRule: ruleWithMax
+        )
+
+        context.insert(task)
+        try context.save()
+
+        #expect(task.occurrenceIndex == 1, "First instance should have index 1")
+
+        // Complete and create instance #2
+        _ = manager.toggleTaskCompletion(task)
+        try context.save()
+
+        var allTasks = manager.allTasks
+        #expect(allTasks.count == 2, "Should have 2 tasks after first completion")
+
+        let instance2 = allTasks.first(where: { !$0.isCompleted })!
+        #expect(instance2.occurrenceIndex == 2, "Second instance should have index 2")
+
+        // Complete and create instance #3
+        _ = manager.toggleTaskCompletion(instance2)
+        try context.save()
+
+        allTasks = manager.allTasks
+        #expect(allTasks.count == 3, "Should have 3 tasks after second completion")
+
+        let instance3 = allTasks.first(where: { !$0.isCompleted })!
+        #expect(instance3.occurrenceIndex == 3, "Third instance should have index 3")
+
+        // Complete instance #3 - should NOT create instance #4 (reached max)
+        _ = manager.toggleTaskCompletion(instance3)
+        try context.save()
+
+        allTasks = manager.allTasks
+        let pendingTasks = manager.pendingTasks
+        #expect(allTasks.count == 3, "Should still have 3 tasks total")
+        #expect(pendingTasks.count == 0, "Should have no pending tasks (max reached)")
+    }
+
+    @Test("maxOccurrences nil allows unlimited occurrences")
+    func testMaxOccurrencesUnlimited() async throws {
+        let container = try TestHelpers.createTestContainer()
+        let context = ModelContext(container)
+        let manager = TaskManager(modelContext: context)
+
+        // Create daily recurring task with no maxOccurrences limit
+        let rule = RecurrenceRule.daily()
+        let task = Task(
+            title: "Unlimited Daily Task",
+            priority: .medium,
+            dueDate: Date(),
+            recurrenceRule: rule
+        )
+
+        context.insert(task)
+        try context.save()
+
+        // Create 10 instances - should all work since no limit
+        for i in 1...10 {
+            let pendingTask = manager.pendingTasks.first!
+            _ = manager.toggleTaskCompletion(pendingTask)
+            try context.save()
+
+            let allTasks = manager.allTasks
+            #expect(allTasks.count == i + 1, "Should have \(i + 1) tasks after \(i) completions")
+        }
+
+        // Should still be able to create more
+        let pendingTasks = manager.pendingTasks
+        #expect(pendingTasks.count == 1, "Should still have 1 pending task (unlimited)")
+    }
+
+    @Test("occurrenceIndex increments correctly")
+    func testOccurrenceIndexIncrement() {
+        let rule = RecurrenceRule.daily()
+        let task = Task(
+            title: "Test Task",
+            dueDate: Date(),
+            recurrenceRule: rule
+        )
+
+        #expect(task.occurrenceIndex == 1, "Original task should have index 1")
+
+        if let instance2 = task.createRecurringInstance() {
+            #expect(instance2.occurrenceIndex == 2, "First recurring instance should have index 2")
+
+            if let instance3 = instance2.createRecurringInstance() {
+                #expect(instance3.occurrenceIndex == 3, "Second recurring instance should have index 3")
+            }
+        }
+    }
+
+    @Test("custom frequency works as daily intervals")
+    func testCustomFrequencyBehavior() {
+        // Custom frequency with interval=5 should behave like daily with interval=5
+        let customRule = RecurrenceRule(
+            frequency: .custom,
+            interval: 5
+        )
+
+        let startDate = Date()
+        let nextDate = customRule.nextOccurrence(after: startDate)
+
+        #expect(nextDate != nil, "Custom frequency should calculate next occurrence")
+
+        // Verify it advances by 5 days (custom interval)
+        if let next = nextDate {
+            let calendar = Calendar.current
+            let dayDiff = calendar.dateComponents([.day], from: startDate, to: next).day
+            #expect(dayDiff == 5, "Custom with interval=5 should advance by 5 days")
+        }
+    }
 }
