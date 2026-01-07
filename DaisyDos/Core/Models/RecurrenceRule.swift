@@ -276,38 +276,68 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
 
     // MARK: - Date Calculations
 
+    /// Encapsulates all parameters needed for recurrence calculation
+    /// Enables unified algorithm without frequency-specific branching
+    private struct RecurrenceCalculationContext {
+        let frequency: Frequency
+        let interval: Int
+        let daysOfWeek: Set<Int>?
+        let dayOfMonth: Int?
+        let calendar: Calendar
+        let baseDate: Date
+
+        /// Maps frequency to Calendar component for unified advancement
+        var calendarComponent: Calendar.Component {
+            switch frequency {
+            case .daily: return .day
+            case .weekly: return .weekOfYear
+            case .monthly: return .month
+            case .yearly: return .year
+            case .custom: return .day  // Custom treated as daily intervals
+            }
+        }
+
+        /// Determines if post-advancement modifiers are needed
+        var requiresModifiers: Bool {
+            daysOfWeek != nil || dayOfMonth != nil
+        }
+    }
+
     /// Calculates the next occurrence date after the given date
+    /// UNIFIED ENGINE: All frequencies flow through single algorithm
     func nextOccurrence(after date: Date) -> Date? {
         // Use rule's stored timezone for all calculations
         var calendar = Calendar.current
         calendar.timeZone = timeZone
 
-        var nextDate: Date?
+        // Step 1: Create calculation context
+        let context = RecurrenceCalculationContext(
+            frequency: frequency,
+            interval: interval,
+            daysOfWeek: daysOfWeek,
+            dayOfMonth: dayOfMonth,
+            calendar: calendar,
+            baseDate: date
+        )
 
-        switch frequency {
-        case .daily:
-            nextDate = calculateNextDailyOccurrence(after: date, calendar: calendar)
-        case .weekly:
-            nextDate = calculateNextWeeklyOccurrence(after: date, calendar: calendar)
-        case .monthly:
-            nextDate = calculateNextMonthlyOccurrence(after: date, calendar: calendar)
-        case .yearly:
-            nextDate = calculateNextYearlyOccurrence(after: date, calendar: calendar)
-        case .custom:
-            nextDate = calculateNextCustomOccurrence(after: date, calendar: calendar)
+        // Step 2: Advance by interval units (unified for all frequencies)
+        guard var nextDate = advanceDateByInterval(context: context) else {
+            return nil
         }
 
-        // Apply preferred time if specified
-        if let unwrappedDate = nextDate, let preferredTime = preferredTime {
-            nextDate = applyTime(preferredTime, to: unwrappedDate, using: calendar)
+        // Step 3: Apply frequency-specific modifiers (weekday selection, day clamping)
+        if context.requiresModifiers {
+            nextDate = applyModifiers(to: nextDate, context: context)
         }
 
-        // Check if we've exceeded the end date or max occurrences
-        if let nextDate = nextDate {
-            if let endDate = endDate, nextDate > endDate {
-                return nil
-            }
-            // Note: maxOccurrences would need additional state tracking to implement fully
+        // Step 4: Apply preferred time if specified
+        if let preferredTime = preferredTime {
+            nextDate = applyTime(preferredTime, to: nextDate, using: calendar)
+        }
+
+        // Step 5: Validate occurrence against termination conditions
+        guard isValidOccurrence(nextDate) else {
+            return nil
         }
 
         return nextDate
@@ -381,7 +411,86 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         }
     }
 
-    // MARK: - Private Helper Methods
+    // MARK: - Unified Calculation Engine
+
+    /// Advances date by interval units (single entry point for all frequencies)
+    private func advanceDateByInterval(context: RecurrenceCalculationContext) -> Date? {
+        return context.calendar.date(
+            byAdding: context.calendarComponent,
+            value: context.interval,
+            to: context.baseDate
+        )
+    }
+
+    /// Applies frequency-specific modifiers after advancement
+    private func applyModifiers(to date: Date, context: RecurrenceCalculationContext) -> Date {
+        switch context.frequency {
+        case .weekly:
+            return applyWeekdayModifier(to: date, context: context)
+        case .monthly, .yearly:
+            return applyMonthDayModifier(to: date, context: context)
+        default:
+            return date  // Daily needs no modifiers
+        }
+    }
+
+    /// Selects next valid weekday for weekly recurrence
+    /// Handles: multiple weekdays, week boundaries, chronological ordering
+    private func applyWeekdayModifier(to date: Date, context: RecurrenceCalculationContext) -> Date {
+        guard let daysOfWeek = context.daysOfWeek, !daysOfWeek.isEmpty else {
+            return date  // No specific days = simple weekly
+        }
+
+        let currentWeekday = context.calendar.component(.weekday, from: context.baseDate)
+        let sortedDays = daysOfWeek.sorted()
+
+        // Find next day in current week
+        if let nextDay = sortedDays.first(where: { $0 > currentWeekday }) {
+            let daysToAdd = nextDay - currentWeekday
+            return context.calendar.date(byAdding: .day, value: daysToAdd, to: context.baseDate) ?? date
+        }
+
+        // Wrap to next interval week, first scheduled day
+        let weeksToAdd = context.interval
+        let daysToAdd = 7 * weeksToAdd + (sortedDays.first! - currentWeekday)
+        return context.calendar.date(byAdding: .day, value: daysToAdd, to: context.baseDate) ?? date
+    }
+
+    /// Clamps day-of-month to valid range
+    /// Handles: Feb 30→28, Apr 31→30, leap year transitions
+    private func applyMonthDayModifier(to date: Date, context: RecurrenceCalculationContext) -> Date {
+        let targetDay = context.dayOfMonth ?? context.calendar.component(.day, from: context.baseDate)
+
+        var components = context.calendar.dateComponents([.year, .month], from: date)
+        components.day = targetDay
+
+        // Try exact day first
+        if let targetDate = context.calendar.date(from: components),
+           context.calendar.component(.day, from: targetDate) == targetDay {
+            return targetDate
+        }
+
+        // Edge case: target day doesn't exist in month (Feb 30, Apr 31)
+        // Fall back to last day of month (spec requirement lines 63-67)
+        let range = context.calendar.range(of: .day, in: .month, for: date)
+        components.day = range?.upperBound.advanced(by: -1)
+        return context.calendar.date(from: components) ?? date
+    }
+
+    /// Validates occurrence against termination conditions
+    private func isValidOccurrence(_ date: Date) -> Bool {
+        // Check end date constraint
+        if let endDate = endDate, date > endDate {
+            return false
+        }
+
+        // maxOccurrences would need state tracking (not implemented)
+        // See line 299 comment
+
+        return true
+    }
+
+    // MARK: - Private Helper Methods (OLD - Will be removed in Phase 4)
 
     private func calculateNextDailyOccurrence(after date: Date, calendar: Calendar) -> Date? {
         return calendar.date(byAdding: .day, value: interval, to: date)
