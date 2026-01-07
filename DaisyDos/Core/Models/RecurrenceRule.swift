@@ -21,11 +21,48 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
     let repeatMode: RepeatMode
     let timeZoneIdentifier: String
 
+    /// Controls whether to create next instance when previous is incomplete
+    /// - true: Always create next instance (backward compatible default)
+    /// - false: Only create after previous completion (spec requirement lines 48-55)
+    let recreateIfIncomplete: Bool
+
+    // MARK: - Time Support
+
+    /// Preferred hour for recurring instances (0-23), nil means use original task's time
+    let preferredTimeHour: Int?
+
+    /// Preferred minute for recurring instances (0-59), nil means use original task's time
+    let preferredTimeMinute: Int?
+
     // MARK: - Computed Properties
 
     /// The actual TimeZone object from the stored identifier
     var timeZone: TimeZone {
         TimeZone(identifier: timeZoneIdentifier) ?? TimeZone.current
+    }
+
+    /// Preferred time as DateComponents (computed from hour/minute)
+    var preferredTime: DateComponents? {
+        guard let hour = preferredTimeHour,
+              let minute = preferredTimeMinute else {
+            return nil
+        }
+        return DateComponents(hour: hour, minute: minute)
+    }
+
+    /// Formatted time string for display (e.g., "9:00 AM")
+    var preferredTimeString: String? {
+        guard let time = preferredTime else { return nil }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+
+        var components = DateComponents()
+        components.hour = time.hour
+        components.minute = time.minute
+        let date = Calendar.current.date(from: components)
+
+        return date.map { formatter.string(from: $0) }
     }
 
     /// Short display name for compact UI (e.g., "Daily", "Weekly", "Every 3 days")
@@ -134,7 +171,9 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         endDate: Date? = nil,
         maxOccurrences: Int? = nil,
         repeatMode: RepeatMode = .fromOriginalDate,
-        timeZone: TimeZone = TimeZone.current
+        timeZone: TimeZone = TimeZone.current,
+        preferredTime: DateComponents? = nil,
+        recreateIfIncomplete: Bool = true
     ) {
         self.id = id
         self.frequency = frequency
@@ -145,45 +184,104 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         self.maxOccurrences = maxOccurrences
         self.repeatMode = repeatMode
         self.timeZoneIdentifier = timeZone.identifier
+        self.recreateIfIncomplete = recreateIfIncomplete
+
+        // Store time components
+        self.preferredTimeHour = preferredTime?.hour
+        self.preferredTimeMinute = preferredTime?.minute
     }
 
     // MARK: - Factory Methods
 
     /// Creates a daily recurrence rule
-    static func daily(interval: Int = 1, endDate: Date? = nil) -> RecurrenceRule {
-        RecurrenceRule(frequency: .daily, interval: interval, endDate: endDate)
+    static func daily(interval: Int = 1, endDate: Date? = nil, time: String? = nil, recreateIfIncomplete: Bool = true) -> RecurrenceRule {
+        let timeComponents = parseTime(time)
+        return RecurrenceRule(
+            frequency: .daily,
+            interval: interval,
+            endDate: endDate,
+            preferredTime: timeComponents,
+            recreateIfIncomplete: recreateIfIncomplete
+        )
     }
 
     /// Creates a weekly recurrence rule for specific days
-    static func weekly(daysOfWeek: Set<Int>, interval: Int = 1, endDate: Date? = nil) -> RecurrenceRule {
-        RecurrenceRule(
+    static func weekly(daysOfWeek: Set<Int>, interval: Int = 1, endDate: Date? = nil, time: String? = nil, recreateIfIncomplete: Bool = true) -> RecurrenceRule {
+        let timeComponents = parseTime(time)
+        return RecurrenceRule(
             frequency: .weekly,
             interval: interval,
             daysOfWeek: daysOfWeek,
-            endDate: endDate
+            endDate: endDate,
+            preferredTime: timeComponents,
+            recreateIfIncomplete: recreateIfIncomplete
         )
     }
 
     /// Creates a monthly recurrence rule
-    static func monthly(dayOfMonth: Int, interval: Int = 1, endDate: Date? = nil) -> RecurrenceRule {
-        RecurrenceRule(
+    static func monthly(dayOfMonth: Int, interval: Int = 1, endDate: Date? = nil, time: String? = nil, recreateIfIncomplete: Bool = true) -> RecurrenceRule {
+        let timeComponents = parseTime(time)
+        return RecurrenceRule(
             frequency: .monthly,
             interval: interval,
             dayOfMonth: dayOfMonth,
-            endDate: endDate
+            endDate: endDate,
+            preferredTime: timeComponents,
+            recreateIfIncomplete: recreateIfIncomplete
         )
     }
 
     /// Creates a yearly recurrence rule
-    static func yearly(interval: Int = 1, endDate: Date? = nil) -> RecurrenceRule {
-        RecurrenceRule(frequency: .yearly, interval: interval, endDate: endDate)
+    static func yearly(interval: Int = 1, endDate: Date? = nil, time: String? = nil, recreateIfIncomplete: Bool = true) -> RecurrenceRule {
+        let timeComponents = parseTime(time)
+        return RecurrenceRule(
+            frequency: .yearly,
+            interval: interval,
+            endDate: endDate,
+            preferredTime: timeComponents,
+            recreateIfIncomplete: recreateIfIncomplete
+        )
+    }
+
+    // MARK: - Time Helpers
+
+    /// Parse time string "HH:mm" into DateComponents
+    private static func parseTime(_ timeString: String?) -> DateComponents? {
+        guard let timeString = timeString else { return nil }
+
+        let components = timeString.split(separator: ":")
+        guard components.count == 2,
+              let hour = Int(components[0]),
+              let minute = Int(components[1]),
+              (0...23).contains(hour),
+              (0...59).contains(minute) else {
+            return nil
+        }
+
+        return DateComponents(hour: hour, minute: minute)
+    }
+
+    /// Extract time from a Date as DateComponents
+    static func extractTime(from date: Date, in timeZone: TimeZone = .current) -> DateComponents {
+        var calendar = Calendar.current
+        calendar.timeZone = timeZone
+        return calendar.dateComponents([.hour, .minute], from: date)
+    }
+
+    /// Extract time from a Date as HH:mm string
+    static func extractTimeString(from date: Date, in timeZone: TimeZone = .current) -> String {
+        let components = extractTime(from: date, in: timeZone)
+        return String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0)
     }
 
     // MARK: - Date Calculations
 
     /// Calculates the next occurrence date after the given date
     func nextOccurrence(after date: Date) -> Date? {
-        let calendar = Calendar.current
+        // Use rule's stored timezone for all calculations
+        var calendar = Calendar.current
+        calendar.timeZone = timeZone
+
         var nextDate: Date?
 
         switch frequency {
@@ -199,6 +297,11 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
             nextDate = calculateNextCustomOccurrence(after: date, calendar: calendar)
         }
 
+        // Apply preferred time if specified
+        if let unwrappedDate = nextDate, let preferredTime = preferredTime {
+            nextDate = applyTime(preferredTime, to: unwrappedDate, using: calendar)
+        }
+
         // Check if we've exceeded the end date or max occurrences
         if let nextDate = nextDate {
             if let endDate = endDate, nextDate > endDate {
@@ -208,6 +311,17 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         }
 
         return nextDate
+    }
+
+    /// Apply time components to a date
+    private func applyTime(_ time: DateComponents, to date: Date, using calendar: Calendar) -> Date {
+        var components = calendar.dateComponents([.year, .month, .day], from: date)
+        components.hour = time.hour
+        components.minute = time.minute
+        components.second = 0
+        components.nanosecond = 0
+
+        return calendar.date(from: components) ?? date
     }
 
     /// Generates a sequence of occurrence dates up to a limit
@@ -234,7 +348,8 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
 
     /// Checks if a given date matches this recurrence pattern
     func matches(date: Date, relativeTo baseDate: Date) -> Bool {
-        let calendar = Calendar.current
+        var calendar = Calendar.current
+        calendar.timeZone = timeZone
 
         switch frequency {
         case .daily:
@@ -355,7 +470,7 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
     // MARK: - Display Properties
 
     var displayDescription: String {
-        let baseDescription: String
+        var baseDescription: String
         switch frequency {
         case .daily:
             baseDescription = interval == 1 ? "Daily" : "Every \(interval) days"
@@ -379,6 +494,11 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
             baseDescription = interval == 1 ? "Yearly" : "Every \(interval) years"
         case .custom:
             baseDescription = "Custom pattern"
+        }
+
+        // Add time if specified
+        if let timeString = preferredTimeString {
+            baseDescription += " at \(timeString)"
         }
 
         // Add repeat mode suffix if fromCompletion

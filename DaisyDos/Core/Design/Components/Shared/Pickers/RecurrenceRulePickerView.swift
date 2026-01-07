@@ -18,6 +18,18 @@ struct RecurrenceRulePickerView: View {
     @State private var customDayInterval: Int = 1
     @State private var isCustomInterval: Bool = false
 
+    // Time support
+    @State private var hasSpecificTime: Bool = false
+    @State private var selectedTime: Date = {
+        var components = DateComponents()
+        components.hour = 9
+        components.minute = 0
+        return Calendar.current.date(from: components) ?? Date()
+    }()
+
+    // Incomplete task behavior
+    @State private var recreateIfIncomplete: Bool = true
+
     // Quick preset options
     enum QuickPreset: String, CaseIterable {
         case daily = "Daily"
@@ -91,6 +103,12 @@ struct RecurrenceRulePickerView: View {
                     } else if !isCustomInterval && frequency == .monthly {
                         monthDayPicker
                     }
+
+                    // MARK: - Time Selection
+                    timePicker
+
+                    // MARK: - Incomplete Task Behavior
+                    incompleteTaskToggle
                 }
                 .padding(.vertical)
             }
@@ -235,6 +253,81 @@ struct RecurrenceRulePickerView: View {
         .padding(.horizontal)
     }
 
+    // MARK: - Time Picker
+
+    @ViewBuilder
+    private var timePicker: some View {
+        VStack(alignment: .leading, spacing: Spacing.small) {
+            Toggle(isOn: $hasSpecificTime) {
+                HStack {
+                    Image(systemName: "clock")
+                        .foregroundColor(.daisyTask)
+                        .font(.body)
+
+                    Text("Set specific time")
+                        .font(.body)
+                        .foregroundColor(.daisyText)
+                }
+            }
+            .tint(.daisyTask)
+            .padding(.horizontal)
+            .padding(.top, Spacing.small)
+
+            if hasSpecificTime {
+                DatePicker(
+                    "Time",
+                    selection: $selectedTime,
+                    displayedComponents: .hourAndMinute
+                )
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .padding(.horizontal)
+
+                Text("Each occurrence will be created at this time")
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+                    .padding(.horizontal)
+                    .padding(.bottom, Spacing.small)
+            }
+        }
+        .background(Color.daisySurface)
+        .cornerRadius(12)
+        .padding(.horizontal)
+    }
+
+    // MARK: - Incomplete Task Behavior Toggle
+
+    @ViewBuilder
+    private var incompleteTaskToggle: some View {
+        VStack(alignment: .leading, spacing: Spacing.small) {
+            Toggle(isOn: $recreateIfIncomplete) {
+                HStack {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .foregroundColor(.daisyTask)
+                        .font(.body)
+
+                    Text("Create if previous incomplete")
+                        .font(.body)
+                        .foregroundColor(.daisyText)
+                }
+            }
+            .tint(.daisyTask)
+            .padding(.horizontal)
+            .padding(.top, Spacing.small)
+
+            Text(recreateIfIncomplete
+                ? "New instances always created on schedule"
+                : "Next instance only after completing previous")
+                .font(.caption)
+                .foregroundColor(.daisyTextSecondary)
+                .padding(.horizontal)
+                .padding(.bottom, Spacing.small)
+        }
+        .background(Color.daisySurface)
+        .cornerRadius(12)
+        .padding(.horizontal)
+    }
+
     // MARK: - Helper Properties
 
     private var hasCustomSettings: Bool {
@@ -256,6 +349,17 @@ struct RecurrenceRulePickerView: View {
         frequency = existingRule.frequency
         selectedDaysOfWeek = existingRule.daysOfWeek ?? []
         dayOfMonth = existingRule.dayOfMonth ?? Calendar.current.component(.day, from: Date())
+        recreateIfIncomplete = existingRule.recreateIfIncomplete
+
+        // Load time if present
+        if let preferredTime = existingRule.preferredTime {
+            hasSpecificTime = true
+
+            var components = DateComponents()
+            components.hour = preferredTime.hour
+            components.minute = preferredTime.minute
+            selectedTime = Calendar.current.date(from: components) ?? Date()
+        }
     }
 
     private func resetFrequencyOptions() {
@@ -289,6 +393,12 @@ struct RecurrenceRulePickerView: View {
             }
         }
 
+        // Extract time if specified
+        var preferredTime: DateComponents? = nil
+        if hasSpecificTime {
+            preferredTime = Calendar.current.dateComponents([.hour, .minute], from: selectedTime)
+        }
+
         recurrenceRule = RecurrenceRule(
             frequency: frequency,
             interval: interval,
@@ -296,7 +406,9 @@ struct RecurrenceRulePickerView: View {
             dayOfMonth: dayOfMonth,
             endDate: nil, // No end date in simplified version
             maxOccurrences: nil, // No max occurrences in simplified version
-            repeatMode: .fromOriginalDate // Always from original date
+            repeatMode: .fromOriginalDate, // Always from original date
+            preferredTime: preferredTime,
+            recreateIfIncomplete: recreateIfIncomplete
         )
     }
 }

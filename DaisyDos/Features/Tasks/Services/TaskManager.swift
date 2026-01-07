@@ -47,6 +47,11 @@ class TaskManager: EntityManagerProtocol {
             object: nil,
             userInfo: ["taskId": task.id.uuidString]
         )
+
+        // Auto-create recurring instance immediately
+        if task.hasRecurrence {
+            createRecurringInstanceIfNeeded(for: task)
+        }
     }
 
     // MARK: - Computed Properties for Filtered Data
@@ -244,8 +249,14 @@ class TaskManager: EntityManagerProtocol {
             operation: "toggle task completion",
             entityType: "task"
         ) {
+            let wasCompleted = task.isCompleted
             task.toggleCompletion()
             try modelContext.save()
+
+            // Notify if task was just completed
+            if task.isCompleted && !wasCompleted {
+                notifyTaskCompleted(task)
+            }
         }
     }
 
@@ -563,6 +574,38 @@ class TaskManager: EntityManagerProtocol {
             }
 
             return newTasks
+        }
+    }
+
+    /// Creates recurring task instance immediately after completion
+    private func createRecurringInstanceIfNeeded(for task: Task) {
+        guard let recurrenceRule = task.recurrenceRule else { return }
+
+        // Check recreateIfIncomplete flag - only create if task completed OR flag is true
+        if !task.isCompleted && !recurrenceRule.recreateIfIncomplete {
+            #if DEBUG
+            print("⏭️ Skipping recurring instance: previous incomplete, recreateIfIncomplete=false")
+            #endif
+            return
+        }
+
+        guard let newTask = task.createRecurringInstance() else {
+            return // No more occurrences (endDate reached)
+        }
+
+        modelContext.insert(newTask)
+
+        do {
+            try modelContext.save()
+            notifyTaskChanged(newTask) // Triggers notification scheduling
+
+            #if DEBUG
+            print("Created recurring instance: '\(newTask.title)' due \(newTask.dueDate?.formatted() ?? "never")")
+            #endif
+        } catch {
+            #if DEBUG
+            print("Failed to create recurring instance: \(error)")
+            #endif
         }
     }
 
