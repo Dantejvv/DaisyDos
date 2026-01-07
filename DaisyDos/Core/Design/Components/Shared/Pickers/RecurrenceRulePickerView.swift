@@ -30,6 +30,10 @@ struct RecurrenceRulePickerView: View {
     // Incomplete task behavior
     @State private var recreateIfIncomplete: Bool = true
 
+    // Max occurrences
+    @State private var hasMaxOccurrences: Bool = false
+    @State private var maxOccurrences: Int = 10
+
     // Quick preset options
     enum QuickPreset: String, CaseIterable {
         case daily = "Daily"
@@ -109,6 +113,9 @@ struct RecurrenceRulePickerView: View {
 
                     // MARK: - Incomplete Task Behavior
                     incompleteTaskToggle
+
+                    // MARK: - Max Occurrences
+                    maxOccurrencesSection
                 }
                 .padding(.vertical)
             }
@@ -328,6 +335,58 @@ struct RecurrenceRulePickerView: View {
         .padding(.horizontal)
     }
 
+    // MARK: - Max Occurrences Section
+
+    @ViewBuilder
+    private var maxOccurrencesSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.small) {
+            Toggle(isOn: $hasMaxOccurrences) {
+                HStack {
+                    Image(systemName: "number.circle")
+                        .foregroundColor(.daisyTask)
+                        .font(.body)
+
+                    Text("Limit occurrences")
+                        .font(.body)
+                        .foregroundColor(.daisyText)
+                }
+            }
+            .tint(.daisyTask)
+            .padding(.horizontal)
+            .padding(.top, Spacing.small)
+
+            if hasMaxOccurrences {
+                VStack(alignment: .leading, spacing: Spacing.small) {
+                    HStack {
+                        Text("Stop after")
+                            .font(.body)
+                            .foregroundColor(.daisyText)
+
+                        Spacer()
+
+                        Stepper("\(maxOccurrences) times", value: $maxOccurrences, in: 1...100)
+                            .labelsHidden()
+                            .fixedSize()
+
+                        Text("\(maxOccurrences) \(maxOccurrences == 1 ? "time" : "times")")
+                            .font(.body)
+                            .foregroundColor(.daisyText)
+                    }
+                    .padding(.horizontal)
+
+                    Text("Recurrence will stop after \(maxOccurrences) occurrence\(maxOccurrences == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                        .padding(.horizontal)
+                        .padding(.bottom, Spacing.small)
+                }
+            }
+        }
+        .background(Color.daisySurface)
+        .cornerRadius(12)
+        .padding(.horizontal)
+    }
+
     // MARK: - Helper Properties
 
     private var hasCustomSettings: Bool {
@@ -359,6 +418,12 @@ struct RecurrenceRulePickerView: View {
             components.hour = preferredTime.hour
             components.minute = preferredTime.minute
             selectedTime = Calendar.current.date(from: components) ?? Date()
+        }
+
+        // Load maxOccurrences if present
+        if let max = existingRule.maxOccurrences {
+            hasMaxOccurrences = true
+            maxOccurrences = max
         }
     }
 
@@ -405,7 +470,7 @@ struct RecurrenceRulePickerView: View {
             daysOfWeek: daysOfWeek,
             dayOfMonth: dayOfMonth,
             endDate: nil, // No end date in simplified version
-            maxOccurrences: nil, // No max occurrences in simplified version
+            maxOccurrences: hasMaxOccurrences ? maxOccurrences : nil,
             repeatMode: .fromOriginalDate, // Always from original date
             preferredTime: preferredTime,
             recreateIfIncomplete: recreateIfIncomplete
