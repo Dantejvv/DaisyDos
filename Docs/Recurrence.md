@@ -247,10 +247,10 @@ All edge cases handled in centralized modifiers (no scattered logic):
 
 ### ✅ Test Coverage
 
-- **203 unit tests** (199 existing + 4 new for recreateIfIncomplete)
+- **207 unit tests** (199 original + 4 recreateIfIncomplete + 4 maxOccurrences/custom)
 - **100% pass rate**
 - **Edge case validation**: Feb 29, month-end clamping, week boundaries, leap years
-- **Integration tests**: Task/Habit/Manager interaction, auto-creation, timezone handling
+- **Integration tests**: Task/Habit/Manager interaction, auto-creation, timezone handling, maxOccurrences enforcement
 - **Performance baseline**: 1000 occurrences calculated in <10ms
 
 ### ✅ Architectural Benefits
@@ -296,21 +296,22 @@ All requirements from sections 1-6 implemented:
 - **Lines of Code**: 472 (down from 518)
 - **Cyclomatic Complexity**: Reduced ~40%
 - **Code Duplication**: Eliminated (DRY principle)
-- **Test Coverage**: 203 tests, 100% pass rate
+- **Test Coverage**: 207 tests, 100% pass rate
 - **Performance**: No regression (equivalent or better)
 
 ### 🎯 Future Enhancements
 
 **Deferred (not in spec):**
-- `maxOccurrences` enforcement (field exists, logic not implemented)
-- Custom frequency implementation (currently returns nil)
 - Performance optimization (caching, memoization)
+- End date UI support (field exists but no UI)
 
 **Completed Beyond Spec:**
-- Timezone awareness (per-rule timezone storage)
-- RepeatMode (fromOriginalDate vs fromCompletionDate)
-- UI integration (RecurrenceRulePickerView with all options)
-- CloudKit synchronization compatibility
+- ✅ **maxOccurrences enforcement** - Tracks occurrenceIndex per task, limits creation at maxOccurrences, full UI support
+- ✅ **Custom frequency** - Implemented as daily intervals via unified algorithm (maps to .day component)
+- ✅ Timezone awareness (per-rule timezone storage)
+- ✅ RepeatMode (fromOriginalDate vs fromCompletionDate)
+- ✅ UI integration (RecurrenceRulePickerView with all options including maxOccurrences)
+- ✅ CloudKit synchronization compatibility
 
 ---
 
@@ -325,13 +326,20 @@ All requirements from sections 1-6 implemented:
 - Phase 5: Add comprehensive test coverage
 - Phase 6: Update documentation
 
-**Commits:**
+**Refactoring Commits (Jan 2026):**
 - `1b8371a` - Phase 1: Add recreateIfIncomplete flag
 - `9e2579d` - Phase 2: Create unified recurrence algorithm
 - `06a44ee` - Phase 3: Unify matches() method
 - `774a314` - Phase 4: Remove old calculation methods (point of no return)
 - `e518eda` - Phase 5: Add recreateIfIncomplete tests
+- `5086e04` - Phase 6: Update documentation with implementation status
 
-**Result:** Specification-compliant unified recurrence engine with improved maintainability, testability, and extensibility.
+**Enhancement Commits (Jan 2026):**
+- `2fc65e3` - Change RecurrenceRulePickerView modal to large
+- `22232d6` - Implement maxOccurrences enforcement in Task model
+- `bafa2aa` - Add maxOccurrences UI to RecurrenceRulePickerView
+- `3690d9d` - Add tests for maxOccurrences and custom frequency
+
+**Result:** Specification-compliant unified recurrence engine with maxOccurrences enforcement, custom frequency support, and improved maintainability, testability, and extensibility.
 
 
