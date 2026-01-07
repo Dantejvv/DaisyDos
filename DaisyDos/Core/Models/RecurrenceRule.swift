@@ -510,68 +510,6 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         return true
     }
 
-    // MARK: - Private Helper Methods (OLD - Will be removed in Phase 4)
-
-    private func calculateNextDailyOccurrence(after date: Date, calendar: Calendar) -> Date? {
-        return calendar.date(byAdding: .day, value: interval, to: date)
-    }
-
-    private func calculateNextWeeklyOccurrence(after date: Date, calendar: Calendar) -> Date? {
-        guard let daysOfWeek = daysOfWeek, !daysOfWeek.isEmpty else {
-            // If no specific days, default to weekly on same day
-            return calendar.date(byAdding: .weekOfYear, value: interval, to: date)
-        }
-
-        let currentWeekday = calendar.component(.weekday, from: date)
-        let sortedDays = daysOfWeek.sorted()
-
-        // Find the next day in the current week
-        if let nextDay = sortedDays.first(where: { $0 > currentWeekday }) {
-            let daysToAdd = nextDay - currentWeekday
-            return calendar.date(byAdding: .day, value: daysToAdd, to: date)
-        }
-
-        // Move to next interval week, first day
-        let weeksToAdd = interval
-        let daysToAdd = 7 * weeksToAdd + (sortedDays.first! - currentWeekday)
-        return calendar.date(byAdding: .day, value: daysToAdd, to: date)
-    }
-
-    private func calculateNextMonthlyOccurrence(after date: Date, calendar: Calendar) -> Date? {
-        let targetDay = dayOfMonth ?? calendar.component(.day, from: date)
-
-        // Try adding interval months
-        guard let nextMonth = calendar.date(byAdding: .month, value: interval, to: date) else {
-            return nil
-        }
-
-        // Adjust to target day of month
-        var components = calendar.dateComponents([.year, .month], from: nextMonth)
-        components.day = targetDay
-
-        let targetDate = calendar.date(from: components)
-
-        // Handle cases where target day doesn't exist in the month (e.g., Feb 30)
-        if let targetDate = targetDate, calendar.component(.day, from: targetDate) == targetDay {
-            return targetDate
-        } else {
-            // Fall back to last day of month
-            let range = calendar.range(of: .day, in: .month, for: nextMonth)
-            components.day = range?.upperBound.advanced(by: -1)
-            return calendar.date(from: components)
-        }
-    }
-
-    private func calculateNextYearlyOccurrence(after date: Date, calendar: Calendar) -> Date? {
-        return calendar.date(byAdding: .year, value: interval, to: date)
-    }
-
-    private func calculateNextCustomOccurrence(after date: Date, calendar: Calendar) -> Date? {
-        // Custom recurrence would need additional implementation based on specific patterns
-        // For now, return nil to indicate unsupported
-        return nil
-    }
-
     // MARK: - Validation
 
     var isValid: Bool {
