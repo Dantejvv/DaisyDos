@@ -52,7 +52,8 @@ class Task {
     var dueDate: Date?
     var recurrenceRule: RecurrenceRule?
     var completedDate: Date?
-    var alertTimeInterval: TimeInterval? // Time interval for alert/reminder (negative = before due date)
+    var reminderDate: Date? // Absolute date/time for reminder notification
+    var occurrenceIndex: Int = 1 // Tracks which occurrence this is (1-based, for maxOccurrences enforcement)
 
     // MARK: - Ordering Properties
     var subtaskOrder: Int = 0 // For ordering within parent's subtask list
@@ -101,7 +102,7 @@ class Task {
         priority: Priority = .none,
         dueDate: Date? = nil,
         recurrenceRule: RecurrenceRule? = nil,
-        alertTimeInterval: TimeInterval? = nil
+        reminderDate: Date? = nil
     ) {
         self.id = UUID()
         self.title = title
@@ -109,7 +110,7 @@ class Task {
         self.priority = priority
         self.dueDate = dueDate
         self.recurrenceRule = recurrenceRule
-        self.alertTimeInterval = alertTimeInterval
+        self.reminderDate = reminderDate
         self.isCompleted = false
         self.createdDate = Date()
         self.modifiedDate = Date()
@@ -362,8 +363,8 @@ class Task {
         attachmentsArray.count
     }
 
-    var hasAlert: Bool {
-        alertTimeInterval != nil
+    var hasReminder: Bool {
+        reminderDate != nil
     }
 
     var subtaskProgressText: String? {
@@ -392,11 +393,29 @@ class Task {
         guard let recurrenceRule = recurrenceRule else {
             return nil
         }
-        let baseDate = completedDate ?? dueDate ?? createdDate
+
+        // Determine base date based on repeatMode
+        let baseDate: Date
+        switch recurrenceRule.repeatMode {
+        case .fromOriginalDate:
+            // Use original due date (or created date if no due date)
+            baseDate = dueDate ?? createdDate
+
+        case .fromCompletionDate:
+            // Use when task was actually completed (or now if not completed)
+            baseDate = completedDate ?? Date()
+        }
+
         return recurrenceRule.nextOccurrence(after: baseDate)
     }
 
     func createRecurringInstance() -> Task? {
+        // Check if maxOccurrences limit has been reached
+        if let maxOccurrences = recurrenceRule?.maxOccurrences,
+           occurrenceIndex >= maxOccurrences {
+            return nil // Reached max occurrences limit
+        }
+
         guard let nextDate = nextRecurrence() else { return nil }
 
         let newTask = Task(
@@ -404,11 +423,15 @@ class Task {
             taskDescription: taskDescription,
             priority: priority,
             dueDate: nextDate,
-            recurrenceRule: recurrenceRule
+            recurrenceRule: recurrenceRule,
+            reminderDate: nil // Recurring instances don't inherit reminders
         )
 
         // Copy tags
         newTask.tags = tags
+
+        // Increment occurrence index for tracking maxOccurrences
+        newTask.occurrenceIndex = occurrenceIndex + 1
 
         return newTask
     }
@@ -446,6 +469,28 @@ class Task {
             formatter.dateFormat = "MMM d, yyyy"
         }
         return formatter.string(from: dueDate)
+    }
+
+    /// Short display text for reminder (used in toolbar labels)
+    var reminderDisplayText: String? {
+        guard let reminderDate = reminderDate else { return nil }
+
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+
+        if calendar.isDateInToday(reminderDate) {
+            formatter.dateFormat = "h:mm a"
+            return formatter.string(from: reminderDate)
+        } else if calendar.isDateInTomorrow(reminderDate) {
+            formatter.dateFormat = "h:mm a"
+            return "Tmrw \(formatter.string(from: reminderDate))"
+        } else if calendar.isDate(reminderDate, equalTo: Date(), toGranularity: .weekOfYear) {
+            formatter.dateFormat = "EEE h:mm a"
+            return formatter.string(from: reminderDate)
+        } else {
+            formatter.dateFormat = "MMM d"
+            return formatter.string(from: reminderDate)
+        }
     }
 
     // MARK: - Hierarchy Helpers
