@@ -404,15 +404,7 @@ This roadmap is decoupled from the codebase documentation (CLAUDE.md) to allow f
 - [X] Reactive scheduling on habit/task changes
 - [X] Permission management UI
 - [X] Recurrence-based scheduling (daily, weekly, monthly, yearly)
-- [X] **Notification grouping system:**
-  - [X] NotificationGroup model with smart categorization logic
-  - [X] Thread identifiers for iOS notification center grouping
-  - [X] Task grouping: High priority, due today, overdue, ungrouped
-  - [X] Habit grouping: Morning (6 AM-12 PM), afternoon (12 PM-6 PM), evening (6 PM-12 AM)
-  - [X] Summary text generation for grouped notifications (4+ items)
-  - [X] Comprehensive test coverage (NotificationGroupTests with 19 tests)
-
-**Status:** Core notification system fully implemented, tested (218 tests passing), and production-ready.
+**Status:** Core notification system fully implemented, tested, and production-ready.
 
 ---
 

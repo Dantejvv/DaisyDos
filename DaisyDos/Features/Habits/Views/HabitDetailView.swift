@@ -56,7 +56,7 @@ struct HabitDetailView: View {
     @State private var showingSkipView = false
     @State private var showingTagAssignment = false
     @State private var showingRecurrencePicker = false
-    @State private var showingAlertPicker = false
+    @State private var showingReminderPicker = false
     @State private var showingPriorityPicker = false
     @State private var newSubtaskTitle = ""
     @State private var showSubtaskField = false
@@ -187,17 +187,12 @@ struct HabitDetailView: View {
             ))
             .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showingAlertPicker) {
-            AlertPickerSheet(
-                selectedAlert: .init(
-                    get: {
-                        if let interval = habit.alertTimeInterval {
-                            return AlertOption.allCases.first { $0.timeInterval == interval }
-                        }
-                        return nil
-                    },
-                    set: { newAlert in
-                        habit.alertTimeInterval = newAlert?.timeInterval
+        .sheet(isPresented: $showingReminderPicker) {
+            ReminderPickerSheet(
+                reminderDate: .init(
+                    get: { habit.reminderDate },
+                    set: { newDate in
+                        habit.reminderDate = newDate
                         habit.modifiedDate = Date()
                         // Notify to trigger notification scheduling
                         NotificationCenter.default.post(
@@ -209,7 +204,7 @@ struct HabitDetailView: View {
                 ),
                 accentColor: .daisyHabit
             )
-            .presentationDetents([.medium])
+            .presentationDetents([.large])
         }
         .sheet(isPresented: $showingPriorityPicker) {
             PriorityPickerSheet(
@@ -398,16 +393,16 @@ struct HabitDetailView: View {
 
                 // Alert - Always shown
                 Button(action: {
-                    showingAlertPicker = true
+                    showingReminderPicker = true
                 }) {
                     HStack {
-                        Label("Alert", systemImage: "bell.fill")
+                        Label("Reminder", systemImage: "bell.fill")
                             .font(.subheadline)
                             .foregroundColor(.daisyTextSecondary)
                         Spacer()
                         HStack(spacing: 4) {
-                            if let alertInterval = habit.alertTimeInterval {
-                                Text(formatAlertInterval(alertInterval))
+                            if let reminderDate = habit.reminderDate {
+                                Text(habit.reminderDisplayText ?? "Set")
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.daisyText)
                             } else {

@@ -26,8 +26,8 @@ struct AddHabitView: View {
     @State private var showingTagSelection = false
     @State private var recurrenceRule: RecurrenceRule? = .daily()
     @State private var showingRecurrencePicker = false
-    @State private var showingAlertPicker = false
-    @State private var selectedAlert: AlertOption?
+    @State private var showingReminderPicker = false
+    @State private var reminderDate: Date?
     @State private var showingPriorityPicker = false
     @State private var showingUnsavedChangesAlert = false
     @State private var subtasks: [SubtaskItem] = []
@@ -93,7 +93,7 @@ struct AddHabitView: View {
                priority != .none ||
                !selectedTags.isEmpty ||
                recurrenceRule != nil ||
-               selectedAlert != nil ||
+               reminderDate != nil ||
                !subtasks.isEmpty ||
                !attachments.isEmpty
     }
@@ -117,11 +117,11 @@ struct AddHabitView: View {
                     MetadataToolbar(
                         config: .habit,
                         recurrenceRule: recurrenceRule,
-                        alert: selectedAlert,
+                        reminderDate: reminderDate,
                         priority: priority,
                         accentColor: .daisyHabit,
                         onRecurrenceTap: { showingRecurrencePicker = true },
-                        onAlertTap: { showingAlertPicker = true },
+                        onReminderTap: { showingReminderPicker = true },
                         onPriorityTap: { showingPriorityPicker = true }
                     )
                     .padding(.horizontal)
@@ -193,13 +193,12 @@ struct AddHabitView: View {
                 )
                 .presentationDetents([.large])
             }
-            .sheet(isPresented: $showingAlertPicker) {
-                AlertPickerSheet(
-                    selectedAlert: $selectedAlert,
+            .sheet(isPresented: $showingReminderPicker) {
+                ReminderPickerSheet(
+                    reminderDate: $reminderDate,
                     accentColor: .daisyHabit
                 )
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+                .presentationDetents([.large])
             }
             .sheet(isPresented: $showingPriorityPicker) {
                 PriorityPickerSheet(
@@ -411,11 +410,11 @@ struct AddHabitView: View {
                 habit.recurrenceRule = rule
             }
 
-            // Set alert if provided
-            habit.alertTimeInterval = selectedAlert?.timeInterval
+            // Set reminder if provided
+            habit.reminderDate = reminderDate
 
-            // Notify to trigger notification scheduling if alert was set
-            if selectedAlert != nil {
+            // Notify to trigger notification scheduling if reminder was set
+            if reminderDate != nil {
                 NotificationCenter.default.post(
                     name: .habitDidChange,
                     object: nil,

@@ -27,8 +27,8 @@ struct ReminderPickerSheet: View {
 
         let hasValue = reminderDate.wrappedValue != nil
         self._hasReminder = State(initialValue: hasValue)
-        // Default to 1 hour from now if no existing reminder
-        self._workingDate = State(initialValue: reminderDate.wrappedValue ?? Date().addingTimeInterval(3600))
+        // Default to current time if no existing reminder
+        self._workingDate = State(initialValue: reminderDate.wrappedValue ?? Date())
     }
 
     var body: some View {

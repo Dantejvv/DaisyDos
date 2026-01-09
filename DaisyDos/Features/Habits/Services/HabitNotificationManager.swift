@@ -4,6 +4,10 @@
 //
 //  Created by Claude Code on 9/30/25.
 //
+//  REFACTORED: Now uses one-shot notifications like TaskNotificationManager
+//  instead of repeating calendar triggers. This ensures notifications
+//  are properly removed when habits are completed.
+//
 
 import Foundation
 import UserNotifications
@@ -33,9 +37,6 @@ class HabitNotificationManager: BaseNotificationManager {
         }
     }
 
-    // MARK: - Habit-Specific Settings
-    // (No defaults - habits use individual alertTimeInterval settings)
-
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
         checkNotificationPermissions()
@@ -43,7 +44,6 @@ class HabitNotificationManager: BaseNotificationManager {
     }
 
     deinit {
-        // Remove observers when manager is deallocated
         NotificationCenter.default.removeObserver(self)
     }
 
@@ -66,6 +66,14 @@ class HabitNotificationManager: BaseNotificationManager {
             object: nil
         )
 
+        // Observe habit completions - reschedule for next occurrence
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(habitWasCompleted(_:)),
+            name: .habitWasCompleted,
+            object: nil
+        )
+
         // Observe global notification setting changes
         NotificationCenter.default.addObserver(
             self,
@@ -81,7 +89,6 @@ class HabitNotificationManager: BaseNotificationManager {
             return
         }
 
-        // Reschedule notifications for the changed habit
         scheduleHabitReminder(for: habit)
 
         #if DEBUG
@@ -94,16 +101,24 @@ class HabitNotificationManager: BaseNotificationManager {
             return
         }
 
-        // Remove notifications for the deleted habit
-        let identifier = "habit_\(habitId)"
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
-
-        // Also remove any weekly notifications
-        let weeklyIdentifiers = (0..<7).map { "\(identifier)_\($0)" }
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: weeklyIdentifiers)
+        removeHabitNotification(habitId: habitId)
 
         #if DEBUG
         print("Removed notifications for deleted habit (ID: \(habitId))")
+        #endif
+    }
+
+    @objc private func habitWasCompleted(_ notification: Foundation.Notification) {
+        guard let habitId = notification.userInfo?["habitId"] as? String,
+              let habit = getHabit(by: habitId) else {
+            return
+        }
+
+        // Reschedule for next occurrence (removes today's, schedules tomorrow's)
+        scheduleHabitReminder(for: habit)
+
+        #if DEBUG
+        print("Rescheduled notifications for completed habit '\(habit.title)'")
         #endif
     }
 
@@ -132,9 +147,15 @@ class HabitNotificationManager: BaseNotificationManager {
             options: []
         )
 
+        let snoozeAction = UNNotificationAction(
+            identifier: "snooze_habit",
+            title: "Snooze 1 Hour",
+            options: []
+        )
+
         let habitCategory = UNNotificationCategory(
             identifier: notificationCategoryIdentifier,
-            actions: [completeAction, skipAction],
+            actions: [completeAction, skipAction, snoozeAction],
             intentIdentifiers: [],
             options: [.customDismissAction]
         )
@@ -142,37 +163,89 @@ class HabitNotificationManager: BaseNotificationManager {
         notificationCenter.setNotificationCategories([habitCategory])
     }
 
-    // MARK: - Habit Notification Scheduling
+    // MARK: - Habit Notification Scheduling (One-Shot Pattern)
 
+    /// Schedules a one-shot notification for the habit's next occurrence.
+    /// This mirrors TaskNotificationManager's approach - schedule once, reschedule on completion.
     func scheduleHabitReminder(for habit: Habit) {
         guard isNotificationsEnabled && isPermissionGranted else { return }
+        guard !habit.isCompletedToday else { return } // Don't schedule if already completed today
 
-        // Only schedule if habit has an alert time interval set
-        guard let alertTimeInterval = habit.alertTimeInterval else { return }
+        // Remove existing notification first
+        removeHabitNotification(habitId: habit.id.uuidString)
 
-        // Convert alertTimeInterval to DateComponents (time of day)
-        // For habits, interpret as seconds-since-midnight (positive values only)
-        guard alertTimeInterval >= 0 && alertTimeInterval < 86400 else { return } // Must be within 24 hours
+        // Only schedule if habit has a reminder date set
+        guard let reminderDate = habit.reminderDate else { return }
 
-        let totalSeconds = Int(alertTimeInterval)
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-
-        var time = DateComponents()
-        time.hour = hours
-        time.minute = minutes
+        // Only schedule if reminder date is in the future
+        guard reminderDate > Date() else { return }
 
         let identifier = "habit_\(habit.id.uuidString)"
 
-        // Remove existing notification
-        removeHabitNotification(for: habit)
-
-        // Determine notification group for thread identifier
-        let group = NotificationGroup.forHabit(habit)
-
-        // Create new notification
+        // Create notification content
         let content = UNMutableNotificationContent()
-        content.title = "Time for your habit!"
+        content.title = "Habit Reminder"
+        content.body = habit.title
+        content.sound = .default
+        content.categoryIdentifier = notificationCategoryIdentifier
+        content.userInfo = [
+            "habit_id": habit.id.uuidString,
+            "habit_title": habit.title
+        ]
+        content.badge = NSNumber(value: getPendingHabitsCount())
+
+        // Schedule using absolute time interval (one-shot, like tasks)
+        let trigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: reminderDate.timeIntervalSinceNow,
+            repeats: false
+        )
+
+        let request = UNNotificationRequest(
+            identifier: identifier,
+            content: content,
+            trigger: trigger
+        )
+
+        notificationCenter.add(request) { error in
+            if let error = error {
+                print("Failed to schedule habit notification: \(error)")
+            }
+        }
+    }
+
+    func removeHabitNotification(habitId: String) {
+        let identifier = "habit_\(habitId)"
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
+    }
+
+    func removeHabitNotification(for habit: Habit) {
+        removeHabitNotification(habitId: habit.id.uuidString)
+    }
+
+    func scheduleAllHabitNotifications() {
+        guard isNotificationsEnabled && isPermissionGranted else { return }
+
+        let habits = getAllHabits()
+        for habit in habits where !habit.isCompletedToday {
+            scheduleHabitReminder(for: habit)
+        }
+    }
+
+    func removeAllHabitNotifications() {
+        _Concurrency.Task {
+            await removeNotifications(withPrefix: "habit_")
+        }
+    }
+
+    // MARK: - Snooze Functionality
+
+    func snoozeHabit(_ habit: Habit, by interval: TimeInterval = 3600) {
+        removeHabitNotification(habitId: habit.id.uuidString)
+
+        let identifier = "habit_\(habit.id.uuidString)"
+
+        let content = UNMutableNotificationContent()
+        content.title = "Habit Reminder (Snoozed)"
         content.body = habit.title
         content.sound = .default
         content.categoryIdentifier = notificationCategoryIdentifier
@@ -181,183 +254,25 @@ class HabitNotificationManager: BaseNotificationManager {
             "habit_title": habit.title
         ]
 
-        // Add badge and sound
-        content.badge = NSNumber(value: getPendingHabitsCount())
+        let trigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: interval,
+            repeats: false
+        )
 
-        // Set thread identifier for notification grouping
-        if let threadIdentifier = group.threadIdentifier {
-            content.threadIdentifier = threadIdentifier
-            content.summaryArgument = habit.title
-            content.summaryArgumentCount = 1
-        }
+        let request = UNNotificationRequest(
+            identifier: identifier,
+            content: content,
+            trigger: trigger
+        )
 
-        // Schedule for recurring notification based on habit's recurrence rule
-        if let recurrenceRule = habit.recurrenceRule {
-            scheduleRecurringNotification(
-                content: content,
-                identifier: identifier,
-                time: time,
-                recurrenceRule: recurrenceRule,
-                referenceDate: habit.createdDate
-            )
-        } else {
-            // Daily notification for flexible habits
-            let trigger = UNCalendarNotificationTrigger(dateMatching: time, repeats: true)
-            let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-
-            notificationCenter.add(request) { error in
-                if let error = error {
-                    print("Failed to schedule habit notification: \(error)")
-                }
-            }
-        }
-    }
-
-    private func scheduleRecurringNotification(
-        content: UNMutableNotificationContent,
-        identifier: String,
-        time: DateComponents,
-        recurrenceRule: RecurrenceRule,
-        referenceDate: Date
-    ) {
-        let calendar = Calendar.current
-
-        // Get timezone from recurrence rule
-        let timezone = recurrenceRule.timeZone
-
-        switch recurrenceRule.frequency {
-        case .daily:
-            var dailyTime = time
-            dailyTime.timeZone = timezone
-
-            let trigger = UNCalendarNotificationTrigger(dateMatching: dailyTime, repeats: true)
-            let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-            notificationCenter.add(request) { error in
-                if let error = error {
-                    print("Failed to schedule daily habit notification: \(error)")
-                }
-            }
-
-        case .weekly:
-            // Schedule for each day of the week specified in the recurrence rule
-            if let daysOfWeek = recurrenceRule.daysOfWeek {
-                for (index, day) in daysOfWeek.enumerated() {
-                    var weeklyTime = time
-                    weeklyTime.weekday = day
-                    weeklyTime.timeZone = timezone
-
-                    let weeklyTrigger = UNCalendarNotificationTrigger(dateMatching: weeklyTime, repeats: true)
-                    let weeklyRequest = UNNotificationRequest(
-                        identifier: "\(identifier)_\(index)",
-                        content: content,
-                        trigger: weeklyTrigger
-                    )
-
-                    notificationCenter.add(weeklyRequest) { error in
-                        if let error = error {
-                            print("Failed to schedule weekly habit notification for day \(day): \(error)")
-                        }
-                    }
-                }
-            }
-
-        case .monthly:
-            // For monthly habits, schedule on the day of month
-            if let dayOfMonth = recurrenceRule.dayOfMonth {
-                // Handle edge cases: February 29th, days that don't exist in all months
-                let validDayOfMonth = min(dayOfMonth, 28) // Cap at 28 to ensure all months work
-
-                var monthlyTime = time
-                monthlyTime.day = validDayOfMonth
-                monthlyTime.timeZone = timezone
-
-                let trigger = UNCalendarNotificationTrigger(dateMatching: monthlyTime, repeats: true)
-                let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-
-                notificationCenter.add(request) { error in
-                    if let error = error {
-                        print("Failed to schedule monthly habit notification: \(error)")
-                    }
-                }
-
-                // If original day was > 28, log a warning
-                if dayOfMonth > 28 {
-                    #if DEBUG
-                    print("Monthly notification for day \(dayOfMonth) adjusted to day 28 to avoid missing months")
-                    #endif
-                }
-            }
-
-        case .yearly:
-            // For yearly habits, extract month and day from reference date
-            let components = calendar.dateComponents([.month, .day], from: referenceDate)
-
-            guard let month = components.month, let day = components.day else {
-                print("Failed to extract month/day from reference date for yearly notification")
-                return
-            }
-
-            // Handle February 29th edge case
-            var yearlyDay = day
-            if month == 2 && day == 29 {
-                yearlyDay = 28 // Move to Feb 28 for non-leap years
+        notificationCenter.add(request) { error in
+            if let error = error {
+                print("Failed to snooze habit notification: \(error)")
+            } else {
                 #if DEBUG
-                print("Yearly notification for Feb 29 adjusted to Feb 28 for non-leap years")
+                print("Snoozed habit '\(habit.title)' for \(interval / 60) minutes")
                 #endif
             }
-
-            var yearlyTime = time
-            yearlyTime.month = month
-            yearlyTime.day = yearlyDay
-            yearlyTime.timeZone = timezone
-
-            let trigger = UNCalendarNotificationTrigger(dateMatching: yearlyTime, repeats: true)
-            let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-
-            notificationCenter.add(request) { error in
-                if let error = error {
-                    print("Failed to schedule yearly habit notification: \(error)")
-                }
-            }
-
-        case .custom:
-            // For custom recurrence, fall back to daily notification
-            var customTime = time
-            customTime.timeZone = timezone
-
-            let trigger = UNCalendarNotificationTrigger(dateMatching: customTime, repeats: true)
-            let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-
-            notificationCenter.add(request) { error in
-                if let error = error {
-                    print("Failed to schedule custom habit notification: \(error)")
-                }
-            }
-        }
-    }
-
-    func removeHabitNotification(for habit: Habit) {
-        let identifier = "habit_\(habit.id.uuidString)"
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
-
-        // Also remove any weekly notifications
-        let weeklyIdentifiers = (0..<7).map { "\(identifier)_\($0)" }
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: weeklyIdentifiers)
-    }
-
-    func scheduleAllHabitNotifications() {
-        guard isNotificationsEnabled && isPermissionGranted else { return }
-
-        let habits = getAllHabits()
-        for habit in habits {
-            scheduleHabitReminder(for: habit)
-        }
-    }
-
-    func removeAllHabitNotifications() {
-        // Use base protocol's removeNotifications method
-        _Concurrency.Task {
-            await removeNotifications(withPrefix: "habit_")
         }
     }
 
@@ -374,6 +289,10 @@ class HabitNotificationManager: BaseNotificationManager {
 
         case "skip_habit":
             return habitManager.skipHabit(habit) != nil
+
+        case "snooze_habit":
+            snoozeHabit(habit)
+            return true
 
         default:
             return false
@@ -406,7 +325,6 @@ class HabitNotificationManager: BaseNotificationManager {
     // MARK: - Settings Management
 
     func getScheduledNotificationsCount() async -> Int {
-        // Use base protocol's getScheduledNotificationsCount method
         return await getScheduledNotificationsCount(prefix: "habit_")
     }
 }

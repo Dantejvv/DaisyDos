@@ -9,6 +9,14 @@ import Foundation
 
 /// Type-safe navigation routes for deep linking throughout the app
 enum NavigationRoute: Hashable {
+
+    // MARK: - Constants
+
+    /// The URL scheme for deep links
+    static let scheme = "daisydos"
+
+    // MARK: - Cases
+
     /// Navigate to a specific task detail view
     case task(UUID)
 
@@ -36,16 +44,17 @@ enum NavigationRoute: Hashable {
     /// Supports URLs like: daisydos://task/{uuid}, daisydos://habit/{uuid}, daisydos://today
     static func parse(from url: URL) -> NavigationRoute? {
         // Check scheme
-        guard url.scheme == "daisydos" else { return nil }
+        guard url.scheme == scheme else { return nil }
 
-        // Get path components (removes empty strings and leading slash)
+        // URL structure: scheme://host/path
+        // For daisydos://today → host="today", path=""
+        // For daisydos://task/uuid → host="task", path="/uuid"
+        guard let host = url.host?.lowercased() else { return nil }
+
+        // Get path components for entity routes (removes empty strings and leading slash)
         let pathComponents = url.pathComponents.filter { !$0.isEmpty && $0 != "/" }
 
-        guard !pathComponents.isEmpty else { return nil }
-
-        let routeType = pathComponents[0].lowercased()
-
-        switch routeType {
+        switch host {
         case "today":
             return .today
         case "tasks":
@@ -58,15 +67,15 @@ enum NavigationRoute: Hashable {
             return .settings
         case "task":
             // Requires UUID: daisydos://task/{uuid}
-            guard pathComponents.count > 1,
-                  let uuid = UUID(uuidString: pathComponents[1]) else {
+            guard let uuidString = pathComponents.first,
+                  let uuid = UUID(uuidString: uuidString) else {
                 return nil
             }
             return .task(uuid)
         case "habit":
             // Requires UUID: daisydos://habit/{uuid}
-            guard pathComponents.count > 1,
-                  let uuid = UUID(uuidString: pathComponents[1]) else {
+            guard let uuidString = pathComponents.first,
+                  let uuid = UUID(uuidString: uuidString) else {
                 return nil
             }
             return .habit(uuid)
@@ -100,6 +109,28 @@ enum NavigationRoute: Hashable {
             return true
         case .today, .tasks, .habits, .logbook, .settings:
             return false
+        }
+    }
+
+    // MARK: - URL Generation
+
+    /// Generate a URL from this route
+    var url: URL? {
+        switch self {
+        case .today:
+            return URL(string: "\(Self.scheme)://today")
+        case .tasks:
+            return URL(string: "\(Self.scheme)://tasks")
+        case .habits:
+            return URL(string: "\(Self.scheme)://habits")
+        case .logbook:
+            return URL(string: "\(Self.scheme)://logbook")
+        case .settings:
+            return URL(string: "\(Self.scheme)://settings")
+        case .task(let uuid):
+            return URL(string: "\(Self.scheme)://task/\(uuid.uuidString)")
+        case .habit(let uuid):
+            return URL(string: "\(Self.scheme)://habit/\(uuid.uuidString)")
         }
     }
 }

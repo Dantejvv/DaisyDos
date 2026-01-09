@@ -42,7 +42,7 @@ import SwiftUI
 /// **Feature Flags Control**:
 /// - `showDate`: Due date picker (Tasks only)
 /// - `showRecurrence`: Recurrence rule picker (Tasks & Habits)
-/// - `showReminder`: Reminder date/time picker (Tasks only, Habits use alertTimeInterval)
+/// - `showReminder`: Reminder date/time picker (Tasks & Habits - both use absolute Date)
 /// - `showPriority`: Priority picker (Tasks & Habits)
 ///
 /// **Usage**:
@@ -83,13 +83,13 @@ struct MetadataToolbarConfig {
     /// Rationale: Tasks are deadline-oriented work items with absolute reminders
     static let task = full
 
-    /// Habit configuration - no due date, uses time-of-day alert instead of reminder
-    /// Rationale: Habits use recurrence patterns and daily alert times, not absolute reminders
+    /// Habit configuration - no due date, uses reminder (same as tasks now)
+    /// Rationale: Habits now use absolute reminder dates like tasks for unified notification system
     static let habit = MetadataToolbarConfig(
         showDate: false,
         showRecurrence: true,
-        showReminder: false,
-        showAlert: true,
+        showReminder: true,
+        showAlert: false,
         showPriority: true
     )
 

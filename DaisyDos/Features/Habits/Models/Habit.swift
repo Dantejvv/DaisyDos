@@ -57,8 +57,8 @@ class Habit {
     /// Priority level for habit importance and organization
     var priority: Priority = Priority.none
 
-    /// Time interval for alert/reminder (e.g., -3600 = 1 hour before)
-    var alertTimeInterval: TimeInterval?
+    /// Absolute date/time for reminder notification (aligned with Task model)
+    var reminderDate: Date?
 
     /// Custom sort order for manual habit arrangement (lower values appear first)
     var habitOrder: Int = 0
@@ -162,7 +162,33 @@ class Habit {
     }
 
     var hasAlert: Bool {
-        alertTimeInterval != nil
+        reminderDate != nil
+    }
+
+    var hasReminder: Bool {
+        reminderDate != nil
+    }
+
+    /// Short display text for reminder (used in toolbar labels)
+    var reminderDisplayText: String? {
+        guard let reminderDate = reminderDate else { return nil }
+
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+
+        if calendar.isDateInToday(reminderDate) {
+            formatter.dateFormat = "h:mm a"
+            return formatter.string(from: reminderDate)
+        } else if calendar.isDateInTomorrow(reminderDate) {
+            formatter.dateFormat = "h:mm a"
+            return "Tmrw \(formatter.string(from: reminderDate))"
+        } else if calendar.isDate(reminderDate, equalTo: Date(), toGranularity: .weekOfYear) {
+            formatter.dateFormat = "EEE h:mm a"
+            return formatter.string(from: reminderDate)
+        } else {
+            formatter.dateFormat = "MMM d"
+            return formatter.string(from: reminderDate)
+        }
     }
 
     var subtaskProgressText: String? {
@@ -581,6 +607,15 @@ extension Habit: Equatable {
 extension Habit: Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+    }
+}
+
+// MARK: - Deep Linking
+
+extension Habit {
+    /// Deep link URL for this habit (e.g., daisydos://habit/{uuid})
+    var deepLinkURL: URL? {
+        NavigationRoute.habit(id).url
     }
 }
 

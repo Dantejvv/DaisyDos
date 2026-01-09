@@ -37,6 +37,7 @@ import SwiftData
 extension Notification.Name {
     static let habitDidChange = Notification.Name("habitDidChange")
     static let habitWasDeleted = Notification.Name("habitWasDeleted")
+    static let habitWasCompleted = Notification.Name("habitWasCompleted")
 }
 
 @Observable
@@ -190,6 +191,7 @@ class HabitManager: EntityManagerProtocol {
 
         do {
             try modelContext.save()
+            notifyHabitCompleted(habit)
             return true
         } catch {
             lastError = ErrorTransformer.transformHabitError(error, operation: "mark habit completed")
@@ -221,11 +223,21 @@ class HabitManager: EntityManagerProtocol {
 
         do {
             try modelContext.save()
+            notifyHabitCompleted(habit)
             return completion
         } catch {
             lastError = ErrorTransformer.transformHabitError(error, operation: "mark habit completed with tracking")
             return nil
         }
+    }
+
+    /// Notify that a habit was completed today (for notification rescheduling)
+    private func notifyHabitCompleted(_ habit: Habit) {
+        NotificationCenter.default.post(
+            name: .habitWasCompleted,
+            object: nil,
+            userInfo: ["habitId": habit.id.uuidString]
+        )
     }
 
     /// Undo today's habit completion

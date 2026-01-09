@@ -20,12 +20,7 @@ struct RecurrenceRulePickerView: View {
 
     // Time support
     @State private var hasSpecificTime: Bool = false
-    @State private var selectedTime: Date = {
-        var components = DateComponents()
-        components.hour = 9
-        components.minute = 0
-        return Calendar.current.date(from: components) ?? Date()
-    }()
+    @State private var selectedTime: Date = Date()
 
     // Incomplete task behavior
     @State private var recreateIfIncomplete: Bool = true

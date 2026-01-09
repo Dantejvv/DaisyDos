@@ -177,9 +177,6 @@ class TaskNotificationManager: BaseNotificationManager {
 
         let identifier = "task_\(task.id.uuidString)"
 
-        // Determine notification group for thread identifier
-        let group = NotificationGroup.forTask(task)
-
         // Create notification content
         let content = UNMutableNotificationContent()
         content.title = "Task Reminder"
@@ -191,13 +188,6 @@ class TaskNotificationManager: BaseNotificationManager {
             "task_title": task.title
         ]
         content.badge = NSNumber(value: getPendingTasksCount())
-
-        // Set thread identifier for notification grouping
-        if let threadIdentifier = group.threadIdentifier {
-            content.threadIdentifier = threadIdentifier
-            content.summaryArgument = task.title
-            content.summaryArgumentCount = 1
-        }
 
         // Schedule the notification using the absolute reminder date
         let trigger = UNTimeIntervalNotificationTrigger(

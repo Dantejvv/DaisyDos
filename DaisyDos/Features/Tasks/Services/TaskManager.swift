@@ -277,9 +277,12 @@ class TaskManager: EntityManagerProtocol {
             task.toggleCompletion()
             try modelContext.save()
 
-            // Notify if task was just completed
             if task.isCompleted && !wasCompleted {
+                // Task was just completed - cancel notifications
                 notifyTaskCompleted(task)
+            } else if !task.isCompleted && wasCompleted {
+                // Task was uncompleted (undo) - reschedule notifications
+                notifyTaskChanged(task)
             }
         }
     }

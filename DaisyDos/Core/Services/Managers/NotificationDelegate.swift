@@ -81,8 +81,12 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             completeHabit(uuid: uuid)
 
         case "skip_habit":
-            // Skip the habit
+            // Skip the habit for today (user won't do it)
             skipHabit(uuid: uuid)
+
+        case "snooze_habit":
+            // Snooze the notification reminder by 1 hour
+            snoozeHabit(uuid: uuid)
 
         case UNNotificationDefaultActionIdentifier:
             // User tapped the notification itself (not an action button)
@@ -198,6 +202,23 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
+    private func snoozeHabit(uuid: UUID) {
+        // Fetch the habit
+        guard let habit = fetchHabit(by: uuid) else {
+            #if DEBUG
+            print("NotificationDelegate: Could not find habit \(uuid) to snooze")
+            #endif
+            return
+        }
+
+        // Snooze habit notification for 1 hour
+        habitNotificationManager.snoozeHabit(habit, by: 3600) // 1 hour
+
+        #if DEBUG
+        print("NotificationDelegate: Successfully snoozed habit '\(habit.title)' for 1 hour")
+        #endif
+    }
+
     private func completeTask(uuid: UUID) {
         // Complete the task using TaskManager
         guard let task = fetchTask(by: uuid) else {
@@ -207,8 +228,8 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             return
         }
 
-        // Toggle completion using updateTask
-        let result = taskManager.updateTask(task, isCompleted: !task.isCompleted)
+        // Use toggleTaskCompletion to properly set completedDate (required for logbook)
+        let result = taskManager.toggleTaskCompletion(task)
 
         switch result {
         case .success:

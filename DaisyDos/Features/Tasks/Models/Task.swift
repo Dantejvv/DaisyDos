@@ -525,3 +525,12 @@ extension Task: Hashable {
 /// Enables Task to be displayed in unified SubtaskRow component
 /// Task already has required properties: title, isCompleted
 extension Task: SubtaskDisplayable {}
+
+// MARK: - Deep Linking
+
+extension Task {
+    /// Deep link URL for this task (e.g., daisydos://task/{uuid})
+    var deepLinkURL: URL? {
+        NavigationRoute.task(id).url
+    }
+}

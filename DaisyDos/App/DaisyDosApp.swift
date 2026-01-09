@@ -14,6 +14,7 @@ import PhotoKit
 import UserNotifications
 
 @main
+// Entry point --> ets up services, managers, and global state, then hands control to ContentView.
 struct DaisyDosApp: App {
     @Environment(\.scenePhase) private var scenePhase
 

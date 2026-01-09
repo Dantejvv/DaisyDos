@@ -27,8 +27,8 @@ struct HabitEditView: View {
     @State private var recurrenceRule: RecurrenceRule?
     @State private var showingRecurrencePicker = false
     @State private var showingPriorityPicker = false
-    @State private var showingAlertPicker = false
-    @State private var selectedAlert: AlertOption?
+    @State private var showingReminderPicker = false
+    @State private var reminderDate: Date?
     @State private var showingUnsavedChangesAlert = false
     @State private var showingAttachmentSourcePicker = false
     @State private var showingPhotoPicker = false
@@ -91,13 +91,7 @@ struct HabitEditView: View {
         self._priority = State(initialValue: habit.priority)
         self._selectedTags = State(initialValue: habit.tags ?? [])
         self._recurrenceRule = State(initialValue: habit.recurrenceRule)
-
-        // Initialize alert from time interval
-        if let timeInterval = habit.alertTimeInterval {
-            self._selectedAlert = State(initialValue: AlertOption.from(timeInterval: timeInterval))
-        } else {
-            self._selectedAlert = State(initialValue: nil)
-        }
+        self._reminderDate = State(initialValue: habit.reminderDate)
 
         // Initialize staged attachments from existing habit attachments
         // Convert existing attachments to temporary URLs for staging
@@ -174,7 +168,7 @@ struct HabitEditView: View {
                habitDescriptionAttributed != habit.habitDescriptionAttributed ||
                priority != habit.priority ||
                recurrenceRule != habit.recurrenceRule ||
-               selectedAlert?.timeInterval != habit.alertTimeInterval ||
+               reminderDate != habit.reminderDate ||
                Set(selectedTags.map(\.id)) != Set((habit.tags ?? []).map(\.id)) ||
                subtasksChanged ||
                attachmentsChanged
@@ -302,11 +296,11 @@ struct HabitEditView: View {
         MetadataToolbar(
             config: .habit,
             recurrenceRule: recurrenceRule,
-            alert: selectedAlert,
+            reminderDate: reminderDate,
             priority: priority,
             accentColor: .daisyHabit,
             onRecurrenceTap: { showingRecurrencePicker = true },
-            onAlertTap: { showingAlertPicker = true },
+            onReminderTap: { showingReminderPicker = true },
             onPriorityTap: { showingPriorityPicker = true }
         )
         .padding(.horizontal)
@@ -380,12 +374,12 @@ struct HabitEditView: View {
                 RecurrenceRulePickerView(recurrenceRule: $recurrenceRule)
                     .presentationDetents([.large])
             }
-            .sheet(isPresented: $showingAlertPicker) {
-                AlertPickerSheet(
-                    selectedAlert: $selectedAlert,
+            .sheet(isPresented: $showingReminderPicker) {
+                ReminderPickerSheet(
+                    reminderDate: $reminderDate,
                     accentColor: .daisyHabit
                 )
-                .presentationDetents([.medium])
+                .presentationDetents([.large])
             }
             .confirmationDialog("Add Attachment", isPresented: $showingAttachmentSourcePicker, titleVisibility: .visible) {
                 #if canImport(PhotosUI)
@@ -447,7 +441,7 @@ struct HabitEditView: View {
         habit.habitDescriptionAttributed = habitDescriptionAttributed
         habit.priority = priority
         habit.recurrenceRule = recurrenceRule
-        habit.alertTimeInterval = selectedAlert?.timeInterval
+        habit.reminderDate = reminderDate
         habit.modifiedDate = Date()
 
         // Update tags
