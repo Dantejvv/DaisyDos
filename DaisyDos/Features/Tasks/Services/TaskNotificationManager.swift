@@ -34,10 +34,7 @@ class TaskNotificationManager: BaseNotificationManager {
     }
 
     // MARK: - Task-Specific Settings
-
-    // Overdue reminder settings
-    var enableOverdueReminders: Bool = true
-    var overdueReminderInterval: TimeInterval = 3600 // 1 hour after due
+    // Note: Overdue reminders removed - notifications are now controlled solely by alert settings
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -168,11 +165,6 @@ class TaskNotificationManager: BaseNotificationManager {
         // Remove existing notifications
         removeTaskNotification(taskId: task.id.uuidString)
 
-        // Schedule overdue reminder if enabled and task has due date
-        if enableOverdueReminders && task.dueDate != nil {
-            scheduleOverdueReminder(for: task)
-        }
-
         // Only schedule if task has a reminder date set
         guard let reminderDate = task.reminderDate else {
             return
@@ -222,58 +214,6 @@ class TaskNotificationManager: BaseNotificationManager {
         notificationCenter.add(request) { error in
             if let error = error {
                 print("Failed to schedule task notification: \(error)")
-            }
-        }
-    }
-
-    private func scheduleOverdueReminder(for task: Task) {
-        guard enableOverdueReminders else { return }
-        guard let dueDate = task.dueDate else { return }
-        guard !task.isCompleted else { return }
-
-        let overdueDate = dueDate.addingTimeInterval(overdueReminderInterval)
-
-        // Only schedule if overdue date is in the future
-        guard overdueDate > Date() else { return }
-
-        let identifier = "task_overdue_\(task.id.uuidString)"
-
-        // Use overdue group for thread identifier
-        let group = NotificationGroup.overdueReminder
-
-        let content = UNMutableNotificationContent()
-        content.title = "Task Overdue ⚠️"
-        content.body = task.title
-        content.sound = .default
-        content.categoryIdentifier = notificationCategoryIdentifier
-        content.userInfo = [
-            "task_id": task.id.uuidString,
-            "task_title": task.title,
-            "is_overdue": true
-        ]
-        content.badge = NSNumber(value: getPendingTasksCount())
-
-        // Set thread identifier for notification grouping
-        if let threadIdentifier = group.threadIdentifier {
-            content.threadIdentifier = threadIdentifier
-            content.summaryArgument = task.title
-            content.summaryArgumentCount = 1
-        }
-
-        let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: overdueDate.timeIntervalSinceNow,
-            repeats: false
-        )
-
-        let request = UNNotificationRequest(
-            identifier: identifier,
-            content: content,
-            trigger: trigger
-        )
-
-        notificationCenter.add(request) { error in
-            if let error = error {
-                print("Failed to schedule overdue reminder: \(error)")
             }
         }
     }

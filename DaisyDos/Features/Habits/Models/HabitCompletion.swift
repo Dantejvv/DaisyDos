@@ -16,7 +16,6 @@ class HabitCompletion {
     var id: UUID = UUID()
     var completedDate: Date = Date()
     var notes: String = ""
-    var mood: Mood = Mood.neutral
     var duration: TimeInterval?
     var createdDate: Date = Date()
 
@@ -25,54 +24,13 @@ class HabitCompletion {
     @Relationship(inverse: \Habit.completionEntries)
     var habit: Habit?
 
-    // MARK: - Mood Tracking
-
-    enum Mood: String, CaseIterable, Codable {
-        case veryHappy = "very_happy"
-        case happy = "happy"
-        case neutral = "neutral"
-        case sad = "sad"
-        case verySad = "very_sad"
-
-        var displayName: String {
-            switch self {
-            case .veryHappy: return "Very Happy"
-            case .happy: return "Happy"
-            case .neutral: return "Neutral"
-            case .sad: return "Sad"
-            case .verySad: return "Very Sad"
-            }
-        }
-
-        var emoji: String {
-            switch self {
-            case .veryHappy: return "😄"
-            case .happy: return "😊"
-            case .neutral: return "😐"
-            case .sad: return "😔"
-            case .verySad: return "😢"
-            }
-        }
-
-        var score: Int {
-            switch self {
-            case .veryHappy: return 5
-            case .happy: return 4
-            case .neutral: return 3
-            case .sad: return 2
-            case .verySad: return 1
-            }
-        }
-    }
-
     // MARK: - Initializers
 
-    init(habit: Habit, completedDate: Date, notes: String = "", mood: Mood = .neutral, duration: TimeInterval? = nil) {
+    init(habit: Habit, completedDate: Date, notes: String = "", duration: TimeInterval? = nil) {
         self.id = UUID()
         self.habit = habit
         self.completedDate = completedDate
         self.notes = notes
-        self.mood = mood
         self.duration = duration
         self.createdDate = Date()
     }
@@ -160,19 +118,15 @@ class HabitCompletion {
         let streakPos = streakPosition()
         let wasOnTime = wasCompletedOnTime()
 
-        switch (streakPos, wasOnTime, mood.score) {
-        case (let pos, true, let moodScore) where pos > habit.longestStreak && moodScore >= 4:
+        switch (streakPos, wasOnTime) {
+        case (let pos, true) where pos > habit.longestStreak:
             return .newRecord
-        case (let pos, true, _) where pos > 7:
+        case (let pos, true) where pos > 7:
             return .weekStreak
-        case (_, true, let moodScore) where moodScore >= 4:
-            return .greatDay
-        case (_, true, _):
+        case (_, true):
             return .onTrack
-        case (_, false, _):
+        case (_, false):
             return .catchingUp
-        default:
-            return .none
         }
     }
 }
@@ -183,7 +137,6 @@ extension HabitCompletion {
     enum ProgressImpact {
         case newRecord
         case weekStreak
-        case greatDay
         case onTrack
         case catchingUp
         case none
@@ -194,8 +147,6 @@ extension HabitCompletion {
                 return "New personal record! 🎉"
             case .weekStreak:
                 return "Week streak achieved! 🔥"
-            case .greatDay:
-                return "Great mood day! ✨"
             case .onTrack:
                 return "Staying on track! 👍"
             case .catchingUp:
@@ -211,8 +162,6 @@ extension HabitCompletion {
                 return "daisySuccess"
             case .weekStreak:
                 return "orange"
-            case .greatDay:
-                return "purple"
             case .onTrack:
                 return "daisyTask"
             case .catchingUp:

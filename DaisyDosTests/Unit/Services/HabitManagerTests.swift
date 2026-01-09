@@ -177,14 +177,12 @@ struct HabitManagerTests {
 
         let completion = manager.markHabitCompletedWithTracking(
             habit,
-            notes: "Great workout!",
-            mood: .happy
+            notes: "Great workout!"
         )
 
         #expect(completion != nil)
         #expect(habit.isCompletedToday)
         #expect(completion?.notes == "Great workout!")
-        #expect(completion?.mood == .happy)
     }
 
     @Test("Undo today's completion")

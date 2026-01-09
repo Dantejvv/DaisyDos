@@ -474,6 +474,13 @@ struct TaskEditView: View {
         // Update attachments
         updateTaskAttachments()
 
+        // Notify to trigger notification scheduling for reminder changes
+        NotificationCenter.default.post(
+            name: .taskDidChange,
+            object: nil,
+            userInfo: ["taskId": task.id.uuidString]
+        )
+
         dismiss()
     }
 

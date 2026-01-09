@@ -199,6 +199,12 @@ struct HabitDetailView: View {
                     set: { newAlert in
                         habit.alertTimeInterval = newAlert?.timeInterval
                         habit.modifiedDate = Date()
+                        // Notify to trigger notification scheduling
+                        NotificationCenter.default.post(
+                            name: .habitDidChange,
+                            object: nil,
+                            userInfo: ["habitId": habit.id.uuidString]
+                        )
                     }
                 ),
                 accentColor: .daisyHabit
@@ -653,14 +659,6 @@ struct HabitDetailView: View {
                         data: analytics.weeklyCompletions,
                         period: selectedPeriod
                     )
-
-                    if !analytics.moodTrends.isEmpty {
-                        MoodTrendsChart(
-                            data: analytics.moodTrends,
-                            period: selectedPeriod,
-                            averageMood: analytics.averageMood
-                        )
-                    }
                 }
             } else {
                 // Empty state
@@ -770,18 +768,6 @@ private struct CompletionRowView: View {
 
             Spacer()
 
-            // Mood
-            HStack(spacing: 4) {
-                Text(completion.mood.emoji)
-                    .font(.caption)
-
-                if showDetails {
-                    Text(completion.mood.displayName)
-                        .font(.caption2)
-                        .foregroundColor(.daisyTextSecondary)
-                }
-            }
-
             // Duration
             if let duration = completion.formattedDuration {
                 Text(duration)
@@ -868,7 +854,6 @@ struct HabitDetailPreview: View {
                 let completion = HabitCompletion(
                     habit: habit,
                     completedDate: date,
-                    mood: HabitCompletion.Mood.allCases.randomElement() ?? .neutral,
                     duration: TimeInterval.random(in: 1200...2400) // 20-40 minutes
                 )
                 container.mainContext.insert(completion)

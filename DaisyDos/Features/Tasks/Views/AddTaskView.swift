@@ -423,8 +423,16 @@ struct AddTaskView: View {
                 }
             }
 
-            // Add reminder if set
-            task.reminderDate = reminderDate
+            // Add reminder if set - use updateTask to ensure notification is scheduled
+            if reminderDate != nil {
+                task.reminderDate = reminderDate
+                // Notify to trigger notification scheduling
+                NotificationCenter.default.post(
+                    name: .taskDidChange,
+                    object: nil,
+                    userInfo: ["taskId": task.id.uuidString]
+                )
+            }
 
             // Add subtasks using batch method (follows SwiftData best practices)
             if !subtasks.isEmpty {

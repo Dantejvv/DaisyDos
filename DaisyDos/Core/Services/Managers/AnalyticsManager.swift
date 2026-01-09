@@ -83,10 +83,6 @@ final class AnalyticsManager {
         let completedToday = habitManager.completedTodayCount
         let pendingToday = habitManager.pendingTodayCount
 
-        // Mood trends
-        let moodTrends = habitManager.moodTrendData(days: period.days)
-        let averageMood = calculateAverageMood(from: moodTrends)
-
         // Time of day distribution
         let timeOfDayDistribution = habitManager.timeOfDayDistribution(days: period.days)
 
@@ -100,16 +96,7 @@ final class AnalyticsManager {
             totalHabits: totalHabits,
             completedToday: completedToday,
             pendingToday: pendingToday,
-            moodTrends: moodTrends,
-            averageMood: averageMood,
             timeOfDayDistribution: timeOfDayDistribution
         )
-    }
-
-    private func calculateAverageMood(from moodTrends: [MoodDataPoint]) -> Double {
-        guard !moodTrends.isEmpty else { return 3.0 }
-
-        let total = moodTrends.reduce(0.0) { $0 + $1.averageMood }
-        return total / Double(moodTrends.count)
     }
 }

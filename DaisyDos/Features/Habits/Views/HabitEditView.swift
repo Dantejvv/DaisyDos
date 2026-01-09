@@ -459,6 +459,13 @@ struct HabitEditView: View {
         // Update attachments
         updateHabitAttachments()
 
+        // Notify to trigger notification scheduling for alert changes
+        NotificationCenter.default.post(
+            name: .habitDidChange,
+            object: nil,
+            userInfo: ["habitId": habit.id.uuidString]
+        )
+
         dismiss()
     }
 

@@ -49,7 +49,6 @@ struct TaskDetailView: View {
     @State private var showingEditView = false
     @State private var showingTagAssignment = false
     @State private var showingDeleteConfirmation = false
-    @State private var showingTaskShare = false
     @State private var showingRecurrencePicker = false
     @State private var showingRecoverConfirmation = false
     @State private var showingDatePicker = false
@@ -144,12 +143,6 @@ struct TaskDetailView: View {
                             Label("Duplicate", systemImage: "plus.square.on.square")
                         }
 
-                        Button {
-                            showingTaskShare = true
-                        } label: {
-                            Label("Share", systemImage: "square.and.arrow.up")
-                        }
-
                         // Add Recover option for completed tasks in logbook mode
                         if isLogbookMode && task.isCompleted {
                             Divider()
@@ -186,9 +179,6 @@ struct TaskDetailView: View {
             ))
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showingTaskShare) {
-            TaskShareSheet(task: task, includeAttachments: false)
         }
         .sheet(isPresented: $showingRecurrencePicker) {
             RecurrenceRulePickerView(recurrenceRule: .init(
@@ -227,6 +217,12 @@ struct TaskDetailView: View {
                     set: { newDate in
                         task.reminderDate = newDate
                         task.modifiedDate = Date()
+                        // Notify to trigger notification scheduling
+                        NotificationCenter.default.post(
+                            name: .taskDidChange,
+                            object: nil,
+                            userInfo: ["taskId": task.id.uuidString]
+                        )
                     }
                 ),
                 accentColor: .daisyTask

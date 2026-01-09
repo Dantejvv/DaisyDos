@@ -25,10 +25,6 @@ struct HabitAnalytics {
     let completedToday: Int
     let pendingToday: Int
 
-    // Mood trends
-    let moodTrends: [MoodDataPoint]
-    let averageMood: Double
-
     // Time of day distribution
     let timeOfDayDistribution: [TimeOfDayData]
 
@@ -58,8 +54,6 @@ struct HabitAnalytics {
             totalHabits: 0,
             completedToday: 0,
             pendingToday: 0,
-            moodTrends: [],
-            averageMood: 3.0,
             timeOfDayDistribution: []
         )
     }

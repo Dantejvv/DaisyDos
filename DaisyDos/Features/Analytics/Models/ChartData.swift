@@ -26,23 +26,6 @@ struct CompletionDataPoint: Identifiable {
     }
 }
 
-/// Data point for mood trends
-struct MoodDataPoint: Identifiable {
-    let id = UUID()
-    let date: Date
-    let averageMood: Double // 1.0 to 5.0
-
-    var moodDescription: String {
-        switch averageMood {
-        case 4.5...5.0: return "Very Happy"
-        case 3.5..<4.5: return "Happy"
-        case 2.5..<3.5: return "Neutral"
-        case 1.5..<2.5: return "Sad"
-        default: return "Very Sad"
-        }
-    }
-}
-
 /// Data for streak display
 struct StreakData: Identifiable {
     let id: UUID

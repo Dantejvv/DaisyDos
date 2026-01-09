@@ -24,8 +24,8 @@ struct HabitsView: View {
     @State private var isReorderMode = false
     @State private var showCompletedBeforeReorder = false
     @AppStorage("habitSortOption") private var sortOptionRaw: String = SortOption.custom.rawValue
+    @AppStorage("habitShowCompleted") private var showCompletedHabits = false
     @State private var showingSortOptions = false
-    @State private var showCompletedHabits = false
 
     private var currentSortOption: SortOption {
         SortOption(rawValue: sortOptionRaw) ?? .title

@@ -414,6 +414,15 @@ struct AddHabitView: View {
             // Set alert if provided
             habit.alertTimeInterval = selectedAlert?.timeInterval
 
+            // Notify to trigger notification scheduling if alert was set
+            if selectedAlert != nil {
+                NotificationCenter.default.post(
+                    name: .habitDidChange,
+                    object: nil,
+                    userInfo: ["habitId": habit.id.uuidString]
+                )
+            }
+
             // Add tags
             for tag in selectedTags {
                 if !(habit.tags ?? []).contains(tag) {

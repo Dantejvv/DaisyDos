@@ -31,7 +31,11 @@ struct TasksView: View {
     @State private var taskToDetail: Task?
     @State private var isMultiSelectMode = false
     @State private var selectedTasks: Set<Task.ID> = []
-    @State private var sortOption: TaskSortOption = .title
+    @AppStorage("taskSortOption") private var sortOptionRaw: String = TaskSortOption.title.rawValue
+
+    private var sortOption: TaskSortOption {
+        get { TaskSortOption(rawValue: sortOptionRaw) ?? .title }
+    }
 
     enum TaskSortOption: String, CaseIterable {
         case title = "Title"
@@ -100,7 +104,7 @@ struct TasksView: View {
 
                                 ForEach(TaskSortOption.allCases, id: \.self) { option in
                                     Button(action: {
-                                        sortOption = option
+                                        sortOptionRaw = option.rawValue
                                     }) {
                                         Label(option.rawValue, systemImage: option.systemImage)
                                         if sortOption == option {

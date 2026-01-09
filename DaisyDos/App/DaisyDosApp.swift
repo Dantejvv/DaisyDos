@@ -15,6 +15,8 @@ import UserNotifications
 
 @main
 struct DaisyDosApp: App {
+    @Environment(\.scenePhase) private var scenePhase
+
     let localOnlyModeManager = LocalOnlyModeManager()
     let appearanceManager = AppearanceManager()
     let navigationManager = NavigationManager()
@@ -25,11 +27,14 @@ struct DaisyDosApp: App {
     @State private var networkMonitor: NetworkMonitor?
     @State private var offlineQueueManager: OfflineQueueManager?
 
+    // Recurrence scheduler for deferred task creation
+    @State private var recurrenceScheduler: RecurrenceScheduler?
+
     // Store notification delegate to prevent deallocation
     @State private var notificationDelegate: NotificationDelegate?
 
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema(versionedSchema: DaisyDosSchemaV7.self)
+        let schema = Schema(versionedSchema: DaisyDosSchemaV8.self)
 
         // Dynamic CloudKit configuration based on LocalOnlyModeManager
         // Note: Changing this requires app restart, handled in LocalOnlyModeManager
@@ -69,6 +74,9 @@ struct DaisyDosApp: App {
         WindowGroup {
             ContentView()
                 .task {
+                    // Clear any orphaned badge on app launch
+                    await clearBadgeOnLaunch()
+
                     // Set ModelContext on NavigationManager for deep linking entity fetches
                     navigationManager.setModelContext(sharedModelContainer.mainContext)
 
@@ -97,8 +105,22 @@ struct DaisyDosApp: App {
                     notificationDelegate = delegate
                     UNUserNotificationCenter.current().delegate = delegate
 
+                    // Initialize recurrence scheduler
+                    recurrenceScheduler = RecurrenceScheduler(modelContext: sharedModelContainer.mainContext)
+
+                    // Process any pending recurrences on app launch
+                    await processPendingRecurrences()
+
                     // Run logbook housekeeping on app launch (if needed)
                     await runLogbookHousekeepingIfNeeded()
+                }
+                .onChange(of: scenePhase) {
+                    // Process pending recurrences when app comes to foreground
+                    if scenePhase == .active {
+                        _Concurrency.Task {
+                            await processPendingRecurrences()
+                        }
+                    }
                 }
                 .onOpenURL { url in
                     // Handle deep links from external sources
@@ -118,9 +140,20 @@ struct DaisyDosApp: App {
         .environment(TagManager(modelContext: sharedModelContainer.mainContext))
         .environment(HabitNotificationManager(modelContext: sharedModelContainer.mainContext))
         .environment(LogbookManager(modelContext: sharedModelContainer.mainContext))
+        .environment(recurrenceScheduler)
         .environment(cloudKitSyncManager)
         .environment(networkMonitor)
         .environment(offlineQueueManager)
+    }
+
+    // MARK: - Badge Management
+
+    /// Clear any orphaned badge count on app launch
+    private func clearBadgeOnLaunch() async {
+        let center = UNUserNotificationCenter.current()
+        // Remove all delivered notifications and clear badge
+        center.removeAllDeliveredNotifications()
+        try? await center.setBadgeCount(0)
     }
 
     // MARK: - Logbook Housekeeping
@@ -150,6 +183,32 @@ struct DaisyDosApp: App {
         case .failure(let error):
             #if DEBUG
             print("Logbook housekeeping failed: \(error.userMessage)")
+            #endif
+        }
+    }
+
+    // MARK: - Pending Recurrences
+
+    /// Process pending recurrences that are ready (scheduled time has passed)
+    private func processPendingRecurrences() async {
+        guard let scheduler = recurrenceScheduler else { return }
+
+        let result = scheduler.processPendingRecurrences()
+
+        switch result {
+        case .success(let createdTasks):
+            if !createdTasks.isEmpty {
+                #if DEBUG
+                print("✅ Created \(createdTasks.count) recurring task(s) from pending recurrences")
+                for task in createdTasks {
+                    print("   - '\(task.title)' due \(task.dueDate?.formatted() ?? "no date")")
+                }
+                #endif
+            }
+
+        case .failure(let error):
+            #if DEBUG
+            print("❌ Failed to process pending recurrences: \(error.userMessage)")
             #endif
         }
     }

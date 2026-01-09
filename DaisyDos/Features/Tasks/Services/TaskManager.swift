@@ -22,6 +22,16 @@ class TaskManager: EntityManagerProtocol {
 
     internal let modelContext: ModelContext
 
+    // Recurrence scheduler for deferred task creation (excluded from observation)
+    @ObservationIgnored
+    private var _recurrenceScheduler: RecurrenceScheduler?
+    private var recurrenceScheduler: RecurrenceScheduler {
+        if _recurrenceScheduler == nil {
+            _recurrenceScheduler = RecurrenceScheduler(modelContext: modelContext)
+        }
+        return _recurrenceScheduler!
+    }
+
     // Error handling
     var lastError: (any RecoverableError)?
 
@@ -48,9 +58,9 @@ class TaskManager: EntityManagerProtocol {
             userInfo: ["taskId": task.id.uuidString]
         )
 
-        // Auto-create recurring instance immediately
+        // Schedule deferred recurring instance creation (task appears at scheduled time, not immediately)
         if task.hasRecurrence {
-            createRecurringInstanceIfNeeded(for: task)
+            scheduleRecurringInstanceIfNeeded(for: task)
         }
     }
 
@@ -95,7 +105,7 @@ class TaskManager: EntityManagerProtocol {
     // MARK: - CRUD Operations
 
     func createTask(title: String) -> Result<Task, AnyRecoverableError> {
-        return ErrorTransformer.safely(
+        let result = ErrorTransformer.safely(
             operation: "create task",
             entityType: "task"
         ) {
@@ -108,6 +118,13 @@ class TaskManager: EntityManagerProtocol {
             try modelContext.save()
             return task
         }
+
+        // Notify after successful creation for notification scheduling
+        if case .success(let task) = result {
+            notifyTaskChanged(task)
+        }
+
+        return result
     }
 
     /// Enhanced task creation with full parameter support
@@ -118,7 +135,7 @@ class TaskManager: EntityManagerProtocol {
         dueDate: Date? = nil,
         recurrenceRule: RecurrenceRule? = nil
     ) -> Result<Task, AnyRecoverableError> {
-        return ErrorTransformer.safely(
+        let result = ErrorTransformer.safely(
             operation: "create enhanced task",
             entityType: "task"
         ) {
@@ -143,6 +160,13 @@ class TaskManager: EntityManagerProtocol {
             try modelContext.save()
             return task
         }
+
+        // Notify after successful creation for notification scheduling
+        if case .success(let task) = result {
+            notifyTaskChanged(task)
+        }
+
+        return result
     }
 
     func updateTask(_ task: Task, title: String? = nil, isCompleted: Bool? = nil) -> Result<Void, AnyRecoverableError> {
@@ -577,7 +601,43 @@ class TaskManager: EntityManagerProtocol {
         }
     }
 
-    /// Creates recurring task instance immediately after completion
+    /// Schedules a pending recurrence for deferred task creation
+    /// The new task will appear when the app is opened after the scheduled date
+    private func scheduleRecurringInstanceIfNeeded(for task: Task) {
+        guard let recurrenceRule = task.recurrenceRule else { return }
+
+        // Check recreateIfIncomplete flag - only schedule if task completed OR flag is true
+        if !task.isCompleted && !recurrenceRule.recreateIfIncomplete {
+            #if DEBUG
+            print("⏭️ Skipping recurring instance: previous incomplete, recreateIfIncomplete=false")
+            #endif
+            return
+        }
+
+        // Check if next occurrence exists (respects endDate and maxOccurrences)
+        guard task.nextRecurrence() != nil else {
+            #if DEBUG
+            print("⏭️ No more occurrences for '\(task.title)' (endDate or maxOccurrences reached)")
+            #endif
+            return
+        }
+
+        // Schedule the pending recurrence
+        let result = recurrenceScheduler.schedulePendingRecurrence(for: task)
+
+        switch result {
+        case .success(let pendingRecurrence):
+            #if DEBUG
+            print("📅 Scheduled recurring instance: '\(task.title)' will appear \(pendingRecurrence.scheduledDate.formatted())")
+            #endif
+        case .failure(let error):
+            #if DEBUG
+            print("❌ Failed to schedule recurring instance: \(error.userMessage)")
+            #endif
+        }
+    }
+
+    /// Creates recurring task instance immediately (legacy behavior, kept for processRecurringTasks)
     private func createRecurringInstanceIfNeeded(for task: Task) {
         guard let recurrenceRule = task.recurrenceRule else { return }
 

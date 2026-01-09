@@ -97,7 +97,7 @@ class HabitManager: EntityManagerProtocol {
     // MARK: - CRUD Operations
 
     func createHabit(title: String, habitDescription: String = "", isCustomSortActive: Bool = false) -> Result<Habit, AnyRecoverableError> {
-        return ErrorTransformer.safely(
+        let result = ErrorTransformer.safely(
             operation: "create habit",
             entityType: "habit"
         ) {
@@ -130,6 +130,13 @@ class HabitManager: EntityManagerProtocol {
             try modelContext.save()
             return habit
         }
+
+        // Notify after successful creation for notification scheduling
+        if case .success(let habit) = result {
+            notifyHabitChanged(habit)
+        }
+
+        return result
     }
 
     func updateHabit(_ habit: Habit, title: String? = nil, habitDescription: String? = nil) -> Result<Void, AnyRecoverableError> {
@@ -191,12 +198,12 @@ class HabitManager: EntityManagerProtocol {
     }
 
     /// Mark habit completed with detailed tracking
-    func markHabitCompletedWithTracking(_ habit: Habit, notes: String = "", mood: HabitCompletion.Mood = .neutral) -> HabitCompletion? {
+    func markHabitCompletedWithTracking(_ habit: Habit, notes: String = "") -> HabitCompletion? {
         guard habit.canMarkCompleted() else {
             return nil // Already completed today
         }
 
-        let completion = habit.markCompletedWithTracking(notes: notes, mood: mood)
+        let completion = habit.markCompletedWithTracking(notes: notes)
 
         if let completion = completion {
             modelContext.insert(completion)

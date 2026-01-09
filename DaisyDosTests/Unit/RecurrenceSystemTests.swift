@@ -8,13 +8,16 @@ import SwiftData
 @Suite("Recurrence System Tests")
 struct RecurrenceSystemTests {
 
-    // MARK: - Fix 1: Auto-Create Recurring Instances Tests
+    // MARK: - Fix 1: Deferred Recurring Instance Creation Tests
+    // NOTE: The recurrence system now uses deferred task creation - tasks appear at their scheduled time,
+    // not immediately upon completion. These tests verify both the scheduling and processing behavior.
 
-    @Test("Task completion creates recurring instance immediately")
-    func testImmediateRecurringInstanceCreation() async throws {
+    @Test("Task completion schedules pending recurrence instead of immediate creation")
+    func testDeferredRecurringInstanceCreation() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
         let manager = TaskManager(modelContext: context)
+        let scheduler = RecurrenceScheduler(modelContext: context)
 
         // Create a daily recurring task
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
@@ -39,49 +42,69 @@ struct RecurrenceSystemTests {
             return
         }
 
-        // Verify new instance was created
+        // Verify NO new task was created immediately (deferred creation)
         let afterCount = manager.allTasks.count
-        #expect(afterCount == 2, "New recurring instance should be created")
+        #expect(afterCount == 1, "No new task should be created immediately - deferred to scheduled time")
 
-        // Verify the new instance has correct due date (tomorrow + 1 day)
-        let newTasks = manager.allTasks.filter { !$0.isCompleted }
-        #expect(newTasks.count == 1, "Should have one pending task")
+        // Verify pending recurrence was scheduled
+        let pendingRecurrences = scheduler.allPendingRecurrences
+        #expect(pendingRecurrences.count == 1, "Should have one pending recurrence scheduled")
 
-        let newTask = newTasks.first!
+        // Verify scheduled date is correct (tomorrow + 1 day = day after tomorrow)
+        let pendingRecurrence = pendingRecurrences.first!
         let expectedDate = Calendar.current.date(byAdding: .day, value: 2, to: Date())!
         let calendar = Calendar.current
-        let isSameDay = calendar.isDate(newTask.dueDate!, inSameDayAs: expectedDate)
-        #expect(isSameDay, "New task should be due 2 days from now")
+        let isSameDay = calendar.isDate(pendingRecurrence.scheduledDate, inSameDayAs: expectedDate)
+        #expect(isSameDay, "Pending recurrence should be scheduled for day after tomorrow")
     }
 
-    @Test("Recurring instance created successfully")
-    func testRecurringInstanceCreated() async throws {
+    @Test("Pending recurrence processed correctly when scheduled time arrives")
+    func testPendingRecurrenceProcessing() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
-        let manager = TaskManager(modelContext: context)
+        let scheduler = RecurrenceScheduler(modelContext: context)
 
-        // Create task
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
-        let recurringTask = Task(
+        // Create task with a recurrence rule
+        let task = Task(
             title: "Task with Recurrence",
             priority: .medium,
-            dueDate: tomorrow,
+            dueDate: Date(),
             recurrenceRule: RecurrenceRule.daily()
         )
 
-        context.insert(recurringTask)
+        context.insert(task)
+        task.isCompleted = true
+        task.completedDate = Date()
         try context.save()
 
-        // Complete the task
-        _ = manager.toggleTaskCompletion(recurringTask)
+        // Create a pending recurrence with a past scheduled date (should be processed immediately)
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        let pendingRecurrence = PendingRecurrence(
+            scheduledDate: yesterday,
+            sourceTask: task
+        )
 
-        // Find the new instance
-        let newTasks = manager.allTasks.filter { !$0.isCompleted }
-        #expect(newTasks.count == 1)
+        context.insert(pendingRecurrence)
+        try context.save()
 
-        let newTask = newTasks.first!
+        // Process pending recurrences
+        let result = scheduler.processPendingRecurrences()
+        guard case .success(let createdTasks) = result else {
+            Issue.record("Failed to process pending recurrences")
+            return
+        }
+
+        // Verify task was created
+        #expect(createdTasks.count == 1, "Should create one task from pending recurrence")
+
+        let newTask = createdTasks.first!
         #expect(newTask.title == "Task with Recurrence")
         #expect(newTask.priority == .medium)
+        #expect(!newTask.isCompleted)
+
+        // Verify pending recurrence was deleted
+        let remainingPending = scheduler.allPendingRecurrences
+        #expect(remainingPending.isEmpty, "Pending recurrence should be deleted after processing")
     }
 
     @Test("No recurring instance when endDate reached")
@@ -346,11 +369,12 @@ struct RecurrenceSystemTests {
 
     // MARK: - Integration Tests
 
-    @Test("Complete recurring task flow: creation → completion → new instance → notification")
+    @Test("Complete recurring task flow: completion schedules pending, processing creates task")
     func testCompleteRecurringFlow() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
         let manager = TaskManager(modelContext: context)
+        let scheduler = RecurrenceScheduler(modelContext: context)
 
         // Create recurring task with all features
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
@@ -378,26 +402,24 @@ struct RecurrenceSystemTests {
             return
         }
 
-        // Verify new instance created
-        let pendingTasks = manager.allTasks.filter { !$0.isCompleted }
-        #expect(pendingTasks.count == 1, "Should have one pending recurring instance")
+        // Verify pending recurrence was scheduled (not immediate task creation)
+        let pendingRecurrences = scheduler.allPendingRecurrences
+        #expect(pendingRecurrences.count == 1, "Should have one pending recurrence scheduled")
 
-        let newTask = pendingTasks.first!
-
-        // Verify all properties copied
-        #expect(newTask.title == "Workout")
-        #expect(newTask.taskDescription == "30 min cardio")
-        #expect(newTask.priority == .high)
-        #expect(newTask.recurrenceRule != nil)
-        #expect(newTask.dueDate != nil)
-        #expect(!newTask.isCompleted)
+        // Verify pending recurrence has correct properties
+        let pendingRecurrence = pendingRecurrences.first!
+        #expect(pendingRecurrence.taskTitle == "Workout")
+        #expect(pendingRecurrence.taskDescription == "30 min cardio")
+        #expect(pendingRecurrence.taskPriority == .high)
+        #expect(pendingRecurrence.recurrenceRule != nil)
     }
 
-    @Test("Weekly M/W/F task completed Friday creates Monday instance (fromOriginal)")
+    @Test("Weekly M/W/F task completed Friday schedules Monday instance (fromOriginal)")
     func testWeeklyFromOriginalDate() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
         let manager = TaskManager(modelContext: context)
+        let scheduler = RecurrenceScheduler(modelContext: context)
 
         let calendar = Calendar.current
 
@@ -424,14 +446,14 @@ struct RecurrenceSystemTests {
         task.completedDate = friday
         _ = manager.toggleTaskCompletion(task)
 
-        // New instance should be next Monday
-        let pendingTasks = manager.allTasks.filter { !$0.isCompleted }
-        #expect(pendingTasks.count == 1)
+        // Verify pending recurrence was scheduled with correct date
+        let pendingRecurrences = scheduler.allPendingRecurrences
+        #expect(pendingRecurrences.count == 1, "Should have one pending recurrence")
 
-        let newTask = pendingTasks.first!
+        let pendingRecurrence = pendingRecurrences.first!
         let expectedMonday = calendar.date(byAdding: .weekOfYear, value: 1, to: monday)!
-        let isSameDay = calendar.isDate(newTask.dueDate!, inSameDayAs: expectedMonday)
-        #expect(isSameDay, "Should create next Monday instance, not Friday + 7 days")
+        let isSameDay = calendar.isDate(pendingRecurrence.scheduledDate, inSameDayAs: expectedMonday)
+        #expect(isSameDay, "Should schedule for next Monday instance, not Friday + 7 days")
     }
 
     // MARK: - Time Support Tests
@@ -522,11 +544,12 @@ struct RecurrenceSystemTests {
         #expect(hour == 9, "Should be 9am, not 3pm")
     }
 
-    @Test("Weekly M/W/F task completed Sunday creates Thursday instance (fromCompletion)")
+    @Test("Weekly M/W/F task completed Sunday schedules next occurrence (fromCompletion)")
     func testWeeklyFromCompletionDate() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
         let manager = TaskManager(modelContext: context)
+        let scheduler = RecurrenceScheduler(modelContext: context)
 
         let calendar = Calendar.current
 
@@ -553,28 +576,28 @@ struct RecurrenceSystemTests {
         task.completedDate = sunday
         _ = manager.toggleTaskCompletion(task)
 
-        // New instance should be next occurrence after Sunday
-        let pendingTasks = manager.allTasks.filter { !$0.isCompleted }
-        #expect(pendingTasks.count == 1)
+        // Verify pending recurrence was scheduled
+        let pendingRecurrences = scheduler.allPendingRecurrences
+        #expect(pendingRecurrences.count == 1, "Should have one pending recurrence")
 
-        let newTask = pendingTasks.first!
+        let pendingRecurrence = pendingRecurrences.first!
 
-        // Verify new task has a due date and it's after completion date
-        #expect(newTask.dueDate != nil, "New task should have a due date")
-        #expect(newTask.dueDate! > sunday, "New task due date should be after completion date")
+        // Verify scheduled date is after completion date
+        #expect(pendingRecurrence.scheduledDate > sunday, "Scheduled date should be after completion date")
 
         // Verify it's one of the scheduled days (M/W/F)
-        let weekday = calendar.component(.weekday, from: newTask.dueDate!)
-        #expect([2, 4, 6].contains(weekday), "New task should be scheduled on M/W/F")
+        let weekday = calendar.component(.weekday, from: pendingRecurrence.scheduledDate)
+        #expect([2, 4, 6].contains(weekday), "Scheduled date should be on M/W/F")
     }
 
     // MARK: - recreateIfIncomplete Tests
 
-    @Test("recreateIfIncomplete=true creates next instance when previous incomplete")
+    @Test("recreateIfIncomplete=true schedules pending recurrence on completion")
     func testRecreateIfIncompleteTrueCreatesInstance() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
         let manager = TaskManager(modelContext: context)
+        let scheduler = RecurrenceScheduler(modelContext: context)
 
         // Create daily recurring task with recreateIfIncomplete=true
         let rule = RecurrenceRule.daily(recreateIfIncomplete: true)
@@ -594,19 +617,21 @@ struct RecurrenceSystemTests {
         _ = manager.toggleTaskCompletion(task)
         try context.save()
 
-        // Should create next instance even though "previous" was marked incomplete initially
-        let allTasks = manager.allTasks
-        #expect(allTasks.count == 2, "Should have 2 tasks: completed original + new instance")
+        // Should schedule pending recurrence (deferred creation)
+        let pendingRecurrences = scheduler.allPendingRecurrences
+        #expect(pendingRecurrences.count == 1, "Should have 1 pending recurrence scheduled")
 
-        let pendingTasks = manager.pendingTasks
-        #expect(pendingTasks.count == 1, "Should have 1 pending task (new instance)")
+        // Only one task in database (the original, now completed)
+        let allTasks = manager.allTasks
+        #expect(allTasks.count == 1, "Should have 1 task (completed original) - new task is deferred")
     }
 
-    @Test("recreateIfIncomplete=false skips next instance when task incomplete")
+    @Test("recreateIfIncomplete=false schedules pending recurrence only when task completed")
     func testRecreateIfIncompleteFalseSkipsInstance() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
         let manager = TaskManager(modelContext: context)
+        let scheduler = RecurrenceScheduler(modelContext: context)
 
         // Create daily recurring task with recreateIfIncomplete=false
         let rule = RecurrenceRule.daily(recreateIfIncomplete: false)
@@ -620,24 +645,19 @@ struct RecurrenceSystemTests {
         context.insert(task)
         try context.save()
 
-        // Manually call createRecurringInstanceIfNeeded while task is incomplete
-        // This simulates what would happen if we tried to create a new instance
-        // before the previous one was completed
         #expect(!task.isCompleted, "Task should be incomplete")
 
-        // The manager's createRecurringInstanceIfNeeded checks this flag
-        // When recreateIfIncomplete=false and task is incomplete, it should skip creation
-        // We can verify this by checking that nextRecurrence() still returns a value
-        // (the rule can calculate) but manager wouldn't create it
+        // nextRecurrence() should still calculate (rule logic unaffected)
         let nextDate = task.nextRecurrence()
         #expect(nextDate != nil, "Rule should be able to calculate next occurrence")
 
-        // Now complete the task - it SHOULD create the next instance
+        // Complete the task - it SHOULD schedule the next instance
         _ = manager.toggleTaskCompletion(task)
         try context.save()
 
-        let allTasks = manager.allTasks
-        #expect(allTasks.count == 2, "Should have 2 tasks after completion")
+        // Verify pending recurrence was scheduled
+        let pendingRecurrences = scheduler.allPendingRecurrences
+        #expect(pendingRecurrences.count == 1, "Should have 1 pending recurrence after completion")
     }
 
     @Test("recreateIfIncomplete default value is true")
@@ -675,11 +695,11 @@ struct RecurrenceSystemTests {
 
     // MARK: - maxOccurrences Tests
 
-    @Test("maxOccurrences stops creating instances after limit reached")
+    @Test("maxOccurrences stops scheduling after limit reached")
     func testMaxOccurrencesLimitEnforcement() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
-        let manager = TaskManager(modelContext: context)
+        let scheduler = RecurrenceScheduler(modelContext: context)
 
         // Create daily recurring task with maxOccurrences=3
         let rule = RecurrenceRule.daily(interval: 1)
@@ -702,67 +722,83 @@ struct RecurrenceSystemTests {
 
         #expect(task.occurrenceIndex == 1, "First instance should have index 1")
 
-        // Complete and create instance #2
-        _ = manager.toggleTaskCompletion(task)
+        // Complete task #1, should schedule pending recurrence for #2
+        task.isCompleted = true
+        task.completedDate = Date()
+        _ = scheduler.schedulePendingRecurrence(for: task)
         try context.save()
 
-        var allTasks = manager.allTasks
-        #expect(allTasks.count == 2, "Should have 2 tasks after first completion")
+        var pendingRecurrences = scheduler.allPendingRecurrences
+        #expect(pendingRecurrences.count == 1, "Should have 1 pending recurrence")
+        #expect(pendingRecurrences.first!.occurrenceIndex == 2, "Pending should be for occurrence #2")
 
-        let instance2 = allTasks.first(where: { !$0.isCompleted })!
-        #expect(instance2.occurrenceIndex == 2, "Second instance should have index 2")
-
-        // Complete and create instance #3
-        _ = manager.toggleTaskCompletion(instance2)
+        // Simulate task #2 (occurrence index 2)
+        let task2 = Task(
+            title: "Limited Daily Task",
+            priority: .medium,
+            dueDate: Date(),
+            recurrenceRule: ruleWithMax
+        )
+        task2.occurrenceIndex = 2
+        task2.isCompleted = true
+        task2.completedDate = Date()
+        context.insert(task2)
+        _ = scheduler.schedulePendingRecurrence(for: task2)
         try context.save()
 
-        allTasks = manager.allTasks
-        #expect(allTasks.count == 3, "Should have 3 tasks after second completion")
+        pendingRecurrences = scheduler.allPendingRecurrences
+        #expect(pendingRecurrences.count == 2, "Should have 2 pending recurrences")
 
-        let instance3 = allTasks.first(where: { !$0.isCompleted })!
-        #expect(instance3.occurrenceIndex == 3, "Third instance should have index 3")
+        // Simulate task #3 (occurrence index 3 = max)
+        let task3 = Task(
+            title: "Limited Daily Task",
+            priority: .medium,
+            dueDate: Date(),
+            recurrenceRule: ruleWithMax
+        )
+        task3.occurrenceIndex = 3
+        task3.isCompleted = true
+        task3.completedDate = Date()
+        context.insert(task3)
 
-        // Complete instance #3 - should NOT create instance #4 (reached max)
-        _ = manager.toggleTaskCompletion(instance3)
-        try context.save()
-
-        allTasks = manager.allTasks
-        let pendingTasks = manager.pendingTasks
-        #expect(allTasks.count == 3, "Should still have 3 tasks total")
-        #expect(pendingTasks.count == 0, "Should have no pending tasks (max reached)")
+        // This should FAIL to schedule (max reached)
+        let result = scheduler.schedulePendingRecurrence(for: task3)
+        if case .success = result {
+            Issue.record("Should not schedule pending recurrence when max occurrences reached")
+        }
     }
 
-    @Test("maxOccurrences nil allows unlimited occurrences")
+    @Test("maxOccurrences nil allows unlimited scheduling")
     func testMaxOccurrencesUnlimited() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
-        let manager = TaskManager(modelContext: context)
+        let scheduler = RecurrenceScheduler(modelContext: context)
 
         // Create daily recurring task with no maxOccurrences limit
         let rule = RecurrenceRule.daily()
-        let task = Task(
-            title: "Unlimited Daily Task",
-            priority: .medium,
-            dueDate: Date(),
-            recurrenceRule: rule
-        )
 
-        context.insert(task)
-        try context.save()
-
-        // Create 10 instances - should all work since no limit
+        // Create and schedule 10 pending recurrences - should all work since no limit
         for i in 1...10 {
-            let pendingTask = manager.pendingTasks.first!
-            _ = manager.toggleTaskCompletion(pendingTask)
-            try context.save()
+            let task = Task(
+                title: "Unlimited Daily Task",
+                priority: .medium,
+                dueDate: Date(),
+                recurrenceRule: rule
+            )
+            task.occurrenceIndex = i
+            task.isCompleted = true
+            task.completedDate = Date()
+            context.insert(task)
 
-            let allTasks = manager.allTasks
-            #expect(allTasks.count == i + 1, "Should have \(i + 1) tasks after \(i) completions")
+            let result = scheduler.schedulePendingRecurrence(for: task)
+            guard case .success = result else {
+                Issue.record("Failed to schedule occurrence \(i)")
+                return
+            }
         }
 
-        // Should still be able to create more
-        let pendingTasks = manager.pendingTasks
-        #expect(pendingTasks.count == 1, "Should still have 1 pending task (unlimited)")
+        let pendingRecurrences = scheduler.allPendingRecurrences
+        #expect(pendingRecurrences.count == 10, "Should have 10 pending recurrences (no limit)")
     }
 
     @Test("occurrenceIndex increments correctly")

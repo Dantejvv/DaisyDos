@@ -403,7 +403,7 @@ class Habit {
     // MARK: - Enhanced Business Logic for Phase 3
 
     /// Enhanced completion tracking
-    func markCompletedWithTracking(notes: String = "", mood: HabitCompletion.Mood = .neutral) -> HabitCompletion? {
+    func markCompletedWithTracking(notes: String = "") -> HabitCompletion? {
         let today = Calendar.current.startOfDay(for: Date())
 
         // Check if already completed today
@@ -415,8 +415,7 @@ class Habit {
         let completion = HabitCompletion(
             habit: self,
             completedDate: today,
-            notes: notes,
-            mood: mood
+            notes: notes
         )
 
         // Add to completion entries

@@ -51,46 +51,6 @@ extension HabitManager {
             .map { CompletionDataPoint(date: $0.key, count: $0.value) }
     }
 
-    // MARK: - Mood Trends
-
-    /// Get average mood per day for the specified period
-    func moodTrendData(days: Int) -> [MoodDataPoint] {
-        let calendar = Calendar.current
-        let endDate = Date()
-        guard let startDate = calendar.date(byAdding: .day, value: -days, to: endDate) else {
-            return []
-        }
-
-        // Get all habits
-        let habits = allHabits
-
-        // Create date buckets for mood scores
-        var dateMoods: [Date: (total: Double, count: Int)] = [:]
-
-        for habit in habits {
-            for completion in habit.completionEntries ?? [] {
-                let completionDay = calendar.startOfDay(for: completion.completedDate)
-                if completionDay >= startDate && completionDay <= endDate {
-                    let mood = completion.mood
-                    let current = dateMoods[completionDay] ?? (total: 0, count: 0)
-                    dateMoods[completionDay] = (
-                        total: current.total + Double(mood.score),
-                        count: current.count + 1
-                    )
-                }
-            }
-        }
-
-        // Calculate averages
-        return dateMoods
-            .sorted { $0.key < $1.key }
-            .compactMap { date, values in
-                guard values.count > 0 else { return nil }
-                let average = values.total / Double(values.count)
-                return MoodDataPoint(date: date, averageMood: average)
-            }
-    }
-
     // MARK: - Streak Data
 
     /// Get top streaks across all habits

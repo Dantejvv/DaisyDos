@@ -32,8 +32,12 @@ struct TodayView: View {
     @State private var selectedItems: Set<UUID> = []
     @State private var searchText = ""
     @State private var isSearchPresented = false
-    @State private var sortOption: SortOption = .title
-    @State private var showCompletedItems = false
+    @AppStorage("todaySortOption") private var sortOptionRaw: String = SortOption.title.rawValue
+    @AppStorage("todayShowCompleted") private var showCompletedItems = false
+
+    private var sortOption: SortOption {
+        get { SortOption(rawValue: sortOptionRaw) ?? .title }
+    }
 
     // Sheet states
     @State private var showingAddTask = false
@@ -132,7 +136,7 @@ struct TodayView: View {
 
                                 ForEach(SortOption.allCases, id: \.self) { option in
                                     Button(action: {
-                                        sortOption = option
+                                        sortOptionRaw = option.rawValue
                                     }) {
                                         Label(option.rawValue, systemImage: option.systemImage)
                                         if sortOption == option {
