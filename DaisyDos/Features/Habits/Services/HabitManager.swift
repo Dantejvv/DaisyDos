@@ -350,26 +350,6 @@ class HabitManager: EntityManagerProtocol {
         }
     }
 
-    /// Get the next order value for new habits in custom sort mode
-    /// Returns 0 for new habits (existing habits will be incremented)
-    func getNextOrderValue() -> Int {
-        return 0
-    }
-
-    /// Increment all habit orders by 1 to make room for a new habit at position 0
-    func incrementAllHabitOrders() -> Result<Void, AnyRecoverableError> {
-        return ErrorTransformer.safely(
-            operation: "increment habit orders",
-            entityType: "habits"
-        ) {
-            for habit in allHabits {
-                habit.habitOrder += 1
-                habit.modifiedDate = Date()
-            }
-            try modelContext.save()
-        }
-    }
-
     // MARK: - Habit Duplication
 
     func duplicateHabit(_ habit: Habit) -> Result<Habit, AnyRecoverableError> {
@@ -623,15 +603,4 @@ class HabitManager: EntityManagerProtocol {
         allHabits.map(\.longestStreak).max() ?? 0
     }
 
-    // MARK: - Helper Properties
-
-    var habitsCompletableToday: [Habit] {
-        allHabits.filter { $0.canMarkCompleted() }
-    }
-
-    var habitsDueToday: [Habit] {
-        // For now, all habits are considered "due" every day
-        // This can be enhanced with recurrence rules in future phases
-        return allHabits
-    }
 }

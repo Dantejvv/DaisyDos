@@ -211,21 +211,6 @@ class TagManager {
         unusedTags.count
     }
 
-    var averageTagUsage: Double {
-        let tags = allTags
-        guard !tags.isEmpty else { return 0.0 }
-        let totalUsage = tags.reduce(0) { $0 + $1.totalItemCount }
-        return Double(totalUsage) / Double(tags.count)
-    }
-
-    var mostUsedTag: Tag? {
-        allTags.max { $0.totalItemCount < $1.totalItemCount }
-    }
-
-    var leastUsedTag: Tag? {
-        usedTags.min { $0.totalItemCount < $1.totalItemCount }
-    }
-
     // MARK: - Tag Creation Helpers
 
     static var availableColors: [String] {

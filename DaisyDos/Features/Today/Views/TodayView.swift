@@ -595,28 +595,11 @@ struct TodayView: View {
     }
 
     private func toggleTaskCompletion(_ task: Task) {
-        if task.hasSubtasks {
-            let result = taskManager.toggleSubtaskCompletion(
-                task,
-                strategy: .hybrid,
-                propagateToParent: true
-            )
-            if case .failure(let error) = result {
-                #if DEBUG
-                print("Failed to toggle task completion: \(error)")
-                #endif
-            } else if task.isCompleted {
-                taskToastManager.showCompletionToast(for: task) {
-                    _ = taskManager.toggleTaskCompletionSafely(task)
-                }
-            }
-        } else {
-            _ = taskManager.toggleTaskCompletionSafely(task)
+        _ = taskManager.toggleTaskCompletionSafely(task)
 
-            if task.isCompleted {
-                taskToastManager.showCompletionToast(for: task) {
-                    _ = taskManager.toggleTaskCompletionSafely(task)
-                }
+        if task.isCompleted {
+            taskToastManager.showCompletionToast(for: task) {
+                _ = taskManager.toggleTaskCompletionSafely(task)
             }
         }
     }

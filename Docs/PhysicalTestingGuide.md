@@ -74,7 +74,7 @@ Tasks use **absolute date/time reminders** set via the reminder picker.
 
 | Pass | Fail | Notes |
 |------|------|-------|
-| [X]  | [ ]  |   pressing the notificaiton goes to a empty screen with triangle    |
+| [ ]  | [ ]  |      |
 
 ---
 
@@ -88,7 +88,7 @@ Tasks use **absolute date/time reminders** set via the reminder picker.
 
 | Pass | Fail | Notes |
 |------|------|-------|
-| [X]  | [ ]  |       |
+| [ ]  | [ ]  |       |
 
 ---
 
@@ -116,7 +116,7 @@ Tasks use **absolute date/time reminders** set via the reminder picker.
 
 | Pass | Fail | Notes |
 |------|------|-------|
-| [X]  | [ ]  |       |
+| [ ]  | [ ]  |       |
 
 ---
 
@@ -130,7 +130,7 @@ Tasks use **absolute date/time reminders** set via the reminder picker.
 
 | Pass | Fail | Notes |
 |------|------|-------|
-| [X]  | [ ]  |       |
+| [ ]  | [ ]  |       |
 
 ---
 
@@ -146,7 +146,7 @@ Tasks use **absolute date/time reminders** set via the reminder picker.
 
 | Pass | Fail | Notes |
 |------|------|-------|
-| [X]  | [ ]  |    notification dismissed and task completed but a little wonky and is not in logbook   |
+| [ ]  | [ ]  |       |
 
 ---
 
@@ -160,7 +160,7 @@ Tasks use **absolute date/time reminders** set via the reminder picker.
 
 | Pass | Fail | Notes |
 |------|------|-------|
-| [X]  | [ ]  |    checking dbl snooze   |
+| [ ]  | [ ]  |       |
 
 ---
 
@@ -173,7 +173,7 @@ Tasks use **absolute date/time reminders** set via the reminder picker.
 
 | Pass | Fail | Notes |
 |------|------|-------|
-| [ ]  | [X]  |    opens to empty triangle screen   |
+| [ ]  | [ ]  |       |
 
 ---
 
@@ -186,7 +186,7 @@ Tasks use **absolute date/time reminders** set via the reminder picker.
 
 | Pass | Fail | Notes |
 |------|------|-------|
-| [X]  | [ ]  |       |
+| [ ]  | [ ]  |       |
 
 ---
 
@@ -199,7 +199,7 @@ Tasks use **absolute date/time reminders** set via the reminder picker.
 
 | Pass | Fail | Notes |
 |------|------|-------|
-| [X]  | [ ]  |   completed tasks from notifications arnt going to logbook    |
+| [ ]  | [ ]  |      |
 
 ---
 
@@ -214,7 +214,7 @@ Tasks use **absolute date/time reminders** set via the reminder picker.
 
 | Pass | Fail | Notes |
 |------|------|-------|
-| [X]  | [ ]  |       |
+| [ ]  | [ ]  |       |
 
 ---
 
@@ -229,7 +229,7 @@ Tasks use **absolute date/time reminders** set via the reminder picker.
 
 | Pass | Fail | Notes |
 |------|------|-------|
-| [ ]  | [X]  |       |
+| [ ]  | [ ]  |       |
 
 ---
 

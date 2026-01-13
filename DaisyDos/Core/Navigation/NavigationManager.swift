@@ -237,17 +237,4 @@ class NavigationManager {
 
         return try? context.fetch(descriptor).first
     }
-
-    // MARK: - State Preservation (Future)
-
-    /// Get the current navigation state as a restorable representation
-    func getNavigationState() -> [String: Any] {
-        // TODO: Implement navigation state preservation for app backgrounding
-        return [:]
-    }
-
-    /// Restore navigation state from a saved representation
-    func restoreNavigationState(_ state: [String: Any]) {
-        // TODO: Implement navigation state restoration
-    }
 }

@@ -277,87 +277,6 @@ struct TaskManagerTests {
         #expect(tasks.allSatisfy { $0.title.localizedStandardContains("buy") })
     }
 
-    @Test("Filter tasks by priority")
-    func testFilterByPriority() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-        let manager = TaskManager(modelContext: context)
-
-        _ = manager.createTask(title: "Low priority", priority: .low)
-        _ = manager.createTask(title: "High priority 1", priority: .high)
-        _ = manager.createTask(title: "High priority 2", priority: .high)
-
-        let highPriorityTasks = manager.tasksByPriority(.high)
-
-        #expect(highPriorityTasks.count == 2)
-        #expect(highPriorityTasks.allSatisfy { $0.priority == .high })
-    }
-
-    @Test("Filter tasks with tags")
-    func testFilterByTag() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-        let manager = TaskManager(modelContext: context)
-
-        guard case .success(let task1) = manager.createTask(title: "Task 1"),
-              case .success(let task2) = manager.createTask(title: "Task 2"),
-              case .success(let task3) = manager.createTask(title: "Task 3") else {
-            Issue.record("Failed to create tasks")
-            return
-        }
-
-        let tag = Tag(name: "Work", sfSymbolName: "briefcase", colorName: "blue")
-        context.insert(tag)
-
-        _ = manager.addTag(tag, to: task1)
-        _ = manager.addTag(tag, to: task2)
-
-        let tasksWithTag = manager.tasksWithTag(tag)
-
-        #expect(tasksWithTag.count == 2)
-        #expect(tasksWithTag.contains(task1))
-        #expect(tasksWithTag.contains(task2))
-        #expect(!tasksWithTag.contains(task3))
-    }
-
-    @Test("Filter overdue tasks")
-    func testOverdueTasks() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-        let manager = TaskManager(modelContext: context)
-
-        let calendar = Calendar.current
-        let yesterday = calendar.date(byAdding: .day, value: -1, to: Date())!
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date())!
-
-        _ = manager.createTask(title: "Overdue task", dueDate: yesterday)
-        _ = manager.createTask(title: "Future task", dueDate: tomorrow)
-
-        let overdueTasks = manager.overdueTasks()
-
-        #expect(overdueTasks.count == 1)
-        #expect(overdueTasks.first?.title == "Overdue task")
-    }
-
-    @Test("Filter tasks due today")
-    func testTasksDueToday() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-        let manager = TaskManager(modelContext: context)
-
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
-
-        _ = manager.createTask(title: "Due today", dueDate: today)
-        _ = manager.createTask(title: "Due tomorrow", dueDate: tomorrow)
-
-        let todayTasks = manager.tasksDueToday()
-
-        #expect(todayTasks.count == 1)
-        #expect(todayTasks.first?.title == "Due today")
-    }
-
     // MARK: - Subtask Management Tests
 
     @Test("Create subtask")
@@ -385,26 +304,6 @@ struct TaskManagerTests {
         #expect(subtask.title == "Subtask")
         #expect((parent.subtasks ?? []).contains(subtask))
         #expect(subtask.parentTask == parent)
-    }
-
-    @Test("Get root tasks only")
-    func testRootTasks() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-        let manager = TaskManager(modelContext: context)
-
-        guard case .success(let parent) = manager.createTask(title: "Parent") else {
-            Issue.record("Failed to create parent")
-            return
-        }
-
-        _ = manager.createSubtask(for: parent, title: "Subtask")
-        _ = manager.createTask(title: "Another root task")
-
-        let rootTasks = manager.rootTasks()
-
-        #expect(rootTasks.count == 2)
-        #expect(rootTasks.allSatisfy { $0.parentTask == nil })
     }
 
     // MARK: - Task Duplication Tests

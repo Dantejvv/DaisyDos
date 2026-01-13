@@ -254,26 +254,6 @@ struct Colors {
             }
         }
 
-        /// Text color that adapts to background
-        static func textColor(on background: ColorBackground) -> Color {
-            switch background {
-            case .light:
-                return Primary.text
-            case .dark:
-                return Color.white
-            case .colored:
-                return Color.white
-            case .surface:
-                return Primary.text
-            }
-        }
-
-        enum ColorBackground {
-            case light
-            case dark
-            case colored
-            case surface
-        }
     }
 
     // MARK: - Accessibility Colors
@@ -383,73 +363,3 @@ extension Color {
     static let daisyToolbar = Colors.Semantic.toolbarAccent
 }
 
-// MARK: - Contrast Validation
-
-extension Colors {
-
-    /// Validates contrast ratio between two colors
-    /// Returns true if the combination meets WCAG AA standards
-    static func validateContrast(
-        foreground: Color,
-        background: Color,
-        minimumRatio: Double = 4.5
-    ) -> Bool {
-        // This is a simplified implementation
-        // In a production app, you would use a proper contrast calculation
-        // For now, we assume all our predefined colors meet standards
-        return true
-    }
-
-    /// Suggests appropriate text color for a given background
-    static func suggestTextColor(for background: Color) -> Color {
-        // Simplified logic - in practice, you'd calculate luminance
-        return Primary.text
-    }
-
-    /// WCAG AA contrast ratio requirements
-    enum ContrastRequirements {
-        static let normalText: Double = 4.5
-        static let largeText: Double = 3.0
-        static let uiComponents: Double = 3.0
-        static let graphicalObjects: Double = 3.0
-    }
-}
-
-// MARK: - Color Palette Documentation
-
-extension Colors {
-
-    /// Color usage guidelines and documentation
-    enum Documentation {
-        static let colorPaletteDescription = """
-        DaisyDos Color System follows the 60-30-10 rule:
-
-        60% Primary Colors:
-        - Backgrounds and surfaces
-        - Primary and secondary text
-        - Neutral UI elements
-
-        30% Secondary Colors:
-        - Blue (brand color), Purple, Teal
-        - Interactive elements
-        - Accent backgrounds
-
-        10% Accent Colors:
-        - Status colors (success, warning, error)
-        - Call-to-action buttons
-        - Important notifications
-
-        All colors meet WCAG AA contrast requirements and support light/dark mode.
-        """
-
-        static let usageGuidelines = """
-        Color Usage Guidelines:
-        1. Use semantic color names, not raw hex values
-        2. Always test in both light and dark mode
-        3. Verify contrast ratios meet accessibility requirements
-        4. Use Primary colors for 60% of interface elements
-        5. Limit accent colors to 10% for maximum impact
-        6. Prefer system colors for common UI elements
-        """
-    }
-}

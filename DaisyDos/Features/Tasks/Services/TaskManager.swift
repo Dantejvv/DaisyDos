@@ -398,43 +398,6 @@ class TaskManager: EntityManagerProtocol {
         }
     }
 
-    func tasksWithTag(_ tag: Tag) -> [Task] {
-        // For now, fetch all tasks and filter in memory since @Predicate with contains is complex
-        return allTasks.filter { task in
-            (task.tags ?? []).contains { $0.id == tag.id }
-        }
-    }
-
-    // MARK: - Enhanced Filtering and Sorting
-
-    func tasksByPriority(_ priority: Priority) -> [Task] {
-        return allTasks.filter { $0.priority == priority }
-    }
-
-    func overdueTasks() -> [Task] {
-        return allTasks.filter { $0.hasOverdueStatus }
-    }
-
-    func tasksDueToday() -> [Task] {
-        return allTasks.filter { $0.isDueToday }
-    }
-
-    func tasksDueSoon() -> [Task] {
-        return allTasks.filter { $0.isDueSoon }
-    }
-
-    func tasksWithDueDates() -> [Task] {
-        return allTasks.filter { $0.dueDate != nil }
-    }
-
-    func tasksWithRecurrence() -> [Task] {
-        return allTasks.filter { $0.hasRecurrence }
-    }
-
-    func rootTasks() -> [Task] {
-        return allTasks.filter { $0.isRootTask }
-    }
-
     // MARK: - Subtask Management
 
     func createSubtask(
@@ -636,38 +599,6 @@ class TaskManager: EntityManagerProtocol {
         case .failure(let error):
             #if DEBUG
             print("❌ Failed to schedule recurring instance: \(error.userMessage)")
-            #endif
-        }
-    }
-
-    /// Creates recurring task instance immediately (legacy behavior, kept for processRecurringTasks)
-    private func createRecurringInstanceIfNeeded(for task: Task) {
-        guard let recurrenceRule = task.recurrenceRule else { return }
-
-        // Check recreateIfIncomplete flag - only create if task completed OR flag is true
-        if !task.isCompleted && !recurrenceRule.recreateIfIncomplete {
-            #if DEBUG
-            print("⏭️ Skipping recurring instance: previous incomplete, recreateIfIncomplete=false")
-            #endif
-            return
-        }
-
-        guard let newTask = task.createRecurringInstance() else {
-            return // No more occurrences (endDate reached)
-        }
-
-        modelContext.insert(newTask)
-
-        do {
-            try modelContext.save()
-            notifyTaskChanged(newTask) // Triggers notification scheduling
-
-            #if DEBUG
-            print("Created recurring instance: '\(newTask.title)' due \(newTask.dueDate?.formatted() ?? "never")")
-            #endif
-        } catch {
-            #if DEBUG
-            print("Failed to create recurring instance: \(error)")
             #endif
         }
     }

@@ -308,14 +308,6 @@ class Habit {
         return subtask
     }
 
-    /// Reset all subtask completion statuses (called when new day starts)
-    func resetSubtaskCompletions() {
-        for subtask in subtasksArray {
-            subtask.resetDailyCompletion()
-        }
-        modifiedDate = Date()
-    }
-
     var subtaskCompletionPercentage: Double {
         guard hasSubtasks else { return isCompletedToday ? 1.0 : 0.0 }
         guard subtaskCount > 0 else { return 0.0 }
