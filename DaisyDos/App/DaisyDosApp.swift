@@ -34,6 +34,7 @@ struct DaisyDosApp: App {
     // Store notification delegate to prevent deallocation
     @State private var notificationDelegate: NotificationDelegate?
 
+    // Shared model container - created first so managers can use its context
     var sharedModelContainer: ModelContainer = {
         let schema = Schema(versionedSchema: DaisyDosSchemaV8.self)
 
@@ -91,17 +92,20 @@ struct DaisyDosApp: App {
                         )
                     }
 
-                    // Create and set up notification delegate (stored to prevent deallocation)
+                    // Set up notification delegate (stored to prevent deallocation)
+                    // Note: The delegate creates its own manager instances for handling notification actions.
+                    // The environment-injected managers handle scheduling via reactive observers,
+                    // so both sets respond to the same Foundation NotificationCenter events.
                     let taskManager = TaskManager(modelContext: sharedModelContainer.mainContext)
                     let habitMgr = HabitManager(modelContext: sharedModelContainer.mainContext)
-                    let taskNotificationManager = TaskNotificationManager(modelContext: sharedModelContainer.mainContext)
-                    let habitNotificationManager = HabitNotificationManager(modelContext: sharedModelContainer.mainContext)
+                    let taskNotifMgr = TaskNotificationManager(modelContext: sharedModelContainer.mainContext)
+                    let habitNotifMgr = HabitNotificationManager(modelContext: sharedModelContainer.mainContext)
                     let delegate = NotificationDelegate(
                         navigationManager: navigationManager,
                         habitManager: habitMgr,
                         taskManager: taskManager,
-                        taskNotificationManager: taskNotificationManager,
-                        habitNotificationManager: habitNotificationManager
+                        taskNotificationManager: taskNotifMgr,
+                        habitNotificationManager: habitNotifMgr
                     )
                     notificationDelegate = delegate
                     UNUserNotificationCenter.current().delegate = delegate

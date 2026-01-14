@@ -46,6 +46,10 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        // Mark the notification as fired so the bell badge disappears from row views
+        let userInfo = notification.request.content.userInfo
+        markNotificationFired(userInfo: userInfo)
+
         // Show notification even when app is in foreground
         // Display banner, play sound, and update badge
         completionHandler([.banner, .sound, .badge])
@@ -59,6 +63,9 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     ) {
         let userInfo = response.notification.request.content.userInfo
         let actionIdentifier = response.actionIdentifier
+
+        // Mark the notification as fired (in case it was delivered while app was in background)
+        markNotificationFired(userInfo: userInfo)
 
         // Handle different notification types
         if let habitID = userInfo["habit_id"] as? String {
@@ -133,29 +140,39 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     // MARK: - Navigation Helpers
 
     private func navigateToHabit(uuid: UUID) {
-        // Fetch the habit from the database
-        guard let habit = fetchHabit(by: uuid) else {
-            #if DEBUG
-            print("NotificationDelegate: Could not find habit with ID \(uuid)")
-            #endif
-            return
-        }
+        // Navigation must happen on main thread with fresh fetch
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
 
-        // Use NavigationManager to navigate to the habit
-        navigationManager.navigateToHabit(habit)
+            // Fetch the habit from the database on main thread
+            guard let habit = self.fetchHabit(by: uuid) else {
+                #if DEBUG
+                print("NotificationDelegate: Could not find habit with ID \(uuid)")
+                #endif
+                return
+            }
+
+            // Use NavigationManager to navigate to the habit
+            self.navigationManager.navigateToHabit(habit)
+        }
     }
 
     private func navigateToTask(uuid: UUID) {
-        // Fetch the task from the database
-        guard let task = fetchTask(by: uuid) else {
-            #if DEBUG
-            print("NotificationDelegate: Could not find task with ID \(uuid)")
-            #endif
-            return
-        }
+        // Navigation must happen on main thread with fresh fetch
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
 
-        // Use NavigationManager to navigate to the task
-        navigationManager.navigateToTask(task)
+            // Fetch the task from the database on main thread
+            guard let task = self.fetchTask(by: uuid) else {
+                #if DEBUG
+                print("NotificationDelegate: Could not find task with ID \(uuid)")
+                #endif
+                return
+            }
+
+            // Use NavigationManager to navigate to the task
+            self.navigationManager.navigateToTask(task)
+        }
     }
 
     // MARK: - Action Handlers
@@ -285,5 +302,26 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         )
 
         return try? context.fetch(descriptor).first
+    }
+
+    // MARK: - Notification State Tracking
+
+    /// Marks the notification as fired so the bell badge disappears from row views
+    private func markNotificationFired(userInfo: [AnyHashable: Any]) {
+        if let habitID = userInfo["habit_id"] as? String,
+           let uuid = UUID(uuidString: habitID),
+           let habit = fetchHabit(by: uuid) {
+            habit.notificationFired = true
+            #if DEBUG
+            print("NotificationDelegate: Marked habit '\(habit.title)' notification as fired")
+            #endif
+        } else if let taskID = userInfo["task_id"] as? String,
+                  let uuid = UUID(uuidString: taskID),
+                  let task = fetchTask(by: uuid) {
+            task.notificationFired = true
+            #if DEBUG
+            print("NotificationDelegate: Marked task '\(task.title)' notification as fired")
+            #endif
+        }
     }
 }

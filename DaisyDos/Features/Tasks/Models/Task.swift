@@ -53,6 +53,7 @@ class Task {
     var recurrenceRule: RecurrenceRule?
     var completedDate: Date?
     var reminderDate: Date? // Absolute date/time for reminder notification
+    var notificationFired: Bool = false // Tracks if the reminder notification has been delivered
     var occurrenceIndex: Int = 1 // Tracks which occurrence this is (1-based, for maxOccurrences enforcement)
 
     // MARK: - Ordering Properties
@@ -365,6 +366,11 @@ class Task {
 
     var hasReminder: Bool {
         reminderDate != nil
+    }
+
+    /// Returns true if the task has a reminder that hasn't fired yet
+    var hasPendingReminder: Bool {
+        hasReminder && !notificationFired
     }
 
     var subtaskProgressText: String? {

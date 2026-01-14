@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 struct ContentView: View {
     @Environment(NavigationManager.self) private var navigationManager
@@ -102,10 +103,17 @@ struct ContentView: View {
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
-                // Re-check notification permissions when app returns to foreground
+                // Re-check notification permissions and clear badges when app returns to foreground
                 if newPhase == .active {
                     taskNotificationManager.checkNotificationPermissions()
                     habitNotificationManager.checkNotificationPermissions()
+
+                    // Clear badge and delivered notifications when app becomes active
+                    let center = UNUserNotificationCenter.current()
+                    center.removeAllDeliveredNotifications()
+                    _Concurrency.Task {
+                        try? await center.setBadgeCount(0)
+                    }
                 }
             }
             }

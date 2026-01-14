@@ -84,23 +84,25 @@ class HabitNotificationManager: BaseNotificationManager {
     }
 
     @objc private func habitDidChange(_ notification: Foundation.Notification) {
-        guard let habitId = notification.userInfo?["habitId"] as? String,
-              let habit = getHabit(by: habitId) else {
-            return
+        guard let habitId = notification.userInfo?["habitId"] as? String else { return }
+
+        // SwiftData ModelContext is not thread-safe - ensure main thread access
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self,
+                  let habit = self.getHabit(by: habitId) else { return }
+
+            self.scheduleHabitReminder(for: habit)
+
+            #if DEBUG
+            print("Rescheduled notifications for habit '\(habit.title)' after change")
+            #endif
         }
-
-        scheduleHabitReminder(for: habit)
-
-        #if DEBUG
-        print("Rescheduled notifications for habit '\(habit.title)' after change")
-        #endif
     }
 
     @objc private func habitWasDeleted(_ notification: Foundation.Notification) {
-        guard let habitId = notification.userInfo?["habitId"] as? String else {
-            return
-        }
+        guard let habitId = notification.userInfo?["habitId"] as? String else { return }
 
+        // Notification removal doesn't need SwiftData access, safe to call directly
         removeHabitNotification(habitId: habitId)
 
         #if DEBUG
@@ -109,27 +111,33 @@ class HabitNotificationManager: BaseNotificationManager {
     }
 
     @objc private func habitWasCompleted(_ notification: Foundation.Notification) {
-        guard let habitId = notification.userInfo?["habitId"] as? String,
-              let habit = getHabit(by: habitId) else {
-            return
+        guard let habitId = notification.userInfo?["habitId"] as? String else { return }
+
+        // SwiftData ModelContext is not thread-safe - ensure main thread access
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self,
+                  let habit = self.getHabit(by: habitId) else { return }
+
+            // Reschedule for next occurrence (removes today's, schedules tomorrow's)
+            self.scheduleHabitReminder(for: habit)
+
+            #if DEBUG
+            print("Rescheduled notifications for completed habit '\(habit.title)'")
+            #endif
         }
-
-        // Reschedule for next occurrence (removes today's, schedules tomorrow's)
-        scheduleHabitReminder(for: habit)
-
-        #if DEBUG
-        print("Rescheduled notifications for completed habit '\(habit.title)'")
-        #endif
     }
 
     @objc private func globalNotificationSettingChanged(_ notification: Foundation.Notification) {
         guard let enabled = notification.userInfo?["enabled"] as? Bool else { return }
 
-        isNotificationsEnabled = enabled
+        // Ensure main thread for SwiftData access in schedule/remove methods
+        DispatchQueue.main.async { [weak self] in
+            self?.isNotificationsEnabled = enabled
 
-        #if DEBUG
-        print("Global notification setting changed to: \(enabled ? "enabled" : "disabled")")
-        #endif
+            #if DEBUG
+            print("Global notification setting changed to: \(enabled ? "enabled" : "disabled")")
+            #endif
+        }
     }
 
     // MARK: - Action Registration
@@ -179,6 +187,9 @@ class HabitNotificationManager: BaseNotificationManager {
 
         // Only schedule if reminder date is in the future
         guard reminderDate > Date() else { return }
+
+        // Reset notification fired state since we're scheduling a new notification
+        habit.notificationFired = false
 
         let identifier = "habit_\(habit.id.uuidString)"
 
@@ -242,12 +253,16 @@ class HabitNotificationManager: BaseNotificationManager {
     func snoozeHabit(_ habit: Habit, by interval: TimeInterval = 3600) {
         removeHabitNotification(habitId: habit.id.uuidString)
 
+        // Reset notification fired state since we're scheduling a new snoozed notification
+        habit.notificationFired = false
+
         let identifier = "habit_\(habit.id.uuidString)"
 
         let content = UNMutableNotificationContent()
         content.title = "Habit Reminder (Snoozed)"
         content.body = habit.title
         content.sound = .default
+        content.badge = NSNumber(value: getPendingHabitsCount())
         content.categoryIdentifier = notificationCategoryIdentifier
         content.userInfo = [
             "habit_id": habit.id.uuidString,

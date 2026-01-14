@@ -70,8 +70,8 @@ struct TaskRowView: View {
                                 SubtaskProgressIndicator(progressText: progressText)
                             }
 
-                            // Combined Alert/Recurrence indicator
-                            if task.hasReminder || task.hasRecurrence {
+                            // Combined Alert/Recurrence indicator (only shows bell if notification hasn't fired)
+                            if task.hasPendingReminder || task.hasRecurrence {
                                 alertRecurrenceIndicator
                             }
 
@@ -184,12 +184,12 @@ struct TaskRowView: View {
 
     @ViewBuilder
     private var alertRecurrenceIndicator: some View {
-        if task.hasReminder && task.hasRecurrence {
+        if task.hasPendingReminder && task.hasRecurrence {
             Image(systemName: "bell.badge.fill")
                 .font(.body)
                 .foregroundColor(.daisyWarning)
                 .accessibilityLabel("Has reminder and recurring")
-        } else if task.hasReminder {
+        } else if task.hasPendingReminder {
             Image(systemName: "bell.fill")
                 .font(.body)
                 .foregroundColor(.daisyWarning)

@@ -83,24 +83,26 @@ class TaskNotificationManager: BaseNotificationManager {
     }
 
     @objc private func taskDidChange(_ notification: Foundation.Notification) {
-        guard let taskId = notification.userInfo?["taskId"] as? String,
-              let task = getTask(by: taskId) else {
-            return
+        guard let taskId = notification.userInfo?["taskId"] as? String else { return }
+
+        // SwiftData ModelContext is not thread-safe - ensure main thread access
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self,
+                  let task = self.getTask(by: taskId) else { return }
+
+            // Reschedule notifications for the changed task
+            self.scheduleTaskReminder(for: task)
+
+            #if DEBUG
+            print("Rescheduled notifications for task '\(task.title)' after change")
+            #endif
         }
-
-        // Reschedule notifications for the changed task
-        scheduleTaskReminder(for: task)
-
-        #if DEBUG
-        print("Rescheduled notifications for task '\(task.title)' after change")
-        #endif
     }
 
     @objc private func taskWasDeleted(_ notification: Foundation.Notification) {
-        guard let taskId = notification.userInfo?["taskId"] as? String else {
-            return
-        }
+        guard let taskId = notification.userInfo?["taskId"] as? String else { return }
 
+        // Notification removal doesn't need SwiftData access, safe to call directly
         removeTaskNotification(taskId: taskId)
 
         #if DEBUG
@@ -109,11 +111,9 @@ class TaskNotificationManager: BaseNotificationManager {
     }
 
     @objc private func taskWasCompleted(_ notification: Foundation.Notification) {
-        guard let taskId = notification.userInfo?["taskId"] as? String else {
-            return
-        }
+        guard let taskId = notification.userInfo?["taskId"] as? String else { return }
 
-        // Remove notifications when task is completed
+        // Notification removal doesn't need SwiftData access, safe to call directly
         removeTaskNotification(taskId: taskId)
 
         #if DEBUG
@@ -124,11 +124,14 @@ class TaskNotificationManager: BaseNotificationManager {
     @objc private func globalNotificationSettingChanged(_ notification: Foundation.Notification) {
         guard let enabled = notification.userInfo?["enabled"] as? Bool else { return }
 
-        isNotificationsEnabled = enabled
+        // Ensure main thread for SwiftData access in schedule/remove methods
+        DispatchQueue.main.async { [weak self] in
+            self?.isNotificationsEnabled = enabled
 
-        #if DEBUG
-        print("Global notification setting changed to: \(enabled ? "enabled" : "disabled")")
-        #endif
+            #if DEBUG
+            print("Global notification setting changed to: \(enabled ? "enabled" : "disabled")")
+            #endif
+        }
     }
 
     // MARK: - Action Registration
@@ -175,6 +178,9 @@ class TaskNotificationManager: BaseNotificationManager {
             return
         }
 
+        // Reset notification fired state since we're scheduling a new notification
+        task.notificationFired = false
+
         let identifier = "task_\(task.id.uuidString)"
 
         // Create notification content
@@ -210,11 +216,7 @@ class TaskNotificationManager: BaseNotificationManager {
 
     func removeTaskNotification(taskId: String) {
         let identifier = "task_\(taskId)"
-        let overdueIdentifier = "task_overdue_\(taskId)"
-
-        notificationCenter.removePendingNotificationRequests(
-            withIdentifiers: [identifier, overdueIdentifier]
-        )
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
     }
 
     func scheduleAllTaskNotifications() {
@@ -239,6 +241,9 @@ class TaskNotificationManager: BaseNotificationManager {
         // Remove existing notification
         removeTaskNotification(taskId: task.id.uuidString)
 
+        // Reset notification fired state since we're scheduling a new snoozed notification
+        task.notificationFired = false
+
         // Schedule new notification after snooze interval
         let identifier = "task_\(task.id.uuidString)"
 
@@ -246,6 +251,7 @@ class TaskNotificationManager: BaseNotificationManager {
         content.title = "Task Reminder (Snoozed)"
         content.body = task.title
         content.sound = .default
+        content.badge = NSNumber(value: getPendingTasksCount())
         content.categoryIdentifier = notificationCategoryIdentifier
         content.userInfo = [
             "task_id": task.id.uuidString,

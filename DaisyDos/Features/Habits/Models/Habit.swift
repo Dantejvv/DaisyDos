@@ -60,6 +60,9 @@ class Habit {
     /// Absolute date/time for reminder notification (aligned with Task model)
     var reminderDate: Date?
 
+    /// Tracks if the reminder notification has been delivered (resets daily for recurring habits)
+    var notificationFired: Bool = false
+
     /// Custom sort order for manual habit arrangement (lower values appear first)
     var habitOrder: Int = 0
 
@@ -167,6 +170,11 @@ class Habit {
 
     var hasReminder: Bool {
         reminderDate != nil
+    }
+
+    /// Returns true if the habit has a reminder/alert that hasn't fired yet
+    var hasPendingAlert: Bool {
+        hasAlert && !notificationFired
     }
 
     /// Short display text for reminder (used in toolbar labels)

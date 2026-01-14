@@ -38,6 +38,9 @@ struct ReminderPickerSheet: View {
                     // None option
                     noneOption
 
+                    // Date & Time option
+                    dateTimeOption
+
                     // Date/Time picker
                     dateTimeSection
                 }
@@ -100,26 +103,44 @@ struct ReminderPickerSheet: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Date/Time Section
+    // MARK: - Date/Time Option
 
-    private var dateTimeSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.small) {
-            // Header with selected state
+    private var dateTimeOption: some View {
+        Button(action: {
+            hasReminder = true
+        }) {
             HStack {
+                Image(systemName: "bell.badge")
+                    .font(.body)
+                    .foregroundColor(hasReminder ? accentColor : .daisyTextSecondary)
+
                 Text("Date & Time")
-                    .font(.caption.weight(.medium))
-                    .foregroundColor(.daisyTextSecondary)
+                    .foregroundColor(.daisyText)
 
                 Spacer()
 
                 if hasReminder {
                     Text(formattedWorkingDate)
-                        .font(.caption.weight(.medium))
+                        .font(.caption)
                         .foregroundColor(accentColor)
+
+                    Image(systemName: "checkmark")
+                        .foregroundColor(accentColor)
+                        .font(.body.weight(.semibold))
                 }
             }
+            .padding()
+            .background(hasReminder ? accentColor.opacity(0.08) : Color.daisySurface)
+            .cornerRadius(12)
             .padding(.horizontal)
+        }
+        .buttonStyle(.plain)
+    }
 
+    // MARK: - Date/Time Section
+
+    private var dateTimeSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.small) {
             VStack(spacing: 0) {
                 // Date picker
                 DatePicker(

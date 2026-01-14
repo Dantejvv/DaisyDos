@@ -66,12 +66,20 @@ extension BaseNotificationManager {
         }
     }
 
-    /// Check current notification permission status
+    /// Check current notification permission status and register actions if authorized
     func checkNotificationPermissions() {
         notificationCenter.getNotificationSettings { settings in
             DispatchQueue.main.async {
                 self.authorizationStatus = settings.authorizationStatus
                 self.isPermissionGranted = settings.authorizationStatus == .authorized
+
+                // Ensure notification actions are registered if permission is already granted
+                // This handles the case where app starts with pre-granted permissions
+                if settings.authorizationStatus == .authorized {
+                    _Concurrency.Task {
+                        await self.registerNotificationActions()
+                    }
+                }
             }
         }
     }

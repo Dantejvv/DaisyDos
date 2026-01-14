@@ -91,8 +91,8 @@ struct HabitRowView: View {
                             SubtaskProgressIndicator(progressText: progressText)
                         }
 
-                        // Combined Alert/Recurrence indicator
-                        if habit.hasAlert || habit.hasRecurrence {
+                        // Combined Alert/Recurrence indicator (only shows bell if notification hasn't fired)
+                        if habit.hasPendingAlert || habit.hasRecurrence {
                             alertRecurrenceIndicator
                         }
 
@@ -167,12 +167,12 @@ struct HabitRowView: View {
 
     @ViewBuilder
     private var alertRecurrenceIndicator: some View {
-        if habit.hasAlert && habit.hasRecurrence {
+        if habit.hasPendingAlert && habit.hasRecurrence {
             Image(systemName: "bell.badge.fill")
                 .font(.body)
                 .foregroundColor(.daisyWarning)
                 .accessibilityLabel("Has reminder and recurring")
-        } else if habit.hasAlert {
+        } else if habit.hasPendingAlert {
             Image(systemName: "bell.fill")
                 .font(.body)
                 .foregroundColor(.daisyWarning)
