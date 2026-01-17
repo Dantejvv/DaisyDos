@@ -14,9 +14,13 @@ import PhotoKit
 import UserNotifications
 
 @main
-// Entry point --> ets up services, managers, and global state, then hands control to ContentView.
+// Entry point --> sets up services, managers, and global state, then hands control to ContentView.
 struct DaisyDosApp: App {
     @Environment(\.scenePhase) private var scenePhase
+
+    /// AppDelegate for handling notification delegate setup in didFinishLaunchingWithOptions.
+    /// This ensures the delegate is registered early enough to catch cold start notification taps.
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     let localOnlyModeManager = LocalOnlyModeManager()
     let appearanceManager = AppearanceManager()
@@ -31,8 +35,14 @@ struct DaisyDosApp: App {
     // Recurrence scheduler for deferred task creation
     @State private var recurrenceScheduler: RecurrenceScheduler?
 
-    // Store notification delegate to prevent deallocation
-    @State private var notificationDelegate: NotificationDelegate?
+    // MARK: - Initialization
+
+    init() {
+        // Pass navigationManager to AppDelegate so it can create the NotificationDelegate
+        // in didFinishLaunchingWithOptions (before .task { } runs)
+        // This fixes the cold start notification bug where the delegate wasn't set early enough
+        appDelegate.navigationManager = navigationManager
+    }
 
     // Shared model container - created first so managers can use its context
     var sharedModelContainer: ModelContainer = {
@@ -76,9 +86,6 @@ struct DaisyDosApp: App {
         WindowGroup {
             ContentView()
                 .task {
-                    // Register all notification categories at launch (must be done once, together)
-                    registerNotificationCategories()
-
                     // Clear any orphaned badge on app launch
                     await clearBadgeOnLaunch()
 
@@ -95,23 +102,20 @@ struct DaisyDosApp: App {
                         )
                     }
 
-                    // Set up notification delegate (stored to prevent deallocation)
-                    // Note: The delegate creates its own manager instances for handling notification actions.
-                    // The environment-injected managers handle scheduling via reactive observers,
-                    // so both sets respond to the same Foundation NotificationCenter events.
+                    // Inject managers into the NotificationDelegate that was created in AppDelegate.
+                    // The delegate was registered early in didFinishLaunchingWithOptions to catch cold start
+                    // notification taps. Now that SwiftData is ready, we can inject the managers.
+                    // This processes any pending actions/markFired calls that arrived before managers were ready.
                     let taskManager = TaskManager(modelContext: sharedModelContainer.mainContext)
                     let habitMgr = HabitManager(modelContext: sharedModelContainer.mainContext)
                     let taskNotifMgr = TaskNotificationManager(modelContext: sharedModelContainer.mainContext)
                     let habitNotifMgr = HabitNotificationManager(modelContext: sharedModelContainer.mainContext)
-                    let delegate = NotificationDelegate(
-                        navigationManager: navigationManager,
+                    appDelegate.notificationDelegate?.setManagers(
                         habitManager: habitMgr,
                         taskManager: taskManager,
                         taskNotificationManager: taskNotifMgr,
                         habitNotificationManager: habitNotifMgr
                     )
-                    notificationDelegate = delegate
-                    UNUserNotificationCenter.current().delegate = delegate
 
                     // Initialize recurrence scheduler
                     recurrenceScheduler = RecurrenceScheduler(modelContext: sharedModelContainer.mainContext)
@@ -225,54 +229,4 @@ struct DaisyDosApp: App {
         }
     }
 
-    // MARK: - Notification Categories
-
-    /// Register all notification categories at once (per Apple guidelines)
-    /// This must be called once at launch with ALL categories together,
-    /// as setNotificationCategories replaces (not merges) existing categories.
-    private func registerNotificationCategories() {
-        // Task actions
-        let completeTaskAction = UNNotificationAction(
-            identifier: "complete_task",
-            title: "Mark Complete ✓",
-            options: [.foreground]
-        )
-        let snoozeTaskAction = UNNotificationAction(
-            identifier: "snooze_task",
-            title: "Snooze 1 Hour",
-            options: []
-        )
-        let taskCategory = UNNotificationCategory(
-            identifier: "task_reminder",
-            actions: [completeTaskAction, snoozeTaskAction],
-            intentIdentifiers: [],
-            options: [.customDismissAction]
-        )
-
-        // Habit actions
-        let completeHabitAction = UNNotificationAction(
-            identifier: "complete_habit",
-            title: "Mark Complete ✓",
-            options: [.foreground]
-        )
-        let skipHabitAction = UNNotificationAction(
-            identifier: "skip_habit",
-            title: "Skip Today",
-            options: []
-        )
-        let snoozeHabitAction = UNNotificationAction(
-            identifier: "snooze_habit",
-            title: "Snooze 1 Hour",
-            options: []
-        )
-        let habitCategory = UNNotificationCategory(
-            identifier: "habit_reminder",
-            actions: [completeHabitAction, skipHabitAction, snoozeHabitAction],
-            intentIdentifiers: [],
-            options: [.customDismissAction]
-        )
-
-        // Register BOTH categories in a single call
-        UNUserNotificationCenter.current().setNotificationCategories([taskCategory, habitCategory])
-    }
 }
