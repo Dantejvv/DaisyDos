@@ -143,32 +143,8 @@ class HabitNotificationManager: BaseNotificationManager {
     // MARK: - Action Registration
 
     func registerNotificationActions() async {
-        let completeAction = UNNotificationAction(
-            identifier: "complete_habit",
-            title: "Mark Complete ✓",
-            options: [.foreground]
-        )
-
-        let skipAction = UNNotificationAction(
-            identifier: "skip_habit",
-            title: "Skip Today",
-            options: []
-        )
-
-        let snoozeAction = UNNotificationAction(
-            identifier: "snooze_habit",
-            title: "Snooze 1 Hour",
-            options: []
-        )
-
-        let habitCategory = UNNotificationCategory(
-            identifier: notificationCategoryIdentifier,
-            actions: [completeAction, skipAction, snoozeAction],
-            intentIdentifiers: [],
-            options: [.customDismissAction]
-        )
-
-        notificationCenter.setNotificationCategories([habitCategory])
+        // Categories are registered centrally in DaisyDosApp.registerNotificationCategories()
+        // to ensure all categories are set in a single call (per Apple guidelines)
     }
 
     // MARK: - Habit Notification Scheduling (One-Shot Pattern)

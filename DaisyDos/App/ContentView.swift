@@ -27,11 +27,13 @@ struct ContentView: View {
 
             NavigationStack(path: navigationManager.pathBinding(for: .today)) {
                 TodayView()
-                    .navigationDestination(for: Task.self) { task in
-                        TaskDetailView(task: task)
-                    }
-                    .navigationDestination(for: Habit.self) { habit in
-                        HabitDetailView(habit: habit)
+                    .navigationDestination(for: TodayRoute.self) { route in
+                        switch route {
+                        case .taskDetail(let task):
+                            TaskDetailView(task: task)
+                        case .habitDetail(let habit):
+                            HabitDetailView(habit: habit)
+                        }
                     }
             }
             .tabItem {
@@ -43,8 +45,13 @@ struct ContentView: View {
 
             NavigationStack(path: navigationManager.pathBinding(for: .tasks)) {
                 TasksView()
-                    .navigationDestination(for: Task.self) { task in
-                        TaskDetailView(task: task)
+                    .navigationDestination(for: TasksRoute.self) { route in
+                        switch route {
+                        case .detail(let task):
+                            TaskDetailView(task: task)
+                        case .logbookDetail(let task):
+                            TaskDetailView(task: task, isLogbookMode: true)
+                        }
                     }
             }
             .tabItem {
@@ -56,8 +63,11 @@ struct ContentView: View {
 
             NavigationStack(path: navigationManager.pathBinding(for: .habits)) {
                 HabitsView()
-                    .navigationDestination(for: Habit.self) { habit in
-                        HabitDetailView(habit: habit)
+                    .navigationDestination(for: HabitsRoute.self) { route in
+                        switch route {
+                        case .detail(let habit):
+                            HabitDetailView(habit: habit)
+                        }
                     }
             }
             .tabItem {
@@ -69,8 +79,11 @@ struct ContentView: View {
 
             NavigationStack(path: navigationManager.pathBinding(for: .logbook)) {
                 LogbookView()
-                    .navigationDestination(for: Task.self) { task in
-                        TaskDetailView(task: task)
+                    .navigationDestination(for: LogbookRoute.self) { route in
+                        switch route {
+                        case .taskDetail(let task):
+                            TaskDetailView(task: task, isLogbookMode: true)
+                        }
                     }
             }
             .tabItem {
@@ -82,6 +95,10 @@ struct ContentView: View {
 
             NavigationStack(path: navigationManager.pathBinding(for: .settings)) {
                 SettingsView()
+                    .navigationDestination(for: SettingsRoute.self) { _ in
+                        // Future settings sub-pages can be handled here
+                        EmptyView()
+                    }
             }
             .tabItem {
                 TabType.settings.tabLabel
@@ -108,10 +125,17 @@ struct ContentView: View {
                     taskNotificationManager.checkNotificationPermissions()
                     habitNotificationManager.checkNotificationPermissions()
 
-                    // Clear badge and delivered notifications when app becomes active
+                    // Mark delivered notifications as fired before clearing them
+                    // This handles notifications delivered while app was in background
+                    // (customDismissAction callbacks are unreliable when app is backgrounded)
                     let center = UNUserNotificationCenter.current()
-                    center.removeAllDeliveredNotifications()
                     _Concurrency.Task {
+                        if let delegate = center.delegate as? NotificationDelegate {
+                            await delegate.markDeliveredNotificationsAsFired()
+                        }
+
+                        // Clear badge and delivered notifications after marking as fired
+                        center.removeAllDeliveredNotifications()
                         try? await center.setBadgeCount(0)
                     }
                 }

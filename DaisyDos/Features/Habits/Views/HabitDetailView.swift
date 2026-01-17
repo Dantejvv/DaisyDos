@@ -75,84 +75,84 @@ struct HabitDetailView: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Hero Card - Habit Overview (title, description, priority)
-                    habitOverviewCard
+        // Note: No NavigationStack here - this view is pushed onto the existing
+        // NavigationStack from ContentView via navigationDestination
+        ScrollView {
+            VStack(spacing: 20) {
+                // Hero Card - Habit Overview (title, description, priority)
+                habitOverviewCard
 
-                    // Subtasks Section - Always shown
-                    subtasksCard
+                // Subtasks Section - Always shown
+                subtasksCard
 
-                    // Metadata Card (recurrence) - Always shown
-                    metadataCard
+                // Metadata Card (recurrence) - Always shown
+                metadataCard
 
-                    // Tags Section - Always shown
-                    tagsCard
+                // Tags Section - Always shown
+                tagsCard
 
-                    // Attachments Section - Always shown
-                    attachmentsCard
+                // Attachments Section - Always shown
+                attachmentsCard
 
-                    // Status & Progress Card
-                    statusAndProgressCard
+                // Status & Progress Card
+                statusAndProgressCard
 
-                    // History Card (created, modified, completion history)
-                    historyCard
+                // History Card (created, modified, completion history)
+                historyCard
 
-                    // Analytics Card (habit-specific analytics)
-                    analyticsCard
-                }
-                .padding()
+                // Analytics Card (habit-specific analytics)
+                analyticsCard
             }
-            .background(Color.daisyBackground)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        // Completion toggle at the top
-                        Button {
-                            if habit.isCompletedToday {
-                                _ = habitManager.undoHabitCompletion(habit)
-                            } else {
-                                if let _ = habitManager.markHabitCompletedWithTracking(habit) {
-                                    toastManager.showCompletionToast(for: habit) {
-                                        _ = habitManager.undoHabitCompletion(habit)
-                                    }
+            .padding()
+        }
+        .background(Color.daisyBackground)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    // Completion toggle at the top
+                    Button {
+                        if habit.isCompletedToday {
+                            _ = habitManager.undoHabitCompletion(habit)
+                        } else {
+                            if let _ = habitManager.markHabitCompletedWithTracking(habit) {
+                                toastManager.showCompletionToast(for: habit) {
+                                    _ = habitManager.undoHabitCompletion(habit)
                                 }
                             }
-                        } label: {
-                            if habit.isCompletedToday {
-                                Label("Mark as Incomplete", systemImage: "circle")
-                            } else {
-                                Label("Mark as Complete", systemImage: "checkmark.circle.fill")
-                            }
-                        }
-
-                        Divider()
-
-                        Button {
-                            showingEditView = true
-                        } label: {
-                            Label("Edit", systemImage: "pencil")
-                        }
-
-                        Divider()
-
-                        Button {
-                            showingSkipView = true
-                        } label: {
-                            Label("Skip Today", systemImage: "forward.end")
-                        }
-
-                        Divider()
-
-                        Button(role: .destructive) {
-                            showingDeleteAlert = true
-                        } label: {
-                            Label("Delete", systemImage: "trash")
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        if habit.isCompletedToday {
+                            Label("Mark as Incomplete", systemImage: "circle")
+                        } else {
+                            Label("Mark as Complete", systemImage: "checkmark.circle.fill")
+                        }
                     }
+
+                    Divider()
+
+                    Button {
+                        showingEditView = true
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+
+                    Divider()
+
+                    Button {
+                        showingSkipView = true
+                    } label: {
+                        Label("Skip Today", systemImage: "forward.end")
+                    }
+
+                    Divider()
+
+                    Button(role: .destructive) {
+                        showingDeleteAlert = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }

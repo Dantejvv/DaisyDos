@@ -74,96 +74,96 @@ struct TaskDetailView: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Hero Card - Task Overview (title, description, priority)
-                    taskOverviewCard
+        // Note: No NavigationStack here - this view is pushed onto the existing
+        // NavigationStack from ContentView via navigationDestination
+        ScrollView {
+            VStack(spacing: 20) {
+                // Hero Card - Task Overview (title, description, priority)
+                taskOverviewCard
 
-                    // Subtasks Section - Always shown
-                    subtasksCard
+                // Subtasks Section - Always shown
+                subtasksCard
 
-                    // Metadata Card (dates, recurrence, alerts) - Always shown
-                    metadataCard
+                // Metadata Card (dates, recurrence, alerts) - Always shown
+                metadataCard
 
-                    // Tags Section - Always shown
-                    tagsCard
+                // Tags Section - Always shown
+                tagsCard
 
-                    // Attachments Section - Always shown
-                    attachmentsCard
+                // Attachments Section - Always shown
+                attachmentsCard
 
-                    // Status & Progress Card
-                    statusAndProgressCard
+                // Status & Progress Card
+                statusAndProgressCard
 
-                    // History Card (created, modified, completion)
-                    historyCard
-                }
-                .padding()
+                // History Card (created, modified, completion)
+                historyCard
             }
-            .background(Color.daisyBackground)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        // Completion toggle at the top (hidden in logbook mode)
-                        if !isLogbookMode {
-                            Button {
-                                _ = taskManager.toggleTaskCompletionSafely(task)
-
-                                // Show undo toast if task was completed
-                                if task.isCompleted {
-                                    toastManager.showCompletionToast(for: task) {
-                                        _ = taskManager.toggleTaskCompletionSafely(task)
-                                    }
-                                }
-                            } label: {
-                                if task.isCompleted {
-                                    Label("Mark as Incomplete", systemImage: "circle")
-                                } else {
-                                    Label("Mark as Complete", systemImage: "checkmark.circle.fill")
-                                }
-                            }
-
-                            Divider()
-                        }
-
-                        // Only show Edit if task can be modified
-                        if canModify {
-                            Button {
-                                showingEditView = true
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-
-                            Divider()
-                        }
-
+            .padding()
+        }
+        .background(Color.daisyBackground)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    // Completion toggle at the top (hidden in logbook mode)
+                    if !isLogbookMode {
                         Button {
-                            duplicateTask()
+                            _ = taskManager.toggleTaskCompletionSafely(task)
+
+                            // Show undo toast if task was completed
+                            if task.isCompleted {
+                                toastManager.showCompletionToast(for: task) {
+                                    _ = taskManager.toggleTaskCompletionSafely(task)
+                                }
+                            }
                         } label: {
-                            Label("Duplicate", systemImage: "plus.square.on.square")
-                        }
-
-                        // Add Recover option for completed tasks in logbook mode
-                        if isLogbookMode && task.isCompleted {
-                            Divider()
-
-                            Button {
-                                showingRecoverConfirmation = true
-                            } label: {
-                                Label("Recover Task", systemImage: "arrow.uturn.backward.circle")
+                            if task.isCompleted {
+                                Label("Mark as Incomplete", systemImage: "circle")
+                            } else {
+                                Label("Mark as Complete", systemImage: "checkmark.circle.fill")
                             }
                         }
 
                         Divider()
-
-                        Button(role: .destructive) {
-                            showingDeleteConfirmation = true
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
                     }
+
+                    // Only show Edit if task can be modified
+                    if canModify {
+                        Button {
+                            showingEditView = true
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+
+                        Divider()
+                    }
+
+                    Button {
+                        duplicateTask()
+                    } label: {
+                        Label("Duplicate", systemImage: "plus.square.on.square")
+                    }
+
+                    // Add Recover option for completed tasks in logbook mode
+                    if isLogbookMode && task.isCompleted {
+                        Divider()
+
+                        Button {
+                            showingRecoverConfirmation = true
+                        } label: {
+                            Label("Recover Task", systemImage: "arrow.uturn.backward.circle")
+                        }
+                    }
+
+                    Divider()
+
+                    Button(role: .destructive) {
+                        showingDeleteConfirmation = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }

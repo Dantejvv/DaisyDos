@@ -140,38 +140,32 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     // MARK: - Navigation Helpers
 
     private func navigateToHabit(uuid: UUID) {
-        // Navigation must happen on main thread with fresh fetch
+        // Use queued navigation to handle cold start race condition
+        // NavigationManager will either navigate immediately (if ready) or queue for later
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
 
-            // Fetch the habit from the database on main thread
-            guard let habit = self.fetchHabit(by: uuid) else {
-                #if DEBUG
-                print("NotificationDelegate: Could not find habit with ID \(uuid)")
-                #endif
-                return
-            }
+            #if DEBUG
+            print("NotificationDelegate: Requesting navigation to habit \(uuid)")
+            #endif
 
-            // Use NavigationManager to navigate to the habit
-            self.navigationManager.navigateToHabit(habit)
+            // Queue navigation - NavigationManager handles ready state check
+            self.navigationManager.queueHabitNavigation(habitID: uuid)
         }
     }
 
     private func navigateToTask(uuid: UUID) {
-        // Navigation must happen on main thread with fresh fetch
+        // Use queued navigation to handle cold start race condition
+        // NavigationManager will either navigate immediately (if ready) or queue for later
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
 
-            // Fetch the task from the database on main thread
-            guard let task = self.fetchTask(by: uuid) else {
-                #if DEBUG
-                print("NotificationDelegate: Could not find task with ID \(uuid)")
-                #endif
-                return
-            }
+            #if DEBUG
+            print("NotificationDelegate: Requesting navigation to task \(uuid)")
+            #endif
 
-            // Use NavigationManager to navigate to the task
-            self.navigationManager.navigateToTask(task)
+            // Queue navigation - NavigationManager handles ready state check
+            self.navigationManager.queueTaskNavigation(taskID: uuid)
         }
     }
 
@@ -306,8 +300,63 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
     // MARK: - Notification State Tracking
 
+    /// Marks all delivered notifications as fired
+    /// Call this when app becomes active to handle notifications delivered while backgrounded
+    /// This is necessary because customDismissAction callbacks are unreliable when app is in background
+    func markDeliveredNotificationsAsFired() async {
+        let center = UNUserNotificationCenter.current()
+        let delivered = await center.deliveredNotifications()
+
+        // Extract IDs on current thread, then update on main thread
+        var habitIDs: [String] = []
+        var taskIDs: [String] = []
+
+        for notification in delivered {
+            let userInfo = notification.request.content.userInfo
+            if let habitID = userInfo["habit_id"] as? String {
+                habitIDs.append(habitID)
+            } else if let taskID = userInfo["task_id"] as? String {
+                taskIDs.append(taskID)
+            }
+        }
+
+        // Capture as let constants for Swift 6 concurrency safety
+        let capturedHabitIDs = habitIDs
+        let capturedTaskIDs = taskIDs
+
+        // Update on main thread for SwiftData safety
+        await MainActor.run {
+            for habitID in capturedHabitIDs {
+                if let uuid = UUID(uuidString: habitID),
+                   let habit = fetchHabit(by: uuid) {
+                    habit.notificationFired = true
+                    #if DEBUG
+                    print("NotificationDelegate: Marked delivered habit '\(habit.title)' notification as fired")
+                    #endif
+                }
+            }
+            for taskID in capturedTaskIDs {
+                if let uuid = UUID(uuidString: taskID),
+                   let task = fetchTask(by: uuid) {
+                    task.notificationFired = true
+                    #if DEBUG
+                    print("NotificationDelegate: Marked delivered task '\(task.title)' notification as fired")
+                    #endif
+                }
+            }
+        }
+    }
+
     /// Marks the notification as fired so the bell badge disappears from row views
+    /// Called from didReceive delegate - dispatches to main thread for SwiftData safety
     private func markNotificationFired(userInfo: [AnyHashable: Any]) {
+        DispatchQueue.main.async { [weak self] in
+            self?.markNotificationFiredSync(userInfo: userInfo)
+        }
+    }
+
+    /// Internal synchronous implementation - must be called on main thread
+    private func markNotificationFiredSync(userInfo: [AnyHashable: Any]) {
         if let habitID = userInfo["habit_id"] as? String,
            let uuid = UUID(uuidString: habitID),
            let habit = fetchHabit(by: uuid) {

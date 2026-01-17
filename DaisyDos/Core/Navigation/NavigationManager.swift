@@ -33,6 +33,17 @@ class NavigationManager {
     var logbookPath = NavigationPath()
     var settingsPath = NavigationPath()
 
+    // MARK: - Pending Navigation (for cold start from notifications)
+
+    /// Stores pending navigation request when app launches from notification before UI is ready
+    /// This handles the race condition where notification tap triggers navigation before SwiftData is initialized
+    private var pendingTaskNavigation: UUID?
+    private var pendingHabitNavigation: UUID?
+
+    /// Whether the navigation system is ready to handle navigation requests
+    /// Set to true after modelContext is set AND views have rendered
+    private(set) var isReady: Bool = false
+
     // MARK: - Dependencies
 
     /// ModelContext for fetching entities when handling deep links
@@ -48,6 +59,101 @@ class NavigationManager {
     /// Set the model context after initialization (for cases where context is not available at init time)
     func setModelContext(_ context: ModelContext) {
         self.modelContext = context
+    }
+
+    /// Mark the navigation system as ready and process any pending navigation
+    /// Call this after the UI has fully rendered (e.g., in onAppear of ContentView)
+    func markReady() {
+        guard !isReady else { return }
+        isReady = true
+
+        #if DEBUG
+        print("NavigationManager: Marked as ready, processing pending navigation")
+        #endif
+
+        processPendingNavigation()
+    }
+
+    /// Queue a navigation request for when the app is ready
+    /// Used by NotificationDelegate when navigation arrives during cold start
+    func queueTaskNavigation(taskID: UUID) {
+        if isReady, modelContext != nil {
+            // App is ready, navigate immediately
+            if let task = fetchTask(by: taskID) {
+                navigateToTask(task)
+            } else {
+                #if DEBUG
+                print("NavigationManager: Task \(taskID) not found for immediate navigation")
+                #endif
+                showError("Task not found. It may have been deleted.")
+                switchToTab(.tasks)
+            }
+        } else {
+            // App not ready, queue for later
+            #if DEBUG
+            print("NavigationManager: Queuing task navigation for \(taskID)")
+            #endif
+            pendingTaskNavigation = taskID
+            pendingHabitNavigation = nil
+        }
+    }
+
+    /// Queue a habit navigation request for when the app is ready
+    func queueHabitNavigation(habitID: UUID) {
+        if isReady, modelContext != nil {
+            // App is ready, navigate immediately
+            if let habit = fetchHabit(by: habitID) {
+                navigateToHabit(habit)
+            } else {
+                #if DEBUG
+                print("NavigationManager: Habit \(habitID) not found for immediate navigation")
+                #endif
+                showError("Habit not found. It may have been deleted.")
+                switchToTab(.habits)
+            }
+        } else {
+            // App not ready, queue for later
+            #if DEBUG
+            print("NavigationManager: Queuing habit navigation for \(habitID)")
+            #endif
+            pendingHabitNavigation = habitID
+            pendingTaskNavigation = nil
+        }
+    }
+
+    /// Process any pending navigation requests (called when app becomes ready)
+    private func processPendingNavigation() {
+        if let taskID = pendingTaskNavigation {
+            pendingTaskNavigation = nil
+            #if DEBUG
+            print("NavigationManager: Processing pending task navigation for \(taskID)")
+            #endif
+
+            if let task = fetchTask(by: taskID) {
+                navigateToTask(task)
+            } else {
+                #if DEBUG
+                print("NavigationManager: Pending task \(taskID) not found")
+                #endif
+                showError("Task not found. It may have been deleted.")
+                switchToTab(.tasks)
+            }
+        } else if let habitID = pendingHabitNavigation {
+            pendingHabitNavigation = nil
+            #if DEBUG
+            print("NavigationManager: Processing pending habit navigation for \(habitID)")
+            #endif
+
+            if let habit = fetchHabit(by: habitID) {
+                navigateToHabit(habit)
+            } else {
+                #if DEBUG
+                print("NavigationManager: Pending habit \(habitID) not found")
+                #endif
+                showError("Habit not found. It may have been deleted.")
+                switchToTab(.habits)
+            }
+        }
     }
 
     // MARK: - Path Management
@@ -196,8 +302,8 @@ class NavigationManager {
         selectedTab = .tasks
         // Clear existing navigation stack
         tasksPath = NavigationPath()
-        // Push task onto navigation stack
-        tasksPath.append(task)
+        // Push task route onto navigation stack
+        tasksPath.append(TasksRoute.detail(task))
     }
 
     /// Navigate to a specific habit (switches to Habits tab and pushes habit detail)
@@ -206,8 +312,38 @@ class NavigationManager {
         selectedTab = .habits
         // Clear existing navigation stack
         habitsPath = NavigationPath()
-        // Push habit onto navigation stack
-        habitsPath.append(habit)
+        // Push habit route onto navigation stack
+        habitsPath.append(HabitsRoute.detail(habit))
+    }
+
+    /// Navigate to a task from Today tab (for notification taps when on Today)
+    func navigateToTaskFromToday(_ task: Task) {
+        // Switch to Today tab
+        selectedTab = .today
+        // Clear existing navigation stack
+        todayPath = NavigationPath()
+        // Push task route onto navigation stack
+        todayPath.append(TodayRoute.taskDetail(task))
+    }
+
+    /// Navigate to a habit from Today tab (for notification taps when on Today)
+    func navigateToHabitFromToday(_ habit: Habit) {
+        // Switch to Today tab
+        selectedTab = .today
+        // Clear existing navigation stack
+        todayPath = NavigationPath()
+        // Push habit route onto navigation stack
+        todayPath.append(TodayRoute.habitDetail(habit))
+    }
+
+    /// Navigate to a completed task in logbook
+    func navigateToLogbookTask(_ task: Task) {
+        // Switch to Logbook tab
+        selectedTab = .logbook
+        // Clear existing navigation stack
+        logbookPath = NavigationPath()
+        // Push task route onto navigation stack
+        logbookPath.append(LogbookRoute.taskDetail(task))
     }
 
     // MARK: - Entity Fetching

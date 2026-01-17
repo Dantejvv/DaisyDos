@@ -28,7 +28,7 @@ struct TasksView: View {
     @State private var taskToDelete: Task?
     @State private var showingDeleteConfirmation = false
     @State private var showingBulkDeleteConfirmation = false
-    @State private var taskToDetail: Task?
+    // Note: Detail navigation now uses NavigationPath via NavigationManager
     @State private var isMultiSelectMode = false
     @State private var selectedTasks: Set<Task.ID> = []
     @AppStorage("taskSortOption") private var sortOptionRaw: String = TaskSortOption.title.rawValue
@@ -54,21 +54,22 @@ struct TasksView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Content area
-                if rootTasks.isEmpty {
-                    // Empty state
-                    emptyStateView
-                } else if sortedTasks.isEmpty && !searchText.isEmpty {
-                    // No search results state
-                    noSearchResultsView
-                } else {
-                    // Task list
-                    taskListView
-                }
+        // Note: No NavigationStack here - ContentView provides the NavigationStack
+        // with path binding for programmatic navigation
+        VStack(spacing: 0) {
+            // Content area
+            if rootTasks.isEmpty {
+                // Empty state
+                emptyStateView
+            } else if sortedTasks.isEmpty && !searchText.isEmpty {
+                // No search results state
+                noSearchResultsView
+            } else {
+                // Task list
+                taskListView
             }
-            .navigationTitle("Tasks")
+        }
+        .navigationTitle("Tasks")
             .searchable(text: $searchText, isPresented: $isSearchPresented, prompt: "Search tasks...")
             .navigationTabCleanup(
                 navigationManager: navigationManager,
@@ -153,9 +154,6 @@ struct TasksView: View {
             .sheet(item: $taskToEdit) { task in
                 TaskEditView(task: task)
             }
-            .navigationDestination(item: $taskToDetail) { task in
-                TaskDetailView(task: task)
-            }
             .alert(
                 "Delete Task",
                 isPresented: $showingDeleteConfirmation,
@@ -199,7 +197,6 @@ struct TasksView: View {
                 get: { taskManager.lastError },
                 set: { taskManager.lastError = $0 }
             ))
-        }
     }
 
     private var filteredTasks: [Task] {
@@ -284,7 +281,7 @@ struct TasksView: View {
                 if isMultiSelectMode {
                     toggleTaskSelection(task)
                 } else {
-                    taskToDetail = task
+                    navigationManager.tasksPath.append(TasksRoute.detail(task))
                 }
             }
         )

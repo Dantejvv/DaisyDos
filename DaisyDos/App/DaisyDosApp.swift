@@ -76,6 +76,9 @@ struct DaisyDosApp: App {
         WindowGroup {
             ContentView()
                 .task {
+                    // Register all notification categories at launch (must be done once, together)
+                    registerNotificationCategories()
+
                     // Clear any orphaned badge on app launch
                     await clearBadgeOnLaunch()
 
@@ -118,6 +121,10 @@ struct DaisyDosApp: App {
 
                     // Run logbook housekeeping on app launch (if needed)
                     await runLogbookHousekeepingIfNeeded()
+
+                    // Mark navigation system as ready after all initialization is complete
+                    // This processes any pending navigation from notification cold start
+                    navigationManager.markReady()
                 }
                 .onChange(of: scenePhase) {
                     // Process pending recurrences when app comes to foreground
@@ -216,5 +223,56 @@ struct DaisyDosApp: App {
             print("❌ Failed to process pending recurrences: \(error.userMessage)")
             #endif
         }
+    }
+
+    // MARK: - Notification Categories
+
+    /// Register all notification categories at once (per Apple guidelines)
+    /// This must be called once at launch with ALL categories together,
+    /// as setNotificationCategories replaces (not merges) existing categories.
+    private func registerNotificationCategories() {
+        // Task actions
+        let completeTaskAction = UNNotificationAction(
+            identifier: "complete_task",
+            title: "Mark Complete ✓",
+            options: [.foreground]
+        )
+        let snoozeTaskAction = UNNotificationAction(
+            identifier: "snooze_task",
+            title: "Snooze 1 Hour",
+            options: []
+        )
+        let taskCategory = UNNotificationCategory(
+            identifier: "task_reminder",
+            actions: [completeTaskAction, snoozeTaskAction],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+
+        // Habit actions
+        let completeHabitAction = UNNotificationAction(
+            identifier: "complete_habit",
+            title: "Mark Complete ✓",
+            options: [.foreground]
+        )
+        let skipHabitAction = UNNotificationAction(
+            identifier: "skip_habit",
+            title: "Skip Today",
+            options: []
+        )
+        let snoozeHabitAction = UNNotificationAction(
+            identifier: "snooze_habit",
+            title: "Snooze 1 Hour",
+            options: []
+        )
+        let habitCategory = UNNotificationCategory(
+            identifier: "habit_reminder",
+            actions: [completeHabitAction, skipHabitAction, snoozeHabitAction],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+
+        // Register BOTH categories in a single call
+        UNUserNotificationCenter.current().setNotificationCategories([taskCategory, habitCategory])
     }
 }

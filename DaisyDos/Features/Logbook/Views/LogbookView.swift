@@ -67,22 +67,22 @@ struct LogbookView: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
-            mainContent(manager: logbookManager)
-                .navigationTitle("Logbook")
-                .navigationBarTitleDisplayMode(.large)
-                .searchable(text: $searchText, isPresented: $isSearchPresented, prompt: "Search completions...")
-                .navigationTabCleanup(
-                    navigationManager: navigationManager,
-                    currentTab: .logbook,
-                    searchText: $searchText,
-                    isSearchPresented: $isSearchPresented
-                )
-                .errorAlert(error: Binding(
-                    get: { logbookManager.lastError },
-                    set: { logbookManager.lastError = $0 }
-                ))
-        }
+        // Note: No NavigationStack here - ContentView provides the NavigationStack
+        // with path binding for programmatic navigation
+        mainContent(manager: logbookManager)
+            .navigationTitle("Logbook")
+            .navigationBarTitleDisplayMode(.large)
+            .searchable(text: $searchText, isPresented: $isSearchPresented, prompt: "Search completions...")
+            .navigationTabCleanup(
+                navigationManager: navigationManager,
+                currentTab: .logbook,
+                searchText: $searchText,
+                isSearchPresented: $isSearchPresented
+            )
+            .errorAlert(error: Binding(
+                get: { logbookManager.lastError },
+                set: { logbookManager.lastError = $0 }
+            ))
     }
 
     // MARK: - Main Content
@@ -168,7 +168,7 @@ struct LogbookView: View {
                     ForEach(Array(completions.enumerated()), id: \.offset) { _, completion in
                         if let task = completion as? Task {
                             // Recent completion (0-90 days) - Use TaskRowView
-                            NavigationLink(destination: TaskDetailView(task: task, isLogbookMode: true)) {
+                            NavigationLink(value: LogbookRoute.taskDetail(task)) {
                                 TaskRowView(
                                     task: task,
                                     onToggleCompletion: {}, // No-op in logbook

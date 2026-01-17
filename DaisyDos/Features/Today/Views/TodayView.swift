@@ -52,9 +52,8 @@ struct TodayView: View {
     @State private var skipReason: String = ""
     @State private var rescheduleDate: Date = Date()
 
-    // Detail navigation
-    @State private var taskToDetail: Task?
-    @State private var habitToDetail: Habit?
+    // Note: Detail navigation now uses NavigationPath via NavigationManager
+    // The navigationDestination is defined in ContentView for TodayRoute
 
     // Edit sheets
     @State private var taskToEdit: Task?
@@ -79,18 +78,19 @@ struct TodayView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                if viewModel.todayItems.isEmpty {
-                    emptyStateView
-                } else if filteredItems.isEmpty && !searchText.isEmpty {
-                    // No search results state
-                    noSearchResultsView
-                } else {
-                    todayItemsList
-                }
+        // Note: No NavigationStack here - ContentView provides the NavigationStack
+        // with path binding for programmatic navigation
+        VStack(spacing: 0) {
+            if viewModel.todayItems.isEmpty {
+                emptyStateView
+            } else if filteredItems.isEmpty && !searchText.isEmpty {
+                // No search results state
+                noSearchResultsView
+            } else {
+                todayItemsList
             }
-            .navigationTitle("Today")
+        }
+        .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
             .searchable(text: $searchText, isPresented: $isSearchPresented, prompt: "Search today's items...")
             .navigationTabCleanup(
@@ -220,12 +220,6 @@ struct TodayView: View {
                     skipReasonSheet(for: habit)
                 }
             }
-            .navigationDestination(item: $taskToDetail) { task in
-                TaskDetailView(task: task)
-            }
-            .navigationDestination(item: $habitToDetail) { habit in
-                HabitDetailView(habit: habit)
-            }
             .alert(
                 "Delete \(selectedItems.count) Items",
                 isPresented: $showingBulkDeleteConfirmation
@@ -269,7 +263,6 @@ struct TodayView: View {
                 get: { habitManager.lastError },
                 set: { habitManager.lastError = $0 }
             ))
-        }
     }
 
     // MARK: - Empty State
@@ -579,9 +572,9 @@ struct TodayView: View {
     private func navigateToDetail(for item: TodayItem) {
         switch item {
         case .task(let task):
-            taskToDetail = task
+            navigationManager.todayPath.append(TodayRoute.taskDetail(task))
         case .habit(let habit):
-            habitToDetail = habit
+            navigationManager.todayPath.append(TodayRoute.habitDetail(habit))
         }
     }
 

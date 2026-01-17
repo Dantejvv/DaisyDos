@@ -137,26 +137,8 @@ class TaskNotificationManager: BaseNotificationManager {
     // MARK: - Action Registration
 
     func registerNotificationActions() async {
-        let completeAction = UNNotificationAction(
-            identifier: "complete_task",
-            title: "Mark Complete ✓",
-            options: [.foreground]
-        )
-
-        let snoozeAction = UNNotificationAction(
-            identifier: "snooze_task",
-            title: "Snooze 1 Hour",
-            options: []
-        )
-
-        let taskCategory = UNNotificationCategory(
-            identifier: notificationCategoryIdentifier,
-            actions: [completeAction, snoozeAction],
-            intentIdentifiers: [],
-            options: [.customDismissAction]
-        )
-
-        notificationCenter.setNotificationCategories([taskCategory])
+        // Categories are registered centrally in DaisyDosApp.registerNotificationCategories()
+        // to ensure all categories are set in a single call (per Apple guidelines)
     }
 
     // MARK: - Task Notification Scheduling

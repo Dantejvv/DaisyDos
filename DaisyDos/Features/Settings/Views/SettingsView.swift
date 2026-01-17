@@ -44,64 +44,64 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                privacySection
-                appearanceSection
-                notificationsSection
-                tagsSection
-                dataManagementSection
-                #if DEBUG
-                developerSection
-                #endif
-                appInformationSection
-            }
-            .navigationTitle("Settings")
-            .sheet(isPresented: $showingAbout) {
-                AboutView()
-            }
-            .sheet(isPresented: $showingAppearanceSettings) {
-                AppearanceSettingsView()
-            }
-            .sheet(isPresented: $showingCloudKitStatus) {
-                CloudKitSyncStatusView()
-            }
-            .sheet(isPresented: $showingPrivacyPolicy) {
-                PrivacyPolicyView()
-            }
-            .sheet(isPresented: $showingTagPicker) {
-                TagsView()
-            }
-            .sheet(isPresented: $showingImportExport) {
-                ImportExportView()
-            }
-            .sheet(isPresented: $showingTestDataGenerator) {
-                TestDataGeneratorView()
-            }
+        // Note: No NavigationStack here - ContentView provides the NavigationStack
+        // with path binding for programmatic navigation
+        List {
+            privacySection
+            appearanceSection
+            notificationsSection
+            tagsSection
+            dataManagementSection
             #if DEBUG
-            .sheet(isPresented: $showingErrorMessageTest) {
-                NavigationStack {
-                    ErrorMessageTestView()
-                }
-            }
+            developerSection
             #endif
-            .alert("Restart Required", isPresented: $showingRestartAlert) {
-                Button("Cancel", role: .cancel) {
-                    // Revert to original value by clearing pending change
-                    pendingLocalOnlyMode = nil
-                }
-                Button("OK") {
-                    // Apply the pending change
-                    if let pending = pendingLocalOnlyMode {
-                        localOnlyModeManager.isLocalOnlyMode = pending
-                    }
-                    pendingLocalOnlyMode = nil
-                }
-            } message: {
-                Text(pendingLocalOnlyMode == false
-                    ? "Enabling iCloud sync requires restarting DaisyDos."
-                    : "Switching to local-only mode requires restarting DaisyDos.")
+            appInformationSection
+        }
+        .navigationTitle("Settings")
+        .sheet(isPresented: $showingAbout) {
+            AboutView()
+        }
+        .sheet(isPresented: $showingAppearanceSettings) {
+            AppearanceSettingsView()
+        }
+        .sheet(isPresented: $showingCloudKitStatus) {
+            CloudKitSyncStatusView()
+        }
+        .sheet(isPresented: $showingPrivacyPolicy) {
+            PrivacyPolicyView()
+        }
+        .sheet(isPresented: $showingTagPicker) {
+            TagsView()
+        }
+        .sheet(isPresented: $showingImportExport) {
+            ImportExportView()
+        }
+        .sheet(isPresented: $showingTestDataGenerator) {
+            TestDataGeneratorView()
+        }
+        #if DEBUG
+        .sheet(isPresented: $showingErrorMessageTest) {
+            NavigationStack {
+                ErrorMessageTestView()
             }
+        }
+        #endif
+        .alert("Restart Required", isPresented: $showingRestartAlert) {
+            Button("Cancel", role: .cancel) {
+                // Revert to original value by clearing pending change
+                pendingLocalOnlyMode = nil
+            }
+            Button("OK") {
+                // Apply the pending change
+                if let pending = pendingLocalOnlyMode {
+                    localOnlyModeManager.isLocalOnlyMode = pending
+                }
+                pendingLocalOnlyMode = nil
+            }
+        } message: {
+            Text(pendingLocalOnlyMode == false
+                ? "Enabling iCloud sync requires restarting DaisyDos."
+                : "Switching to local-only mode requires restarting DaisyDos.")
         }
     }
 

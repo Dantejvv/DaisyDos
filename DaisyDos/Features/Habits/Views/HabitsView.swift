@@ -11,6 +11,7 @@ import SwiftData
 struct HabitsView: View {
     @Environment(HabitManager.self) private var habitManager
     @Environment(HabitCompletionToastManager.self) private var toastManager
+    @Environment(NavigationManager.self) private var navigationManager
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Habit.createdDate, order: .reverse) private var allHabits: [Habit]
     @State private var searchText = ""
@@ -20,7 +21,7 @@ struct HabitsView: View {
     @State private var habitToSkip: Habit?
     @State private var habitToEdit: Habit?
     @State private var habitToAssignTags: Habit?
-    @State private var habitToDetail: Habit?
+    // Note: Detail navigation now uses NavigationPath via NavigationManager
     @State private var isReorderMode = false
     @State private var showCompletedBeforeReorder = false
     @AppStorage("habitSortOption") private var sortOptionRaw: String = SortOption.custom.rawValue
@@ -48,9 +49,10 @@ struct HabitsView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack {
-                if allHabits.isEmpty {
+        // Note: No NavigationStack here - ContentView provides the NavigationStack
+        // with path binding for programmatic navigation
+        VStack {
+            if allHabits.isEmpty {
                     // Empty state
                     Spacer()
                     VStack(spacing: 20) {
@@ -181,9 +183,6 @@ struct HabitsView: View {
                     }
                 ))
             }
-            .navigationDestination(item: $habitToDetail) { habit in
-                HabitDetailView(habit: habit)
-            }
             .alert(
                 "Delete Habit",
                 isPresented: $showingDeleteConfirmation,
@@ -224,7 +223,6 @@ struct HabitsView: View {
                 get: { habitManager.lastError },
                 set: { habitManager.lastError = $0 }
             ))
-        }
     }
 
     // MARK: - Computed Properties
@@ -348,7 +346,7 @@ struct HabitsView: View {
                     accentColor: .daisyHabit,
                     onTap: {
                         if !isReorderMode {
-                            habitToDetail = habit
+                            navigationManager.habitsPath.append(HabitsRoute.detail(habit))
                         }
                     }
                 )
