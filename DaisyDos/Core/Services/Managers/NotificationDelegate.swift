@@ -25,11 +25,13 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     private var taskManager: TaskManager?
     private var taskNotificationManager: TaskNotificationManager?
     private var habitNotificationManager: HabitNotificationManager?
+    private var badgeManager: BadgeManager?
 
     /// Whether managers have been injected and are ready for use
     private var managersReady: Bool {
         habitManager != nil && taskManager != nil &&
-        taskNotificationManager != nil && habitNotificationManager != nil
+        taskNotificationManager != nil && habitNotificationManager != nil &&
+        badgeManager != nil
     }
 
     // MARK: - Pending Actions (for cold start)
@@ -67,13 +69,15 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         habitManager: HabitManager,
         taskManager: TaskManager,
         taskNotificationManager: TaskNotificationManager,
-        habitNotificationManager: HabitNotificationManager
+        habitNotificationManager: HabitNotificationManager,
+        badgeManager: BadgeManager
     ) {
         self.init(navigationManager: navigationManager)
         self.habitManager = habitManager
         self.taskManager = taskManager
         self.taskNotificationManager = taskNotificationManager
         self.habitNotificationManager = habitNotificationManager
+        self.badgeManager = badgeManager
     }
 
     /// Inject managers after initialization (for cold start scenarios)
@@ -82,12 +86,14 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         habitManager: HabitManager,
         taskManager: TaskManager,
         taskNotificationManager: TaskNotificationManager,
-        habitNotificationManager: HabitNotificationManager
+        habitNotificationManager: HabitNotificationManager,
+        badgeManager: BadgeManager
     ) {
         self.habitManager = habitManager
         self.taskManager = taskManager
         self.taskNotificationManager = taskNotificationManager
         self.habitNotificationManager = habitNotificationManager
+        self.badgeManager = badgeManager
 
         #if DEBUG
         print("NotificationDelegate: Managers injected, processing \(pendingActions.count) pending actions and \(pendingMarkFiredUserInfos.count) pending markFired calls")
@@ -161,8 +167,12 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         print("NotificationDelegate: didReceive called with action '\(actionIdentifier)', managersReady=\(managersReady)")
         #endif
 
-        // Mark the notification as fired (in case it was delivered while app was in background)
-        markNotificationFired(userInfo: userInfo)
+        // Mark the notification as fired ONLY for non-snooze actions
+        // Snooze actions will reschedule the notification, so the alert badge should remain visible
+        let isSnoozeAction = actionIdentifier == "snooze_task" || actionIdentifier == "snooze_habit"
+        if !isSnoozeAction {
+            markNotificationFired(userInfo: userInfo)
+        }
 
         // Handle different notification types
         if let habitID = userInfo["habit_id"] as? String {
@@ -182,6 +192,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         switch actionIdentifier {
         case "complete_habit":
             // Complete the habit (or queue if managers not ready)
+            // No navigation - action runs in background without launching app
             if managersReady {
                 completeHabit(uuid: uuid)
             } else {
@@ -193,6 +204,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
         case "skip_habit":
             // Skip the habit for today (or queue if managers not ready)
+            // No navigation - action runs in background without launching app
             if managersReady {
                 skipHabit(uuid: uuid)
             } else {
@@ -204,6 +216,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
         case "snooze_habit":
             // Snooze the notification reminder (or queue if managers not ready)
+            // No navigation - action runs in background without launching app
             if managersReady {
                 snoozeHabit(uuid: uuid)
             } else {
@@ -218,10 +231,6 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             // Navigation works immediately - NavigationManager queues if not ready
             navigateToHabit(uuid: uuid)
 
-        case UNNotificationDismissActionIdentifier:
-            // User dismissed the notification - do nothing
-            break
-
         default:
             break
         }
@@ -235,6 +244,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         switch actionIdentifier {
         case "complete_task":
             // Complete the task (or queue if managers not ready)
+            // No navigation - action runs in background without launching app
             if managersReady {
                 completeTask(uuid: uuid)
             } else {
@@ -246,6 +256,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
         case "snooze_task":
             // Snooze the task (or queue if managers not ready)
+            // No navigation - action runs in background without launching app
             if managersReady {
                 snoozeTask(uuid: uuid)
             } else {
@@ -259,10 +270,6 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             // User tapped the notification itself
             // Navigation works immediately - NavigationManager queues if not ready
             navigateToTask(uuid: uuid)
-
-        case UNNotificationDismissActionIdentifier:
-            // User dismissed the notification - do nothing
-            break
 
         default:
             break

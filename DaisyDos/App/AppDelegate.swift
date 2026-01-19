@@ -60,11 +60,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     /// This must be called once at launch with ALL categories together,
     /// as setNotificationCategories replaces (not merges) existing categories.
     private func registerNotificationCategories() {
-        // Task actions
+        // Task actions - no .foreground option so actions run in background without launching app
         let completeTaskAction = UNNotificationAction(
             identifier: "complete_task",
             title: "Mark Complete ✓",
-            options: [.foreground]
+            options: []
         )
         let snoozeTaskAction = UNNotificationAction(
             identifier: "snooze_task",
@@ -75,14 +75,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             identifier: "task_reminder",
             actions: [completeTaskAction, snoozeTaskAction],
             intentIdentifiers: [],
-            options: [.customDismissAction]
+            options: []
         )
 
-        // Habit actions
+        // Habit actions - no .foreground option so actions run in background without launching app
         let completeHabitAction = UNNotificationAction(
             identifier: "complete_habit",
             title: "Mark Complete ✓",
-            options: [.foreground]
+            options: []
         )
         let skipHabitAction = UNNotificationAction(
             identifier: "skip_habit",
@@ -98,7 +98,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             identifier: "habit_reminder",
             actions: [completeHabitAction, skipHabitAction, snoozeHabitAction],
             intentIdentifiers: [],
-            options: [.customDismissAction]
+            options: []
         )
 
         // Register BOTH categories in a single call

@@ -13,6 +13,7 @@ struct ContentView: View {
     @Environment(NavigationManager.self) private var navigationManager
     @Environment(TaskNotificationManager.self) private var taskNotificationManager
     @Environment(HabitNotificationManager.self) private var habitNotificationManager
+    @Environment(BadgeManager.self) private var badgeManager: BadgeManager?
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -120,12 +121,12 @@ struct ContentView: View {
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
-                // Re-check notification permissions and clear badges when app returns to foreground
+                // Re-check notification permissions and update badge when app returns to foreground
                 if newPhase == .active {
                     taskNotificationManager.checkNotificationPermissions()
                     habitNotificationManager.checkNotificationPermissions()
 
-                    // Mark delivered notifications as fired before clearing them
+                    // Mark delivered notifications as fired and update badge
                     // This handles notifications delivered while app was in background
                     // (customDismissAction callbacks are unreliable when app is backgrounded)
                     let center = UNUserNotificationCenter.current()
@@ -134,9 +135,12 @@ struct ContentView: View {
                             await delegate.markDeliveredNotificationsAsFired()
                         }
 
-                        // Clear badge and delivered notifications after marking as fired
+                        // Clear delivered notifications from notification center
                         center.removeAllDeliveredNotifications()
-                        try? await center.setBadgeCount(0)
+
+                        // Update badge to reflect current actionable items
+                        // (replaces old behavior of clearing to 0)
+                        await badgeManager?.updateBadge()
                     }
                 }
             }

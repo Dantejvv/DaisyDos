@@ -4,6 +4,96 @@ This guide provides comprehensive test cases for validating DaisyDos notificatio
 
 ---
 
+  ---
+  1. Notification Creation
+
+  - Set alert when creating a new task
+  - Set alert when creating a new habit
+  - Edit existing task to add/modify alert
+  - Edit existing habit to add/modify alert
+  - Remove alert from task
+  - Remove alert from habit
+
+  ---
+  2. Notification Delivery
+
+  - Notification displays when app is in foreground (banner, sound, badge)
+  - Notification displays when app is in background
+  - Notification displays when app is terminated (cold start)
+
+  ---
+  3. User Interactions with Notifications
+
+  Basic Interactions:
+  - Tap notification → Navigate to task/habit detail
+  - Dismiss notification (swipe away)
+  - Ignore notification (let it pass in notification center)
+
+  Quick Action Menu (Long Press):
+
+  Task Actions:
+  - Snooze (pushes alert back 1 hour)
+  - Mark Complete
+
+  Habit Actions:
+  - Snooze (pushes alert back 1 hour)
+  - Mark Complete
+  - Skip Today
+
+  ---
+  4. Alert Badge Icons (Row Views)
+
+  - Bell icon shows when alert is pending (not yet fired)
+  - Bell icon hides after notification fires
+  - Bell icon remains visible after snooze (alert will refire)
+  - Combined bell+recurrence icon when both exist
+
+  ---
+  5. Notification Settings
+
+  - Global notifications toggle (Settings → Notifications)
+  - Permission status display (Granted/Not Granted)
+  - Grant permission button when not authorized
+  - Disabling global toggle removes all scheduled notifications
+  - Re-enabling global toggle reschedules all notifications
+
+  ---
+  6. Notification State Management
+
+  - Notifications removed when task completed
+  - Notifications removed when habit completed for today
+  - Notifications removed when task deleted
+  - Notifications removed when habit deleted
+  - Habit notifications reschedule for next occurrence after completion
+  - Task recurring instances do NOT inherit reminders
+
+  ---
+  7. Cold Start Handling
+
+  - Notification actions work when app launches from terminated state
+  - Navigation works when tapping notification on cold start
+  - Pending actions queue and execute when managers ready
+
+  ---
+  8. App Badge Count
+
+  - Badge count reflects pending notifications
+  - Badge resets to 0 when app enters foreground
+
+  ---
+  9. Snoozed Notification Behavior
+
+  - Snoozed notification title changes to "(Snoozed)"
+  - Snooze duration is 1 hour
+  - Multiple snoozes work (can snooze repeatedly)
+
+  ---
+  Additional features found in codebase that you didn't mention:
+  - Notifications show task/habit title in the body
+  - Custom dismiss action registered for notification categories
+  - markDeliveredNotificationsAsFired() syncs state when app becomes active
+  - Notification identifiers are UUID-based (one notification per item)
+
 ## Table of Contents
 1. [Prerequisites & Setup](#1-prerequisites--setup)
 2. [Task Notifications](#2-task-notifications)

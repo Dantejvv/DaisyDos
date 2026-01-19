@@ -35,6 +35,9 @@ struct DaisyDosApp: App {
     // Recurrence scheduler for deferred task creation
     @State private var recurrenceScheduler: RecurrenceScheduler?
 
+    // Badge manager for dynamic app badge updates
+    @State private var badgeManager: BadgeManager?
+
     // MARK: - Initialization
 
     init() {
@@ -86,9 +89,6 @@ struct DaisyDosApp: App {
         WindowGroup {
             ContentView()
                 .task {
-                    // Clear any orphaned badge on app launch
-                    await clearBadgeOnLaunch()
-
                     // Set ModelContext on NavigationManager for deep linking entity fetches
                     navigationManager.setModelContext(sharedModelContainer.mainContext)
 
@@ -102,6 +102,9 @@ struct DaisyDosApp: App {
                         )
                     }
 
+                    // Initialize BadgeManager for dynamic badge updates
+                    badgeManager = BadgeManager(modelContext: sharedModelContainer.mainContext)
+
                     // Inject managers into the NotificationDelegate that was created in AppDelegate.
                     // The delegate was registered early in didFinishLaunchingWithOptions to catch cold start
                     // notification taps. Now that SwiftData is ready, we can inject the managers.
@@ -114,7 +117,8 @@ struct DaisyDosApp: App {
                         habitManager: habitMgr,
                         taskManager: taskManager,
                         taskNotificationManager: taskNotifMgr,
-                        habitNotificationManager: habitNotifMgr
+                        habitNotificationManager: habitNotifMgr,
+                        badgeManager: badgeManager!
                     )
 
                     // Initialize recurrence scheduler
@@ -125,6 +129,9 @@ struct DaisyDosApp: App {
 
                     // Run logbook housekeeping on app launch (if needed)
                     await runLogbookHousekeepingIfNeeded()
+
+                    // Update badge to reflect current actionable items
+                    await badgeManager?.updateBadge()
 
                     // Mark navigation system as ready after all initialization is complete
                     // This processes any pending navigation from notification cold start
@@ -157,19 +164,10 @@ struct DaisyDosApp: App {
         .environment(HabitNotificationManager(modelContext: sharedModelContainer.mainContext))
         .environment(LogbookManager(modelContext: sharedModelContainer.mainContext))
         .environment(recurrenceScheduler)
+        .environment(badgeManager)
         .environment(cloudKitSyncManager)
         .environment(networkMonitor)
         .environment(offlineQueueManager)
-    }
-
-    // MARK: - Badge Management
-
-    /// Clear any orphaned badge count on app launch
-    private func clearBadgeOnLaunch() async {
-        let center = UNUserNotificationCenter.current()
-        // Remove all delivered notifications and clear badge
-        center.removeAllDeliveredNotifications()
-        try? await center.setBadgeCount(0)
     }
 
     // MARK: - Logbook Housekeeping
