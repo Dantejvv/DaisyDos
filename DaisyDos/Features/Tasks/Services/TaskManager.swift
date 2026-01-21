@@ -96,12 +96,6 @@ class TaskManager: EntityManagerProtocol {
         return (try? modelContext.fetch(descriptor)) ?? []
     }
 
-    var todaysTasks: [Task] {
-        // Show all incomplete tasks as "today's tasks" for now
-        // In Phase 2, this will be enhanced with due dates
-        return pendingTasks
-    }
-
     // MARK: - CRUD Operations
 
     func createTask(title: String) -> Result<Task, AnyRecoverableError> {
@@ -510,62 +504,9 @@ class TaskManager: EntityManagerProtocol {
         }
     }
 
-    /// Moves a subtask up one position in its parent's subtask list
-    func moveSubtaskUp(_ subtask: Task) -> Result<Void, AnyRecoverableError> {
-        return ErrorTransformer.safely(
-            operation: "move subtask up",
-            entityType: "task"
-        ) {
-            guard let parent = subtask.parentTask else {
-                throw DaisyDosError.validationFailed("Subtask has no parent")
-            }
-
-            parent.moveSubtaskUp(subtask)
-            try modelContext.save()
-        }
-    }
-
-    /// Moves a subtask down one position in its parent's subtask list
-    func moveSubtaskDown(_ subtask: Task) -> Result<Void, AnyRecoverableError> {
-        return ErrorTransformer.safely(
-            operation: "move subtask down",
-            entityType: "task"
-        ) {
-            guard let parent = subtask.parentTask else {
-                throw DaisyDosError.validationFailed("Subtask has no parent")
-            }
-
-            parent.moveSubtaskDown(subtask)
-            try modelContext.save()
-        }
-    }
-
     // MARK: - Helper Methods
 
     // MARK: - Recurrence Management
-
-    func processRecurringTasks() -> Result<[Task], AnyRecoverableError> {
-        return ErrorTransformer.safely(
-            operation: "process recurring tasks",
-            entityType: "task"
-        ) {
-            let completedRecurringTasks = completedTasks.filter { $0.hasRecurrence }
-            var newTasks: [Task] = []
-
-            for completedTask in completedRecurringTasks {
-                if let newTask = completedTask.createRecurringInstance() {
-                    modelContext.insert(newTask)
-                    newTasks.append(newTask)
-                }
-            }
-
-            if !newTasks.isEmpty {
-                try modelContext.save()
-            }
-
-            return newTasks
-        }
-    }
 
     /// Schedules a pending recurrence for deferred task creation
     /// The new task will appear when the app is opened after the scheduled date
@@ -600,56 +541,6 @@ class TaskManager: EntityManagerProtocol {
             #if DEBUG
             print("❌ Failed to schedule recurring instance: \(error.userMessage)")
             #endif
-        }
-    }
-
-    // MARK: - Enhanced Today's Tasks
-
-    var enhancedTodaysTasks: [Task] {
-        let today = Date()
-        let calendar = Calendar.current
-
-        return allTasks.filter { task in
-            guard !task.isCompleted else { return false }
-
-            // Include if due today
-            if let dueDate = task.dueDate, calendar.isDate(dueDate, inSameDayAs: today) {
-                return true
-            }
-
-            // Include if overdue
-            if task.hasOverdueStatus {
-                return true
-            }
-
-            // Include if no due date
-            if task.dueDate == nil {
-                return true
-            }
-
-            return false
-        }.sorted { first, second in
-            // Sort by priority first, then by due date
-            if first.priority != second.priority {
-                return first.priority > second.priority
-            }
-
-            // Sort overdue tasks first
-            if first.hasOverdueStatus != second.hasOverdueStatus {
-                return first.hasOverdueStatus
-            }
-
-            // Sort by due date
-            switch (first.dueDate, second.dueDate) {
-            case (let date1?, let date2?):
-                return date1 < date2
-            case (nil, _?):
-                return false // Tasks without due dates come after those with due dates
-            case (_?, nil):
-                return true
-            case (nil, nil):
-                return first.createdDate > second.createdDate // Most recent first for tasks without due dates
-            }
         }
     }
 
@@ -773,44 +664,6 @@ class TaskManager: EntityManagerProtocol {
         case .failure(let error):
             lastError = error.wrapped
             return nil
-        }
-    }
-
-    /// Update a task and handle errors internally
-    func updateTaskSafely(_ task: Task, title: String? = nil, isCompleted: Bool? = nil) -> Bool {
-        switch updateTask(task, title: title, isCompleted: isCompleted) {
-        case .success:
-            return true
-        case .failure(let error):
-            lastError = error.wrapped
-            return false
-        }
-    }
-
-    /// Enhanced update task with all properties and handle errors internally
-    func updateTaskSafely(
-        _ task: Task,
-        title: String? = nil,
-        taskDescription: String? = nil,
-        priority: Priority? = nil,
-        dueDate: Date? = nil,
-        recurrenceRule: RecurrenceRule? = nil,
-        isCompleted: Bool? = nil
-    ) -> Bool {
-        switch updateTask(
-            task,
-            title: title,
-            taskDescription: taskDescription,
-            priority: priority,
-            dueDate: dueDate,
-            recurrenceRule: recurrenceRule,
-            isCompleted: isCompleted
-        ) {
-        case .success:
-            return true
-        case .failure(let error):
-            lastError = error.wrapped
-            return false
         }
     }
 

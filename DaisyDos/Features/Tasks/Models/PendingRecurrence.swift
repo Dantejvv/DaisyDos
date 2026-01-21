@@ -63,12 +63,6 @@ class PendingRecurrence {
         self.createdDate = Date()
     }
 
-    // MARK: - Computed Properties
-
-    /// Whether this pending recurrence is ready to be processed (scheduled time has passed)
-    var isReady: Bool {
-        Date() >= scheduledDate
-    }
 }
 
 // MARK: - Equatable Conformance

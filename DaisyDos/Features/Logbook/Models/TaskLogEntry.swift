@@ -115,22 +115,6 @@ class TaskLogEntry {
         return title.isEmpty ? "Untitled Task" : title
     }
 
-    var completionDurationFormatted: String {
-        guard let duration = completionDuration else { return "N/A" }
-
-        let days = Int(duration / 86400)
-        let hours = Int((duration.truncatingRemainder(dividingBy: 86400)) / 3600)
-
-        if days > 0 {
-            return "\(days)d \(hours)h"
-        } else if hours > 0 {
-            return "\(hours)h"
-        } else {
-            let minutes = Int(duration / 60)
-            return "\(minutes)m"
-        }
-    }
-
     var formattedCompletedDate: String {
         let formatter = DateFormatter()
         if Calendar.current.isDateInToday(completedDate) {

@@ -54,6 +54,7 @@ class Task {
     var completedDate: Date?
     var reminderDate: Date? // Absolute date/time for reminder notification (non-recurring tasks only)
     var reminderOffset: TimeInterval? // Seconds before due time for relative reminders (recurring tasks only, negative value e.g., -900 for 15 min before)
+    var snoozedUntil: Date? // When snoozed, this overrides the normal reminder time until the snooze fires
     var notificationFired: Bool = false // Tracks if the reminder notification has been delivered
     var occurrenceIndex: Int = 1 // Tracks which occurrence this is (1-based, for maxOccurrences enforcement)
 
@@ -199,10 +200,6 @@ class Task {
         return Double(completedSubtaskCount) / Double(subtaskCount)
     }
 
-    var isPartiallyComplete: Bool {
-        hasSubtasks && subtaskCompletionPercentage > 0 && subtaskCompletionPercentage < 1.0
-    }
-
     // MARK: - Tag Management
 
     func canAddTag() -> Bool {
@@ -296,44 +293,6 @@ class Task {
         modifiedDate = Date()
     }
 
-    /// Moves a subtask up one position by adjusting order values
-    func moveSubtaskUp(_ subtask: Task) {
-        let orderedTasks = orderedSubtasks
-        guard let currentIndex = orderedTasks.firstIndex(of: subtask),
-              currentIndex > 0 else {
-            return
-        }
-
-        // Get the target task to swap orders with
-        let targetTask = orderedTasks[currentIndex - 1]
-
-        // Swap the order values
-        let tempOrder = subtask.subtaskOrder
-        subtask.subtaskOrder = targetTask.subtaskOrder
-        targetTask.subtaskOrder = tempOrder
-
-        modifiedDate = Date()
-    }
-
-    /// Moves a subtask down one position by adjusting order values
-    func moveSubtaskDown(_ subtask: Task) {
-        let orderedTasks = orderedSubtasks
-        guard let currentIndex = orderedTasks.firstIndex(of: subtask),
-              currentIndex < orderedTasks.count - 1 else {
-            return
-        }
-
-        // Get the target task to swap orders with
-        let targetTask = orderedTasks[currentIndex + 1]
-
-        // Swap the order values
-        let tempOrder = subtask.subtaskOrder
-        subtask.subtaskOrder = targetTask.subtaskOrder
-        targetTask.subtaskOrder = tempOrder
-
-        modifiedDate = Date()
-    }
-
     func createSubtask(
         title: String,
         taskDescription: String = "",
@@ -372,9 +331,14 @@ class Task {
     }
 
     /// Computes the effective reminder date based on whether this is a recurring or non-recurring task
+    /// - If snoozed: Use snoozedUntil date (overrides normal calculation)
     /// - Recurring tasks: Calculate from dueDate + reminderOffset
     /// - Non-recurring tasks: Use absolute reminderDate
     var effectiveReminderDate: Date? {
+        // If snoozed, use the snooze time
+        if let snoozed = snoozedUntil {
+            return snoozed
+        }
         // For recurring tasks with a relative offset
         if let offset = reminderOffset, let due = dueDate, recurrenceRule != nil {
             return due.addingTimeInterval(offset)
@@ -458,23 +422,10 @@ class Task {
         return newTask
     }
 
-    // MARK: - Search and Filtering
-
-    func matches(searchQuery: String) -> Bool {
-        let query = searchQuery.lowercased()
-        return title.lowercased().contains(query) ||
-               taskDescription.lowercased().contains(query) ||
-               tagsArray.contains { $0.name.lowercased().contains(query) }
-    }
-
     // MARK: - Display Helpers
 
     var displayTitle: String {
         return title.isEmpty ? "Untitled Task" : title
-    }
-
-    var priorityDisplayText: String {
-        return priority.displayName
     }
 
     var dueDateDisplayText: String? {
@@ -494,9 +445,17 @@ class Task {
     }
 
     /// Short display text for reminder (used in toolbar labels)
+    /// For snoozed tasks, shows "Snoozed" with time
     /// For recurring tasks with relative offsets, shows the offset (e.g., "15m before")
     /// For non-recurring tasks, shows the absolute date/time
     var reminderDisplayText: String? {
+        // If snoozed, show snooze time
+        if let snoozed = snoozedUntil {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "h:mm a"
+            return "Snoozed \(formatter.string(from: snoozed))"
+        }
+
         // For recurring tasks with relative offset, show the offset description
         if recurrenceRule != nil, let offset = reminderOffset {
             return ReminderOffset.displayText(for: offset)
@@ -523,15 +482,6 @@ class Task {
         }
     }
 
-    // MARK: - Hierarchy Helpers
-
-    var rootTask: Task {
-        var current = self
-        while let parent = current.parentTask {
-            current = parent
-        }
-        return current
-    }
 }
 
 // MARK: - Equatable Conformance
@@ -555,12 +505,3 @@ extension Task: Hashable {
 /// Enables Task to be displayed in unified SubtaskRow component
 /// Task already has required properties: title, isCompleted
 extension Task: SubtaskDisplayable {}
-
-// MARK: - Deep Linking
-
-extension Task {
-    /// Deep link URL for this task (e.g., daisydos://task/{uuid})
-    var deepLinkURL: URL? {
-        NavigationRoute.task(id).url
-    }
-}

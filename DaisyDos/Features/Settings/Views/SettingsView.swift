@@ -11,18 +11,14 @@ import SwiftData
 struct SettingsView: View {
     @Environment(LocalOnlyModeManager.self) private var localOnlyModeManager
     @Environment(AppearanceManager.self) private var appearanceManager
-    @Environment(TagManager.self) private var tagManager
     @Environment(NotificationPreferencesManager.self) private var notificationPreferencesManager
     @Environment(TaskNotificationManager.self) private var taskNotificationManager
     @Environment(CloudKitSyncManager.self) private var cloudKitSyncManager: CloudKitSyncManager?
-
-    @Query private var allTags: [Tag]
 
     @State private var showingAbout = false
     @State private var showingAppearanceSettings = false
     @State private var showingCloudKitStatus = false
     @State private var showingPrivacyPolicy = false
-    @State private var showingTagPicker = false
     @State private var showingImportExport = false
     @State private var showingTestDataGenerator = false
     @State private var showingErrorMessageTest = false
@@ -50,7 +46,6 @@ struct SettingsView: View {
             privacySection
             appearanceSection
             notificationsSection
-            tagsSection
             dataManagementSection
             #if DEBUG
             developerSection
@@ -69,9 +64,6 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showingPrivacyPolicy) {
             PrivacyPolicyView()
-        }
-        .sheet(isPresented: $showingTagPicker) {
-            TagsView()
         }
         .sheet(isPresented: $showingImportExport) {
             ImportExportView()
@@ -238,27 +230,6 @@ struct SettingsView: View {
             Text("Notifications are set individually for each task and habit using the alert button in the edit view.")
                 .font(.caption)
                 .foregroundColor(.daisyTextSecondary)
-        }
-    }
-
-    private var tagsSection: some View {
-        Section("Tags") {
-            Button(action: { showingTagPicker = true }) {
-                HStack {
-                    Label {
-                        Text("Manage Tags")
-                            .foregroundColor(.daisyText)
-                    } icon: {
-                        Image(systemName: "tag")
-                    }
-                    Spacer()
-                    Text("\(allTags.count)")
-                        .foregroundColor(.daisyTextSecondary)
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(.daisyTextSecondary)
-                }
-            }
         }
     }
 
@@ -459,5 +430,4 @@ private struct FeatureRow: View {
         .environment(LocalOnlyModeManager())
         .environment(TaskManager(modelContext: container.mainContext))
         .environment(HabitManager(modelContext: container.mainContext))
-        .environment(TagManager(modelContext: container.mainContext))
 }

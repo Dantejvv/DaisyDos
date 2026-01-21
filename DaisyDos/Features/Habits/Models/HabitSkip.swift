@@ -31,23 +31,4 @@ class HabitSkip {
         self.createdDate = Date()
     }
 
-    // MARK: - Computed Properties
-
-    var dayOfWeek: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE"
-        return formatter.string(from: skippedDate)
-    }
-
-    var isToday: Bool {
-        Calendar.current.isDate(skippedDate, inSameDayAs: Date())
-    }
-
-    var isThisWeek: Bool {
-        Calendar.current.isDate(skippedDate, equalTo: Date(), toGranularity: .weekOfYear)
-    }
-
-    var isThisMonth: Bool {
-        Calendar.current.isDate(skippedDate, equalTo: Date(), toGranularity: .month)
-    }
 }

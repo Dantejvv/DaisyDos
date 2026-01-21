@@ -189,11 +189,11 @@ struct HabitDetailView: View {
             .presentationDetents([.medium])
         }
         .sheet(isPresented: $showingReminderPicker) {
-            ReminderPickerSheet(
-                reminderDate: .init(
-                    get: { habit.reminderDate },
-                    set: { newDate in
-                        habit.reminderDate = newDate
+            HabitReminderPickerSheet(
+                reminderOffset: .init(
+                    get: { habit.reminderOffset },
+                    set: { newOffset in
+                        habit.reminderOffset = newOffset
                         habit.modifiedDate = Date()
                         // Notify to trigger notification scheduling
                         NotificationCenter.default.post(
@@ -201,6 +201,20 @@ struct HabitDetailView: View {
                             object: nil,
                             userInfo: ["habitId": habit.id.uuidString]
                         )
+                    }
+                ),
+                scheduledTimeHour: .init(
+                    get: { habit.scheduledTimeHour },
+                    set: { newHour in
+                        habit.scheduledTimeHour = newHour
+                        habit.modifiedDate = Date()
+                    }
+                ),
+                scheduledTimeMinute: .init(
+                    get: { habit.scheduledTimeMinute },
+                    set: { newMinute in
+                        habit.scheduledTimeMinute = newMinute
+                        habit.modifiedDate = Date()
                     }
                 ),
                 accentColor: .daisyHabit
@@ -402,8 +416,8 @@ struct HabitDetailView: View {
                             .foregroundColor(.daisyTextSecondary)
                         Spacer()
                         HStack(spacing: 4) {
-                            if let reminderDate = habit.reminderDate {
-                                Text(habit.reminderDisplayText ?? "Set")
+                            if habit.hasReminder, let displayText = habit.reminderDisplayText {
+                                Text(displayText)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.daisyText)
                             } else {
@@ -807,7 +821,7 @@ private extension DateFormatter {
 struct HabitDetailPreview: View {
     var body: some View {
         let container = try! ModelContainer(
-            for: Habit.self, HabitCompletion.self, HabitStreak.self, Tag.self,
+            for: Habit.self, HabitCompletion.self, Tag.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
 

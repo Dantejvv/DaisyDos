@@ -174,55 +174,6 @@ struct TaskLogEntryTests {
         #expect(logEntry2.displayTitle == "Untitled Task")
     }
 
-    @Test("Completion duration formatted")
-    func testCompletionDurationFormatted() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-
-        // Task with no duration
-        let logEntry1 = TaskLogEntry(
-            originalTaskId: UUID(),
-            title: "No Duration",
-            taskDescription: "",
-            completedDate: Date(),
-            createdDate: Date(),
-            dueDate: nil,
-            priority: .medium,
-            wasOverdue: false,
-            subtaskCount: 0,
-            completedSubtaskCount: 0,
-            wasSubtask: false,
-            parentTaskTitle: nil,
-            tagNames: [],
-            completionDuration: nil
-        )
-
-        // Task with duration
-        let logEntry2 = TaskLogEntry(
-            originalTaskId: UUID(),
-            title: "With Duration",
-            taskDescription: "",
-            completedDate: Date(),
-            createdDate: Date(),
-            dueDate: nil,
-            priority: .medium,
-            wasOverdue: false,
-            subtaskCount: 0,
-            completedSubtaskCount: 0,
-            wasSubtask: false,
-            parentTaskTitle: nil,
-            tagNames: [],
-            completionDuration: 3661 // 1 hour, 1 minute, 1 second
-        )
-
-        context.insert(logEntry1)
-        context.insert(logEntry2)
-        try context.save()
-
-        #expect(logEntry1.completionDurationFormatted == "N/A")
-        #expect(logEntry2.completionDurationFormatted.contains("1h") || logEntry2.completionDurationFormatted.contains("hour"))
-    }
-
     @Test("Log entry persists correctly")
     func testLogEntryPersistence() async throws {
         let container = try TestHelpers.createTestContainer()

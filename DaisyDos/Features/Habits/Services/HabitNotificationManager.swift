@@ -227,12 +227,15 @@ class HabitNotificationManager: BaseNotificationManager {
     // MARK: - Snooze Functionality
 
     func snoozeHabit(_ habit: Habit, by interval: TimeInterval = 3600) {
-        removeHabitNotification(habitId: habit.id.uuidString)
+        let identifier = "habit_\(habit.id.uuidString)"
+
+        // Remove both pending AND delivered notifications to prevent markDeliveredNotificationsAsFired
+        // from re-marking this habit as fired during cold start
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
+        notificationCenter.removeDeliveredNotifications(withIdentifiers: [identifier])
 
         // Reset notification fired state since we're scheduling a new snoozed notification
         habit.notificationFired = false
-
-        let identifier = "habit_\(habit.id.uuidString)"
 
         let content = UNMutableNotificationContent()
         content.title = "Habit Reminder (Snoozed)"

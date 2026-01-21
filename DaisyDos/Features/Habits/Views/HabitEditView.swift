@@ -29,7 +29,6 @@ struct HabitEditView: View {
     @State private var showingPriorityPicker = false
     @State private var showingReminderPicker = false
     @State private var showingScheduledTimePicker = false
-    @State private var reminderDate: Date?
     @State private var reminderOffset: TimeInterval?
     @State private var scheduledTimeHour: Int?
     @State private var scheduledTimeMinute: Int?
@@ -95,7 +94,6 @@ struct HabitEditView: View {
         self._priority = State(initialValue: habit.priority)
         self._selectedTags = State(initialValue: habit.tags ?? [])
         self._recurrenceRule = State(initialValue: habit.recurrenceRule)
-        self._reminderDate = State(initialValue: habit.reminderDate)
         self._reminderOffset = State(initialValue: habit.reminderOffset)
         self._scheduledTimeHour = State(initialValue: habit.scheduledTimeHour)
         self._scheduledTimeMinute = State(initialValue: habit.scheduledTimeMinute)
@@ -175,7 +173,6 @@ struct HabitEditView: View {
                habitDescriptionAttributed != habit.habitDescriptionAttributed ||
                priority != habit.priority ||
                recurrenceRule != habit.recurrenceRule ||
-               reminderDate != habit.reminderDate ||
                reminderOffset != habit.reminderOffset ||
                scheduledTimeHour != habit.scheduledTimeHour ||
                scheduledTimeMinute != habit.scheduledTimeMinute ||
@@ -307,7 +304,6 @@ struct HabitEditView: View {
             MetadataToolbar(
                 config: .habit,
                 recurrenceRule: recurrenceRule,
-                reminderDate: reminderDate,
                 reminderOffset: reminderOffset,
                 priority: priority,
                 accentColor: .daisyHabit,
@@ -439,10 +435,10 @@ struct HabitEditView: View {
                     .presentationDetents([.large])
             }
             .sheet(isPresented: $showingReminderPicker) {
-                ReminderPickerSheet(
-                    reminderDate: $reminderDate,
+                HabitReminderPickerSheet(
                     reminderOffset: $reminderOffset,
-                    hasRecurrence: recurrenceRule != nil,
+                    scheduledTimeHour: $scheduledTimeHour,
+                    scheduledTimeMinute: $scheduledTimeMinute,
                     accentColor: .daisyHabit
                 )
                 .presentationDetents([.large])
@@ -500,18 +496,11 @@ struct HabitEditView: View {
                 set: { habitManager.lastError = $0 }
             ))
             .onChange(of: recurrenceRule) { oldValue, newValue in
-                // Handle recurrence changes: clear the inappropriate reminder type
-                let hadRecurrence = oldValue != nil
-                let hasRecurrence = newValue != nil
-
-                if hadRecurrence && !hasRecurrence {
-                    // Recurrence was removed: clear relative reminders
+                // Handle recurrence removal: clear reminders if recurrence is removed
+                if oldValue != nil && newValue == nil {
                     reminderOffset = nil
                     scheduledTimeHour = nil
                     scheduledTimeMinute = nil
-                } else if !hadRecurrence && hasRecurrence {
-                    // Recurrence was added: clear absolute reminder
-                    reminderDate = nil
                 }
             }
         }
@@ -530,7 +519,6 @@ struct HabitEditView: View {
         habit.habitDescriptionAttributed = habitDescriptionAttributed
         habit.priority = priority
         habit.recurrenceRule = recurrenceRule
-        habit.reminderDate = reminderDate
         habit.reminderOffset = reminderOffset
         habit.scheduledTimeHour = scheduledTimeHour
         habit.scheduledTimeMinute = scheduledTimeMinute

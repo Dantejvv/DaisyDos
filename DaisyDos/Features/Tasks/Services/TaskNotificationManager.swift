@@ -220,15 +220,18 @@ class TaskNotificationManager: BaseNotificationManager {
     // MARK: - Snooze Functionality
 
     func snoozeTask(_ task: Task, by interval: TimeInterval = 3600) {
-        // Remove existing notification
-        removeTaskNotification(taskId: task.id.uuidString)
-
-        // Reset notification fired state since we're scheduling a new snoozed notification
-        task.notificationFired = false
-
-        // Schedule new notification after snooze interval
         let identifier = "task_\(task.id.uuidString)"
 
+        // Remove both pending AND delivered notifications to prevent markDeliveredNotificationsAsFired
+        // from re-marking this task as fired during cold start
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
+        notificationCenter.removeDeliveredNotifications(withIdentifiers: [identifier])
+
+        // Update task state for snooze
+        task.notificationFired = false
+        task.snoozedUntil = Date().addingTimeInterval(interval)
+
+        // Schedule new notification after snooze interval
         let content = UNMutableNotificationContent()
         content.title = "Task Reminder (Snoozed)"
         content.body = task.title

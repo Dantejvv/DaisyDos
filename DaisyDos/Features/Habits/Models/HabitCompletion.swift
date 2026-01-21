@@ -37,24 +37,6 @@ class HabitCompletion {
 
     // MARK: - Computed Properties
 
-    var dayOfWeek: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE"
-        return formatter.string(from: completedDate)
-    }
-
-    var isToday: Bool {
-        Calendar.current.isDate(completedDate, inSameDayAs: Date())
-    }
-
-    var isThisWeek: Bool {
-        Calendar.current.isDate(completedDate, equalTo: Date(), toGranularity: .weekOfYear)
-    }
-
-    var isThisMonth: Bool {
-        Calendar.current.isDate(completedDate, equalTo: Date(), toGranularity: .month)
-    }
-
     var formattedDuration: String? {
         guard let duration = duration else { return nil }
 
@@ -68,109 +50,6 @@ class HabitCompletion {
         }
     }
 
-    // MARK: - Business Logic
-
-    /// Check if this completion was made on time based on habit's recurrence rule
-    func wasCompletedOnTime() -> Bool {
-        guard let habit = habit else { return false }
-        return habit.isDueOn(date: completedDate)
-    }
-
-    /// Get the streak position (how many days in a row including this one)
-    func streakPosition() -> Int {
-        guard let habit = habit else { return 0 }
-
-        let calendar = Calendar.current
-        let completions = (habit.completionEntries ?? [])
-            .sorted { $0.completedDate < $1.completedDate }
-
-        guard let thisIndex = completions.firstIndex(where: { $0.id == self.id }) else {
-            return 0
-        }
-
-        var position = 1
-        var currentIndex = thisIndex
-
-        // Count backwards to find consecutive days
-        while currentIndex > 0 {
-            let currentCompletion = completions[currentIndex]
-            let previousCompletion = completions[currentIndex - 1]
-
-            let daysBetween = calendar.dateComponents([.day],
-                from: previousCompletion.completedDate,
-                to: currentCompletion.completedDate).day ?? 0
-
-            if daysBetween == 1 {
-                position += 1
-                currentIndex -= 1
-            } else {
-                break
-            }
-        }
-
-        return position
-    }
-
-    /// Calculate how this completion affected the overall habit progress
-    func progressImpact() -> ProgressImpact {
-        guard let habit = habit else { return .none }
-
-        let streakPos = streakPosition()
-        let wasOnTime = wasCompletedOnTime()
-
-        switch (streakPos, wasOnTime) {
-        case (let pos, true) where pos > habit.longestStreak:
-            return .newRecord
-        case (let pos, true) where pos > 7:
-            return .weekStreak
-        case (_, true):
-            return .onTrack
-        case (_, false):
-            return .catchingUp
-        }
-    }
-}
-
-// MARK: - Progress Impact
-
-extension HabitCompletion {
-    enum ProgressImpact {
-        case newRecord
-        case weekStreak
-        case onTrack
-        case catchingUp
-        case none
-
-        var displayMessage: String {
-            switch self {
-            case .newRecord:
-                return "New personal record! 🎉"
-            case .weekStreak:
-                return "Week streak achieved! 🔥"
-            case .onTrack:
-                return "Staying on track! 👍"
-            case .catchingUp:
-                return "Catching up! 💪"
-            case .none:
-                return ""
-            }
-        }
-
-        var color: String {
-            switch self {
-            case .newRecord:
-                return "daisySuccess"
-            case .weekStreak:
-                return "orange"
-            case .onTrack:
-                return "daisyTask"
-            case .catchingUp:
-                return "yellow"
-            case .none:
-                return "daisyTextSecondary"
-            }
-        }
-    }
 }
 
 // MARK: - Analytics Extensions

@@ -513,6 +513,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
                 if let uuid = UUID(uuidString: taskID),
                    let task = fetchTask(by: uuid) {
                     task.notificationFired = true
+                    task.snoozedUntil = nil // Clear snooze state when notification fires
                     #if DEBUG
                     print("NotificationDelegate: Marked delivered task '\(task.title)' notification as fired")
                     #endif
@@ -554,6 +555,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
                   let uuid = UUID(uuidString: taskID),
                   let task = fetchTask(by: uuid) {
             task.notificationFired = true
+            task.snoozedUntil = nil // Clear snooze state when notification fires
             #if DEBUG
             print("NotificationDelegate: Marked task '\(task.title)' notification as fired")
             #endif

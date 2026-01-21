@@ -54,12 +54,6 @@ class HabitSubtask {
         lastCompletedDate = completed ? Date() : nil
         modifiedDate = Date()
     }
-
-    /// Reset completion status (called daily or when parent habit resets)
-    func resetDailyCompletion() {
-        isCompletedToday = false
-        modifiedDate = Date()
-    }
 }
 
 // MARK: - Equatable Conformance

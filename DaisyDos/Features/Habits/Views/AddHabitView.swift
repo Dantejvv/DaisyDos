@@ -28,7 +28,6 @@ struct AddHabitView: View {
     @State private var showingRecurrencePicker = false
     @State private var showingReminderPicker = false
     @State private var showingScheduledTimePicker = false
-    @State private var reminderDate: Date?
     @State private var reminderOffset: TimeInterval?
     @State private var scheduledTimeHour: Int?
     @State private var scheduledTimeMinute: Int?
@@ -97,7 +96,7 @@ struct AddHabitView: View {
                priority != .none ||
                !selectedTags.isEmpty ||
                recurrenceRule != nil ||
-               reminderDate != nil ||
+               reminderOffset != nil ||
                !subtasks.isEmpty ||
                !attachments.isEmpty
     }
@@ -122,7 +121,6 @@ struct AddHabitView: View {
                         MetadataToolbar(
                             config: .habit,
                             recurrenceRule: recurrenceRule,
-                            reminderDate: reminderDate,
                             reminderOffset: reminderOffset,
                             priority: priority,
                             accentColor: .daisyHabit,
@@ -206,10 +204,10 @@ struct AddHabitView: View {
                 .presentationDetents([.large])
             }
             .sheet(isPresented: $showingReminderPicker) {
-                ReminderPickerSheet(
-                    reminderDate: $reminderDate,
+                HabitReminderPickerSheet(
                     reminderOffset: $reminderOffset,
-                    hasRecurrence: recurrenceRule != nil,
+                    scheduledTimeHour: $scheduledTimeHour,
+                    scheduledTimeMinute: $scheduledTimeMinute,
                     accentColor: .daisyHabit
                 )
                 .presentationDetents([.large])
@@ -264,18 +262,11 @@ struct AddHabitView: View {
                 set: { habitManager.lastError = $0 }
             ))
             .onChange(of: recurrenceRule) { oldValue, newValue in
-                // Handle recurrence changes: clear the inappropriate reminder type
-                let hadRecurrence = oldValue != nil
-                let hasRecurrence = newValue != nil
-
-                if hadRecurrence && !hasRecurrence {
-                    // Recurrence was removed: clear relative reminders
+                // Handle recurrence removal: clear reminders if recurrence is removed
+                if oldValue != nil && newValue == nil {
                     reminderOffset = nil
                     scheduledTimeHour = nil
                     scheduledTimeMinute = nil
-                } else if !hadRecurrence && hasRecurrence {
-                    // Recurrence was added: clear absolute reminder
-                    reminderDate = nil
                 }
             }
             .tint(appearanceManager.currentAccentColor)
@@ -493,15 +484,13 @@ struct AddHabitView: View {
                 habit.recurrenceRule = rule
             }
 
-            // Set reminder if provided
-            // For recurring habits, use reminderOffset and scheduledTime; for non-recurring, use reminderDate
-            habit.reminderDate = reminderDate
+            // Set reminder if provided (relative offset from scheduled time)
             habit.reminderOffset = reminderOffset
             habit.scheduledTimeHour = scheduledTimeHour
             habit.scheduledTimeMinute = scheduledTimeMinute
 
             // Notify to trigger notification scheduling if reminder was set
-            if reminderDate != nil || reminderOffset != nil {
+            if reminderOffset != nil {
                 NotificationCenter.default.post(
                     name: .habitDidChange,
                     object: nil,

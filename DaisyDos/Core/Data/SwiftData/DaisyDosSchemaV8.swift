@@ -20,7 +20,6 @@ enum DaisyDosSchemaV8: VersionedSchema {
             Habit.self,
             Tag.self,
             HabitCompletion.self,
-            HabitStreak.self,
             HabitSkip.self,
             HabitSubtask.self,
             TaskLogEntry.self,
