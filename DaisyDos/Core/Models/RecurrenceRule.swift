@@ -70,12 +70,16 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         // If interval is greater than 1, show custom interval format
         if interval > 1 {
             switch frequency {
+            case .minutely:
+                return "Every \(interval)min"
+            case .hourly:
+                return "Every \(interval)h"
             case .daily:
                 return "Every \(interval)d"
             case .weekly:
                 return "Every \(interval)w"
             case .monthly:
-                return "Every \(interval)m"
+                return "Every \(interval)mo"
             case .yearly:
                 return "Every \(interval)y"
             case .custom:
@@ -122,6 +126,8 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
     // MARK: - Frequency Types
 
     enum Frequency: String, CaseIterable, Codable {
+        case minutely = "minutely"
+        case hourly = "hourly"
         case daily = "daily"
         case weekly = "weekly"
         case monthly = "monthly"
@@ -130,6 +136,10 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
 
         var displayName: String {
             switch self {
+            case .minutely:
+                return "Every X minutes"
+            case .hourly:
+                return "Hourly"
             case .daily:
                 return "Daily"
             case .weekly:
@@ -145,6 +155,10 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
 
         var description: String {
             switch self {
+            case .minutely:
+                return "Repeats every few minutes"
+            case .hourly:
+                return "Repeats every hour or every few hours"
             case .daily:
                 return "Repeats every day or every few days"
             case .weekly:
@@ -243,6 +257,26 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         )
     }
 
+    /// Creates an hourly recurrence rule
+    static func hourly(interval: Int = 1, endDate: Date? = nil, recreateIfIncomplete: Bool = true) -> RecurrenceRule {
+        return RecurrenceRule(
+            frequency: .hourly,
+            interval: interval,
+            endDate: endDate,
+            recreateIfIncomplete: recreateIfIncomplete
+        )
+    }
+
+    /// Creates a minutely recurrence rule
+    static func minutely(interval: Int = 1, endDate: Date? = nil, recreateIfIncomplete: Bool = true) -> RecurrenceRule {
+        return RecurrenceRule(
+            frequency: .minutely,
+            interval: interval,
+            endDate: endDate,
+            recreateIfIncomplete: recreateIfIncomplete
+        )
+    }
+
     // MARK: - Time Helpers
 
     /// Parse time string "HH:mm" into DateComponents
@@ -289,6 +323,8 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         /// Maps frequency to Calendar component for unified advancement
         var calendarComponent: Calendar.Component {
             switch frequency {
+            case .minutely: return .minute
+            case .hourly: return .hour
             case .daily: return .day
             case .weekly: return .weekOfYear
             case .monthly: return .month
@@ -398,6 +434,10 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         // Extract unit difference
         let unitsBetween: Int?
         switch component {
+        case .minute:
+            unitsBetween = calendar.dateComponents([.minute], from: baseDate, to: date).minute
+        case .hour:
+            unitsBetween = calendar.dateComponents([.hour], from: baseDate, to: date).hour
         case .day:
             unitsBetween = calendar.dateComponents([.day], from: baseDate, to: date).day
         case .weekOfYear:
@@ -520,6 +560,14 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
         guard interval > 0 else { return false }
 
         switch frequency {
+        case .minutely:
+            // 1-1440 minutes (up to 24 hours)
+            return interval >= 1 && interval <= 1440
+
+        case .hourly:
+            // 1-24 hours
+            return interval >= 1 && interval <= 24
+
         case .weekly:
             if let daysOfWeek = daysOfWeek {
                 return !daysOfWeek.isEmpty && daysOfWeek.allSatisfy { $0 >= 1 && $0 <= 7 }
@@ -542,6 +590,10 @@ struct RecurrenceRule: Codable, Equatable, Identifiable {
     var displayDescription: String {
         var baseDescription: String
         switch frequency {
+        case .minutely:
+            baseDescription = interval == 1 ? "Every minute" : "Every \(interval) minutes"
+        case .hourly:
+            baseDescription = interval == 1 ? "Hourly" : "Every \(interval) hours"
         case .daily:
             baseDescription = interval == 1 ? "Daily" : "Every \(interval) days"
         case .weekly:

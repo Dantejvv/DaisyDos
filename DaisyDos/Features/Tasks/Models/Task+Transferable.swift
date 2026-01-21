@@ -7,59 +7,68 @@
 
 import Foundation
 import SwiftUI
+import SwiftData
 import UniformTypeIdentifiers
 
 // MARK: - Custom UTTypes
 
 extension UTType {
     static let daisyTask = UTType(exportedAs: "com.daisydos.task")
-    static let daisySubtaskMove = UTType(exportedAs: "com.daisydos.subtask-move")
 }
 
-// MARK: - Internal Drag Data for Move Operations
+// MARK: - Task Transfer Data (Swift 6 Compatible)
 
-struct SubtaskMoveData: Codable, Transferable {
-    let taskId: UUID
-    let parentTaskId: UUID  // Required - must match drop target parent
-    let currentIndex: Int   // Position in current parent's subtask array
+// Use typealias to disambiguate from Swift's concurrency Task
+typealias DaisyTask = DaisyDos.Task
 
-    init(taskId: UUID, parentTaskId: UUID, currentIndex: Int) {
-        self.taskId = taskId
-        self.parentTaskId = parentTaskId
-        self.currentIndex = currentIndex
+/// Sendable transfer data using persistentModelID for Task drag-and-drop
+/// Use this instead of Task: Transferable to avoid Sendable conformance issues
+struct TaskTransferData: Codable, Sendable, Transferable {
+    let persistentModelID: String  // Encoded PersistentIdentifier
+    let taskId: UUID               // Fallback UUID for lookups
+    let title: String              // For external app text representation
+
+    init(from task: DaisyTask) {
+        // Encode PersistentIdentifier as a string for Codable conformance
+        if let encoded = try? JSONEncoder().encode(task.persistentModelID),
+           let idString = String(data: encoded, encoding: .utf8) {
+            self.persistentModelID = idString
+        } else {
+            self.persistentModelID = ""
+        }
+        self.taskId = task.id
+        self.title = task.title
+    }
+
+    /// Resolve the Task from a ModelContext using the persistentModelID
+    func resolveTask(in context: ModelContext) -> DaisyTask? {
+        // Try to decode and fetch by PersistentIdentifier first
+        if !persistentModelID.isEmpty,
+           let data = persistentModelID.data(using: .utf8),
+           let identifier = try? JSONDecoder().decode(PersistentIdentifier.self, from: data) {
+            return context.model(for: identifier) as? DaisyTask
+        }
+
+        // Fallback: fetch by UUID
+        let taskIdToFind = taskId
+        let descriptor = FetchDescriptor<DaisyTask>(predicate: #Predicate { $0.id == taskIdToFind })
+        return try? context.fetch(descriptor).first
     }
 
     static var transferRepresentation: some TransferRepresentation {
-        CodableRepresentation(contentType: .daisySubtaskMove)
+        CodableRepresentation(contentType: .daisyTask)
+
+        // External apps - plain text representation of title
+        ProxyRepresentation(exporting: \.title)
     }
 }
 
-// MARK: - Task Transferable Implementation
+// MARK: - Task Draggable Extension
 
-extension Task: Transferable {
-    static var transferRepresentation: some TransferRepresentation {
-        // For internal operations, use a proxy to SubtaskMoveData
-        ProxyRepresentation { task in
-            guard let parent = task.parentTask else {
-                // Root tasks cannot be reordered via this mechanism
-                return SubtaskMoveData(taskId: task.id, parentTaskId: UUID(), currentIndex: -1)
-            }
-
-            let currentIndex = parent.subtasks?.firstIndex(of: task) ?? -1
-            return SubtaskMoveData(
-                taskId: task.id,
-                parentTaskId: parent.id,
-                currentIndex: currentIndex
-            )
-        } importing: { (moveData: SubtaskMoveData) in
-            // This should not be used for importing - drop handler manages moves
-            Task(title: "Moving...")
-        }
-
-        // External apps - text representation
-        ProxyRepresentation(exporting: \.title) { title in
-            Task(title: title)
-        }
+extension DaisyTask {
+    /// Creates transfer data for drag-and-drop operations
+    var transferData: TaskTransferData {
+        TaskTransferData(from: self)
     }
 }
 

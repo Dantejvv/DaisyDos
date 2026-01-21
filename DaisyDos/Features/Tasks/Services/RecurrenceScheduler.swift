@@ -144,7 +144,8 @@ class RecurrenceScheduler {
             priority: pendingRecurrence.taskPriority,
             dueDate: pendingRecurrence.scheduledDate,
             recurrenceRule: pendingRecurrence.recurrenceRule,
-            reminderDate: nil // Recurring instances don't inherit reminders
+            reminderDate: nil, // Recurring instances don't use absolute reminders
+            reminderOffset: pendingRecurrence.reminderOffset // Inherit relative reminder offset
         )
 
         // Set occurrence index

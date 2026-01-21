@@ -150,8 +150,8 @@ class TaskNotificationManager: BaseNotificationManager {
         // Remove existing notifications
         removeTaskNotification(taskId: task.id.uuidString)
 
-        // Only schedule if task has a reminder date set
-        guard let reminderDate = task.reminderDate else {
+        // Use effectiveReminderDate which handles both absolute and relative reminders
+        guard let reminderDate = task.effectiveReminderDate else {
             return
         }
 

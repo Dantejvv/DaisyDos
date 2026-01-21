@@ -15,8 +15,11 @@ struct RecurrenceRulePickerView: View {
     @State private var frequency: RecurrenceRule.Frequency = .daily
     @State private var selectedDaysOfWeek: Set<Int> = []
     @State private var dayOfMonth: Int = 1
-    @State private var customDayInterval: Int = 1
+    @State private var customInterval: Int = 1
     @State private var isCustomInterval: Bool = false
+
+    // Sub-daily interval support
+    @State private var subDailyUnit: SubDailyUnit = .hours
 
     // Time support
     @State private var hasSpecificTime: Bool = false
@@ -29,30 +32,57 @@ struct RecurrenceRulePickerView: View {
     @State private var hasMaxOccurrences: Bool = false
     @State private var maxOccurrences: Int = 10
 
+    // Sub-daily unit options
+    enum SubDailyUnit: String, CaseIterable {
+        case minutes = "minutes"
+        case hours = "hours"
+        case days = "days"
+
+        var displayName: String {
+            rawValue
+        }
+
+        var singularName: String {
+            switch self {
+            case .minutes: return "minute"
+            case .hours: return "hour"
+            case .days: return "day"
+            }
+        }
+
+        var maxValue: Int {
+            switch self {
+            case .minutes: return 59
+            case .hours: return 24
+            case .days: return 365
+            }
+        }
+    }
+
     // Quick preset options
     enum QuickPreset: String, CaseIterable {
+        case hourly = "Hourly"
         case daily = "Daily"
         case weekly = "Weekly"
         case monthly = "Monthly"
-        case yearly = "Yearly"
         case custom = "Custom"
 
         var icon: String {
             switch self {
+            case .hourly: return "clock.arrow.circlepath"
             case .daily: return "repeat.circle"
             case .weekly: return "calendar.circle"
             case .monthly: return "calendar.badge.clock"
-            case .yearly: return "calendar.badge.plus"
             case .custom: return "number.circle"
             }
         }
 
         var frequency: RecurrenceRule.Frequency? {
             switch self {
+            case .hourly: return .hourly
             case .daily: return .daily
             case .weekly: return .weekly
             case .monthly: return .monthly
-            case .yearly: return .yearly
             case .custom: return nil // Custom doesn't have a preset frequency
             }
         }
@@ -72,7 +102,8 @@ struct RecurrenceRulePickerView: View {
                             ) {
                                 if preset == .custom {
                                     isCustomInterval = true
-                                    frequency = .daily // Default to daily for custom
+                                    subDailyUnit = .days // Default to days for custom
+                                    frequency = .daily
                                 } else {
                                     isCustomInterval = false
                                     if let freq = preset.frequency {
@@ -80,7 +111,7 @@ struct RecurrenceRulePickerView: View {
                                     }
                                     // Reset custom settings when selecting preset
                                     selectedDaysOfWeek = []
-                                    customDayInterval = 1
+                                    customInterval = 1
                                     if frequency == .monthly {
                                         dayOfMonth = Calendar.current.component(.day, from: Date())
                                     }
@@ -103,8 +134,10 @@ struct RecurrenceRulePickerView: View {
                         monthDayPicker
                     }
 
-                    // MARK: - Time Selection
-                    timePicker
+                    // MARK: - Time Selection (hide for sub-daily frequencies)
+                    if !isSubDailyFrequency {
+                        timePicker
+                    }
 
                     // MARK: - Incomplete Task Behavior
                     incompleteTaskToggle
@@ -228,6 +261,44 @@ struct RecurrenceRulePickerView: View {
     @ViewBuilder
     private var customIntervalPicker: some View {
         VStack(alignment: .leading, spacing: Spacing.small) {
+            // Unit selector (Minutes / Hours / Days)
+            HStack(spacing: 8) {
+                ForEach(SubDailyUnit.allCases, id: \.self) { unit in
+                    let isSelected = subDailyUnit == unit
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            subDailyUnit = unit
+                            // Reset interval to 1 when changing units, but clamp to max
+                            customInterval = min(customInterval, unit.maxValue)
+                            // Update frequency based on unit
+                            switch unit {
+                            case .minutes: frequency = .minutely
+                            case .hours: frequency = .hourly
+                            case .days: frequency = .daily
+                            }
+                        }
+                    }) {
+                        Text(unit.displayName.capitalized)
+                            .font(.subheadline.weight(isSelected ? .semibold : .medium))
+                            .foregroundColor(isSelected ? .white : .daisyText)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(isSelected ? Color.daisyTask : Color.daisySurface)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(isSelected ? Color.clear : Color.daisyTask.opacity(0.2), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, Spacing.small)
+
+            // Interval picker
             HStack {
                 Text("Repeat every")
                     .font(.body)
@@ -235,20 +306,21 @@ struct RecurrenceRulePickerView: View {
 
                 Spacer()
 
-                Picker("Days", selection: $customDayInterval) {
-                    ForEach(1...365, id: \.self) { day in
-                        Text("\(day)").tag(day)
+                Picker("Interval", selection: $customInterval) {
+                    ForEach(1...subDailyUnit.maxValue, id: \.self) { value in
+                        Text("\(value)").tag(value)
                     }
                 }
                 .pickerStyle(.wheel)
                 .frame(height: 180)
                 .clipped()
 
-                Text(customDayInterval == 1 ? "day" : "days")
+                Text(customInterval == 1 ? subDailyUnit.singularName : subDailyUnit.displayName)
                     .font(.body)
                     .foregroundColor(.daisyText)
             }
             .padding(.horizontal)
+            .padding(.bottom, Spacing.small)
         }
         .background(Color.daisySurface)
         .cornerRadius(12)
@@ -395,6 +467,11 @@ struct RecurrenceRulePickerView: View {
         }
     }
 
+    /// Returns true if the current frequency is sub-daily (hourly or minutely)
+    private var isSubDailyFrequency: Bool {
+        frequency == .hourly || frequency == .minutely
+    }
+
     // MARK: - Helper Methods
 
     private func initializeFromExistingRule() {
@@ -404,6 +481,22 @@ struct RecurrenceRulePickerView: View {
         selectedDaysOfWeek = existingRule.daysOfWeek ?? []
         dayOfMonth = existingRule.dayOfMonth ?? Calendar.current.component(.day, from: Date())
         recreateIfIncomplete = existingRule.recreateIfIncomplete
+
+        // Handle custom intervals (including sub-daily)
+        if existingRule.interval > 1 || existingRule.frequency == .hourly || existingRule.frequency == .minutely {
+            isCustomInterval = true
+            customInterval = existingRule.interval
+
+            // Set the appropriate unit based on frequency
+            switch existingRule.frequency {
+            case .minutely:
+                subDailyUnit = .minutes
+            case .hourly:
+                subDailyUnit = .hours
+            default:
+                subDailyUnit = .days
+            }
+        }
 
         // Load time if present
         if let preferredTime = existingRule.preferredTime {
@@ -433,10 +526,21 @@ struct RecurrenceRulePickerView: View {
         var daysOfWeek: Set<Int>? = nil
         var dayOfMonth: Int? = nil
         var interval = 1
+        var finalFrequency = frequency
 
-        // Handle custom interval (every X days)
+        // Handle custom interval (every X minutes/hours/days)
         if isCustomInterval {
-            interval = customDayInterval
+            interval = customInterval
+
+            // Set frequency based on selected unit
+            switch subDailyUnit {
+            case .minutes:
+                finalFrequency = .minutely
+            case .hours:
+                finalFrequency = .hourly
+            case .days:
+                finalFrequency = .daily
+            }
         } else {
             switch frequency {
             case .weekly:
@@ -453,14 +557,14 @@ struct RecurrenceRulePickerView: View {
             }
         }
 
-        // Extract time if specified
+        // Extract time if specified (only for non-sub-daily frequencies)
         var preferredTime: DateComponents? = nil
-        if hasSpecificTime {
+        if hasSpecificTime && !isSubDailyFrequency {
             preferredTime = Calendar.current.dateComponents([.hour, .minute], from: selectedTime)
         }
 
         recurrenceRule = RecurrenceRule(
-            frequency: frequency,
+            frequency: finalFrequency,
             interval: interval,
             daysOfWeek: daysOfWeek,
             dayOfMonth: dayOfMonth,

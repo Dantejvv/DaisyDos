@@ -29,6 +29,7 @@ struct TaskEditView: View {
     @State private var showingPriorityPicker = false
     @State private var showingReminderPicker = false
     @State private var reminderDate: Date?
+    @State private var reminderOffset: TimeInterval?
     @State private var showingUnsavedChangesAlert = false
     @State private var showingAttachmentSourcePicker = false
     @State private var showingPhotoPicker = false
@@ -88,6 +89,7 @@ struct TaskEditView: View {
         self._selectedTags = State(initialValue: task.tags ?? [])
         self._recurrenceRule = State(initialValue: task.recurrenceRule)
         self._reminderDate = State(initialValue: task.reminderDate)
+        self._reminderOffset = State(initialValue: task.reminderOffset)
 
         // Initialize staged attachments from existing task attachments
         // Convert existing attachments to temporary URLs for staging
@@ -166,6 +168,7 @@ struct TaskEditView: View {
                (hasDueDate ? dueDate : nil) != task.dueDate ||
                recurrenceRule != task.recurrenceRule ||
                reminderDate != task.reminderDate ||
+               reminderOffset != task.reminderOffset ||
                Set(selectedTags.map(\.id)) != Set((task.tags ?? []).map(\.id)) ||
                subtasksChanged ||
                attachmentsChanged
@@ -393,6 +396,8 @@ struct TaskEditView: View {
             .sheet(isPresented: $showingReminderPicker) {
                 ReminderPickerSheet(
                     reminderDate: $reminderDate,
+                    reminderOffset: $reminderOffset,
+                    hasRecurrence: recurrenceRule != nil,
                     accentColor: .daisyTask
                 )
                 .presentationDetents([.medium, .large])
@@ -445,6 +450,19 @@ struct TaskEditView: View {
                 get: { taskManager.lastError },
                 set: { taskManager.lastError = $0 }
             ))
+            .onChange(of: recurrenceRule) { oldValue, newValue in
+                // Handle recurrence changes: clear the inappropriate reminder type
+                let hadRecurrence = oldValue != nil
+                let hasRecurrence = newValue != nil
+
+                if hadRecurrence && !hasRecurrence {
+                    // Recurrence was removed: clear relative reminder
+                    reminderOffset = nil
+                } else if !hadRecurrence && hasRecurrence {
+                    // Recurrence was added: clear absolute reminder
+                    reminderDate = nil
+                }
+            }
         }
     }
 
@@ -463,6 +481,7 @@ struct TaskEditView: View {
         task.dueDate = hasDueDate ? dueDate : nil
         task.recurrenceRule = recurrenceRule
         task.reminderDate = reminderDate
+        task.reminderOffset = reminderOffset
         task.modifiedDate = Date()
 
         // Update tags

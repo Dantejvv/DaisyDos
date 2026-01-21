@@ -158,8 +158,8 @@ class HabitNotificationManager: BaseNotificationManager {
         // Remove existing notification first
         removeHabitNotification(habitId: habit.id.uuidString)
 
-        // Only schedule if habit has a reminder date set
-        guard let reminderDate = habit.reminderDate else { return }
+        // Use effectiveReminderDate which handles both absolute and relative reminders
+        guard let reminderDate = habit.effectiveReminderDate else { return }
 
         // Only schedule if reminder date is in the future
         guard reminderDate > Date() else { return }

@@ -903,4 +903,265 @@ struct RecurrenceRuleTests {
         let day10 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 11))!
         #expect(!rule.matches(date: day10, relativeTo: baseDate))
     }
+
+    // MARK: - Hourly Recurrence Tests
+
+    @Test("Hourly recurrence - simple interval")
+    func testHourlySimpleInterval() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 10, minute: 0))!
+        let rule = RecurrenceRule.hourly()
+
+        let next = rule.nextOccurrence(after: startDate)
+        #expect(next != nil)
+
+        let expected = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 11, minute: 0))!
+        #expect(next == expected)
+    }
+
+    @Test("Hourly recurrence - multi-hour interval", arguments: [2, 4, 6, 12])
+    func testHourlyMultiHourInterval(interval: Int) {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 8, minute: 0))!
+        let rule = RecurrenceRule.hourly(interval: interval)
+
+        let next = rule.nextOccurrence(after: startDate)
+        #expect(next != nil)
+
+        let expected = calendar.date(byAdding: .hour, value: interval, to: startDate)!
+        #expect(next == expected)
+    }
+
+    @Test("Hourly recurrence - crosses midnight")
+    func testHourlyCrossesMidnight() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 23, minute: 0))!
+        let rule = RecurrenceRule.hourly(interval: 2)
+
+        let next = rule.nextOccurrence(after: startDate)
+        #expect(next != nil)
+
+        // Should be 1 AM next day
+        let expected = calendar.date(from: DateComponents(year: 2025, month: 1, day: 2, hour: 1, minute: 0))!
+        #expect(next == expected)
+    }
+
+    @Test("Hourly recurrence - generate multiple occurrences")
+    func testHourlyMultipleOccurrences() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 8, minute: 0))!
+        let rule = RecurrenceRule.hourly(interval: 3) // Every 3 hours
+
+        let occurrences = rule.occurrences(from: startDate, limit: 5)
+        #expect(occurrences.count == 5)
+
+        // Verify hours: 11, 14, 17, 20, 23
+        let expectedHours = [11, 14, 17, 20, 23]
+        for (index, date) in occurrences.enumerated() {
+            let hour = calendar.component(.hour, from: date)
+            #expect(hour == expectedHours[index], "Occurrence \(index) should be at hour \(expectedHours[index])")
+        }
+    }
+
+    @Test("Hourly recurrence - respects end date")
+    func testHourlyEndDate() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 8, minute: 0))!
+        let endDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 14, minute: 0))!
+        let rule = RecurrenceRule.hourly(endDate: endDate)
+
+        let occurrences = rule.occurrences(from: startDate, limit: 100)
+        #expect(occurrences.count == 6) // 9, 10, 11, 12, 13, 14
+        #expect(occurrences.allSatisfy { $0 <= endDate })
+    }
+
+    @Test("Hourly validation - interval bounds")
+    func testHourlyValidation() {
+        // Valid: 1-24 hours
+        let valid1 = RecurrenceRule.hourly(interval: 1)
+        #expect(valid1.isValid)
+
+        let valid24 = RecurrenceRule.hourly(interval: 24)
+        #expect(valid24.isValid)
+
+        // Invalid: > 24 hours
+        let invalid = RecurrenceRule(frequency: .hourly, interval: 25)
+        #expect(!invalid.isValid)
+    }
+
+    @Test("Hourly display description")
+    func testHourlyDisplayDescription() {
+        let rule1 = RecurrenceRule.hourly()
+        #expect(rule1.displayDescription == "Hourly")
+
+        let rule2 = RecurrenceRule.hourly(interval: 4)
+        #expect(rule2.displayDescription == "Every 4 hours")
+    }
+
+    @Test("Hourly pattern matching")
+    func testHourlyPatternMatching() {
+        let calendar = Calendar.current
+        let baseDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 8, minute: 0))!
+        let rule = RecurrenceRule.hourly(interval: 2)
+
+        // Match: +2 hours
+        let hour2 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 10, minute: 0))!
+        #expect(rule.matches(date: hour2, relativeTo: baseDate))
+
+        // Match: +4 hours
+        let hour4 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 12, minute: 0))!
+        #expect(rule.matches(date: hour4, relativeTo: baseDate))
+
+        // Non-match: +3 hours
+        let hour3 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 11, minute: 0))!
+        #expect(!rule.matches(date: hour3, relativeTo: baseDate))
+    }
+
+    // MARK: - Minutely Recurrence Tests
+
+    @Test("Minutely recurrence - simple interval")
+    func testMinutelySimpleInterval() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 10, minute: 0))!
+        let rule = RecurrenceRule.minutely()
+
+        let next = rule.nextOccurrence(after: startDate)
+        #expect(next != nil)
+
+        let expected = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 10, minute: 1))!
+        #expect(next == expected)
+    }
+
+    @Test("Minutely recurrence - common intervals", arguments: [15, 30, 45])
+    func testMinutelyCommonIntervals(interval: Int) {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 10, minute: 0))!
+        let rule = RecurrenceRule.minutely(interval: interval)
+
+        let next = rule.nextOccurrence(after: startDate)
+        #expect(next != nil)
+
+        let expected = calendar.date(byAdding: .minute, value: interval, to: startDate)!
+        #expect(next == expected)
+    }
+
+    @Test("Minutely recurrence - crosses hour")
+    func testMinutelyCrossesHour() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 10, minute: 45))!
+        let rule = RecurrenceRule.minutely(interval: 30)
+
+        let next = rule.nextOccurrence(after: startDate)
+        #expect(next != nil)
+
+        // Should be 11:15
+        let expected = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 11, minute: 15))!
+        #expect(next == expected)
+    }
+
+    @Test("Minutely recurrence - generate multiple occurrences")
+    func testMinutelyMultipleOccurrences() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 10, minute: 0))!
+        let rule = RecurrenceRule.minutely(interval: 15)
+
+        let occurrences = rule.occurrences(from: startDate, limit: 5)
+        #expect(occurrences.count == 5)
+
+        // Verify times: 10:15, 10:30, 10:45, 11:00, 11:15
+        let expectedMinutes = [15, 30, 45, 0, 15]
+        let expectedHours = [10, 10, 10, 11, 11]
+        for (index, date) in occurrences.enumerated() {
+            let minute = calendar.component(.minute, from: date)
+            let hour = calendar.component(.hour, from: date)
+            #expect(minute == expectedMinutes[index], "Occurrence \(index) should be at minute \(expectedMinutes[index])")
+            #expect(hour == expectedHours[index], "Occurrence \(index) should be at hour \(expectedHours[index])")
+        }
+    }
+
+    @Test("Minutely validation - interval bounds")
+    func testMinutelyValidation() {
+        // Valid: 1-1440 minutes
+        let valid1 = RecurrenceRule.minutely(interval: 1)
+        #expect(valid1.isValid)
+
+        let valid1440 = RecurrenceRule.minutely(interval: 1440) // 24 hours
+        #expect(valid1440.isValid)
+
+        // Invalid: > 1440 minutes
+        let invalid = RecurrenceRule(frequency: .minutely, interval: 1441)
+        #expect(!invalid.isValid)
+    }
+
+    @Test("Minutely display description")
+    func testMinutelyDisplayDescription() {
+        let rule1 = RecurrenceRule.minutely()
+        #expect(rule1.displayDescription == "Every minute")
+
+        let rule2 = RecurrenceRule.minutely(interval: 30)
+        #expect(rule2.displayDescription == "Every 30 minutes")
+    }
+
+    @Test("Minutely pattern matching")
+    func testMinutelyPatternMatching() {
+        let calendar = Calendar.current
+        let baseDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 10, minute: 0))!
+        let rule = RecurrenceRule.minutely(interval: 15)
+
+        // Match: +15 minutes
+        let min15 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 10, minute: 15))!
+        #expect(rule.matches(date: min15, relativeTo: baseDate))
+
+        // Match: +30 minutes
+        let min30 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 10, minute: 30))!
+        #expect(rule.matches(date: min30, relativeTo: baseDate))
+
+        // Non-match: +20 minutes
+        let min20 = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 10, minute: 20))!
+        #expect(!rule.matches(date: min20, relativeTo: baseDate))
+    }
+
+    @Test("Minutely recurrence - crosses midnight")
+    func testMinutelyCrossesMidnight() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 23, minute: 45))!
+        let rule = RecurrenceRule.minutely(interval: 30)
+
+        let next = rule.nextOccurrence(after: startDate)
+        #expect(next != nil)
+
+        // Should be 00:15 next day
+        let expected = calendar.date(from: DateComponents(year: 2025, month: 1, day: 2, hour: 0, minute: 15))!
+        #expect(next == expected)
+    }
+
+    // MARK: - Sub-Daily Codable Tests
+
+    @Test("Hourly rule is Codable")
+    func testHourlyCodable() throws {
+        let original = RecurrenceRule.hourly(interval: 4, endDate: Date())
+
+        let encoder = JSONEncoder()
+        let data = try encoder.encode(original)
+
+        let decoder = JSONDecoder()
+        let decoded = try decoder.decode(RecurrenceRule.self, from: data)
+
+        #expect(decoded.frequency == original.frequency)
+        #expect(decoded.interval == original.interval)
+    }
+
+    @Test("Minutely rule is Codable")
+    func testMinutelyCodable() throws {
+        let original = RecurrenceRule.minutely(interval: 30)
+
+        let encoder = JSONEncoder()
+        let data = try encoder.encode(original)
+
+        let decoder = JSONDecoder()
+        let decoded = try decoder.decode(RecurrenceRule.self, from: data)
+
+        #expect(decoded.frequency == .minutely)
+        #expect(decoded.interval == 30)
+    }
 }

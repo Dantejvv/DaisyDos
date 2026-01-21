@@ -29,6 +29,7 @@ struct AddTaskView: View {
     @State private var showingPriorityPicker = false
     @State private var showingReminderPicker = false
     @State private var reminderDate: Date?
+    @State private var reminderOffset: TimeInterval?
     @State private var showingUnsavedChangesAlert = false
     @State private var subtasks: [SubtaskItem] = []
     @State private var newSubtaskTitle = ""
@@ -120,6 +121,7 @@ struct AddTaskView: View {
                         dueDate: dueDate,
                         recurrenceRule: recurrenceRule,
                         reminderDate: reminderDate,
+                        reminderOffset: reminderOffset,
                         priority: priority,
                         accentColor: .daisyTask,
                         onDateTap: { showingDatePicker = true },
@@ -206,6 +208,8 @@ struct AddTaskView: View {
             .sheet(isPresented: $showingReminderPicker) {
                 ReminderPickerSheet(
                     reminderDate: $reminderDate,
+                    reminderOffset: $reminderOffset,
+                    hasRecurrence: recurrenceRule != nil,
                     accentColor: .daisyTask
                 )
                 .presentationDetents([.medium, .large])
@@ -253,6 +257,19 @@ struct AddTaskView: View {
                 get: { taskManager.lastError },
                 set: { taskManager.lastError = $0 }
             ))
+            .onChange(of: recurrenceRule) { oldValue, newValue in
+                // Handle recurrence changes: clear the inappropriate reminder type
+                let hadRecurrence = oldValue != nil
+                let hasRecurrence = newValue != nil
+
+                if hadRecurrence && !hasRecurrence {
+                    // Recurrence was removed: clear relative reminder
+                    reminderOffset = nil
+                } else if !hadRecurrence && hasRecurrence {
+                    // Recurrence was added: clear absolute reminder
+                    reminderDate = nil
+                }
+            }
             .tint(appearanceManager.currentAccentColor)
         }
     }
@@ -424,8 +441,10 @@ struct AddTaskView: View {
             }
 
             // Add reminder if set - use updateTask to ensure notification is scheduled
-            if reminderDate != nil {
+            // For recurring tasks, use reminderOffset; for non-recurring, use reminderDate
+            if reminderDate != nil || reminderOffset != nil {
                 task.reminderDate = reminderDate
+                task.reminderOffset = reminderOffset
                 // Notify to trigger notification scheduling
                 NotificationCenter.default.post(
                     name: .taskDidChange,

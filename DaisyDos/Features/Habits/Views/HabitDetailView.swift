@@ -162,10 +162,11 @@ struct HabitDetailView: View {
         .sheet(isPresented: $showingSkipView) {
             SimpleHabitSkipView(
                 habit: habit,
-                onSkip: { reason in
-                    _ = habitManager.skipHabit(habit, reason: reason)
+                onSkip: {
+                    _ = habitManager.skipHabit(habit)
                 }
             )
+            .presentationDetents([.medium])
         }
         .sheet(isPresented: $showingTagAssignment) {
             TagSelectionView(selectedTags: .init(

@@ -206,7 +206,7 @@ struct HabitManagerTests {
         #expect(habit.currentStreak == 0)
     }
 
-    @Test("Skip habit without reason")
+    @Test("Skip habit")
     func testSkipHabit() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
@@ -220,25 +220,7 @@ struct HabitManagerTests {
         let skip = manager.skipHabit(habit)
 
         #expect(skip != nil)
-        #expect(skip?.reason == nil)
         #expect(skip?.habit?.id == habit.id)
-    }
-
-    @Test("Skip habit with reason")
-    func testSkipHabitWithReason() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-        let manager = HabitManager(modelContext: context)
-
-        guard case .success(let habit) = manager.createHabit(title: "Exercise") else {
-            Issue.record("Failed to create habit")
-            return
-        }
-
-        let skip = manager.skipHabit(habit, reason: "Was feeling sick")
-
-        #expect(skip != nil)
-        #expect(skip?.reason == "Was feeling sick")
     }
 
     @Test("Reset habit streak")

@@ -38,6 +38,9 @@ class PendingRecurrence {
     /// Track occurrence index for maxOccurrences enforcement
     var occurrenceIndex: Int = 1
 
+    /// Relative reminder offset (inherited from source task for recurring reminders)
+    var reminderOffset: TimeInterval?
+
     /// When this pending recurrence was created
     var createdDate: Date = Date()
 
@@ -56,6 +59,7 @@ class PendingRecurrence {
         self.recurrenceRule = sourceTask.recurrenceRule
         self.tagIds = sourceTask.tags?.map { $0.id }
         self.occurrenceIndex = sourceTask.occurrenceIndex + 1
+        self.reminderOffset = sourceTask.reminderOffset // Inherit relative reminder offset
         self.createdDate = Date()
     }
 

@@ -355,7 +355,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         }
 
         // Skip habit using HabitManager
-        if habitManager.skipHabit(habit, reason: "Skipped from notification") != nil {
+        if habitManager.skipHabit(habit) != nil {
             #if DEBUG
             print("NotificationDelegate: Successfully skipped habit '\(habit.title)'")
             #endif

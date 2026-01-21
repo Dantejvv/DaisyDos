@@ -52,7 +52,8 @@ class Task {
     var dueDate: Date?
     var recurrenceRule: RecurrenceRule?
     var completedDate: Date?
-    var reminderDate: Date? // Absolute date/time for reminder notification
+    var reminderDate: Date? // Absolute date/time for reminder notification (non-recurring tasks only)
+    var reminderOffset: TimeInterval? // Seconds before due time for relative reminders (recurring tasks only, negative value e.g., -900 for 15 min before)
     var notificationFired: Bool = false // Tracks if the reminder notification has been delivered
     var occurrenceIndex: Int = 1 // Tracks which occurrence this is (1-based, for maxOccurrences enforcement)
 
@@ -103,7 +104,8 @@ class Task {
         priority: Priority = .none,
         dueDate: Date? = nil,
         recurrenceRule: RecurrenceRule? = nil,
-        reminderDate: Date? = nil
+        reminderDate: Date? = nil,
+        reminderOffset: TimeInterval? = nil
     ) {
         self.id = UUID()
         self.title = title
@@ -112,6 +114,7 @@ class Task {
         self.dueDate = dueDate
         self.recurrenceRule = recurrenceRule
         self.reminderDate = reminderDate
+        self.reminderOffset = reminderOffset
         self.isCompleted = false
         self.createdDate = Date()
         self.modifiedDate = Date()
@@ -365,12 +368,24 @@ class Task {
     }
 
     var hasReminder: Bool {
-        reminderDate != nil
+        reminderDate != nil || reminderOffset != nil
+    }
+
+    /// Computes the effective reminder date based on whether this is a recurring or non-recurring task
+    /// - Recurring tasks: Calculate from dueDate + reminderOffset
+    /// - Non-recurring tasks: Use absolute reminderDate
+    var effectiveReminderDate: Date? {
+        // For recurring tasks with a relative offset
+        if let offset = reminderOffset, let due = dueDate, recurrenceRule != nil {
+            return due.addingTimeInterval(offset)
+        }
+        // For non-recurring tasks with an absolute reminder date
+        return reminderDate
     }
 
     /// Returns true if the task has a reminder that hasn't fired yet
     var hasPendingReminder: Bool {
-        hasReminder && !notificationFired
+        effectiveReminderDate != nil && !notificationFired
     }
 
     var subtaskProgressText: String? {
@@ -430,7 +445,8 @@ class Task {
             priority: priority,
             dueDate: nextDate,
             recurrenceRule: recurrenceRule,
-            reminderDate: nil // Recurring instances don't inherit reminders
+            reminderDate: nil, // Recurring instances don't use absolute reminders
+            reminderOffset: reminderOffset // Inherit the relative reminder offset
         )
 
         // Copy tags
@@ -478,7 +494,15 @@ class Task {
     }
 
     /// Short display text for reminder (used in toolbar labels)
+    /// For recurring tasks with relative offsets, shows the offset (e.g., "15m before")
+    /// For non-recurring tasks, shows the absolute date/time
     var reminderDisplayText: String? {
+        // For recurring tasks with relative offset, show the offset description
+        if recurrenceRule != nil, let offset = reminderOffset {
+            return ReminderOffset.displayText(for: offset)
+        }
+
+        // For non-recurring tasks, show the absolute reminder date
         guard let reminderDate = reminderDate else { return nil }
 
         let calendar = Calendar.current

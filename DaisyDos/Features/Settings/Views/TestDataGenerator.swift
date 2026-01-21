@@ -197,15 +197,13 @@ struct TestDataGenerator {
             if index % 5 == 0 && template.3 > 0 {
                 let skip1 = HabitSkip(
                     habit: habit,
-                    skippedDate: calendar.date(byAdding: .day, value: -7, to: now)!,
-                    reason: "Was sick"
+                    skippedDate: calendar.date(byAdding: .day, value: -7, to: now)!
                 )
                 modelContext.insert(skip1)
 
                 let skip2 = HabitSkip(
                     habit: habit,
-                    skippedDate: calendar.date(byAdding: .day, value: -14, to: now)!,
-                    reason: "Traveling"
+                    skippedDate: calendar.date(byAdding: .day, value: -14, to: now)!
                 )
                 modelContext.insert(skip2)
             }

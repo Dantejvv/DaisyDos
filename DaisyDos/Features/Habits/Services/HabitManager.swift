@@ -255,8 +255,8 @@ class HabitManager: EntityManagerProtocol {
         }
     }
 
-    func skipHabit(_ habit: Habit, reason: String? = nil) -> HabitSkip? {
-        guard let skip = habit.skipHabit(reason: reason) else {
+    func skipHabit(_ habit: Habit) -> HabitSkip? {
+        guard let skip = habit.skipHabit() else {
             return nil // Already completed or skipped today
         }
 

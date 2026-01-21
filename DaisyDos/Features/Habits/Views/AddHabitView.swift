@@ -27,7 +27,11 @@ struct AddHabitView: View {
     @State private var recurrenceRule: RecurrenceRule? = .daily()
     @State private var showingRecurrencePicker = false
     @State private var showingReminderPicker = false
+    @State private var showingScheduledTimePicker = false
     @State private var reminderDate: Date?
+    @State private var reminderOffset: TimeInterval?
+    @State private var scheduledTimeHour: Int?
+    @State private var scheduledTimeMinute: Int?
     @State private var showingPriorityPicker = false
     @State private var showingUnsavedChangesAlert = false
     @State private var subtasks: [SubtaskItem] = []
@@ -114,16 +118,24 @@ struct AddHabitView: View {
 
                     // MARK: - Metadata Toolbar
 
-                    MetadataToolbar(
-                        config: .habit,
-                        recurrenceRule: recurrenceRule,
-                        reminderDate: reminderDate,
-                        priority: priority,
-                        accentColor: .daisyHabit,
-                        onRecurrenceTap: { showingRecurrencePicker = true },
-                        onReminderTap: { showingReminderPicker = true },
-                        onPriorityTap: { showingPriorityPicker = true }
-                    )
+                    VStack(spacing: Spacing.small) {
+                        MetadataToolbar(
+                            config: .habit,
+                            recurrenceRule: recurrenceRule,
+                            reminderDate: reminderDate,
+                            reminderOffset: reminderOffset,
+                            priority: priority,
+                            accentColor: .daisyHabit,
+                            onRecurrenceTap: { showingRecurrencePicker = true },
+                            onReminderTap: { showingReminderPicker = true },
+                            onPriorityTap: { showingPriorityPicker = true }
+                        )
+
+                        // Scheduled time picker (only shown when recurrence is set)
+                        if recurrenceRule != nil {
+                            scheduledTimeRow
+                        }
+                    }
                     .padding(.horizontal)
                     .padding(.top, Spacing.medium)
 
@@ -196,9 +208,19 @@ struct AddHabitView: View {
             .sheet(isPresented: $showingReminderPicker) {
                 ReminderPickerSheet(
                     reminderDate: $reminderDate,
+                    reminderOffset: $reminderOffset,
+                    hasRecurrence: recurrenceRule != nil,
                     accentColor: .daisyHabit
                 )
                 .presentationDetents([.large])
+            }
+            .sheet(isPresented: $showingScheduledTimePicker) {
+                ScheduledTimePickerSheet(
+                    scheduledTimeHour: $scheduledTimeHour,
+                    scheduledTimeMinute: $scheduledTimeMinute,
+                    accentColor: .daisyHabit
+                )
+                .presentationDetents([.medium])
             }
             .sheet(isPresented: $showingPriorityPicker) {
                 PriorityPickerSheet(
@@ -241,11 +263,72 @@ struct AddHabitView: View {
                 get: { habitManager.lastError },
                 set: { habitManager.lastError = $0 }
             ))
+            .onChange(of: recurrenceRule) { oldValue, newValue in
+                // Handle recurrence changes: clear the inappropriate reminder type
+                let hadRecurrence = oldValue != nil
+                let hasRecurrence = newValue != nil
+
+                if hadRecurrence && !hasRecurrence {
+                    // Recurrence was removed: clear relative reminders
+                    reminderOffset = nil
+                    scheduledTimeHour = nil
+                    scheduledTimeMinute = nil
+                } else if !hadRecurrence && hasRecurrence {
+                    // Recurrence was added: clear absolute reminder
+                    reminderDate = nil
+                }
+            }
             .tint(appearanceManager.currentAccentColor)
         }
     }
 
     // MARK: - View Components
+
+    /// Row for setting scheduled time (shown for recurring habits)
+    private var scheduledTimeRow: some View {
+        Button(action: {
+            showingScheduledTimePicker = true
+        }) {
+            HStack(spacing: Spacing.small) {
+                Image(systemName: "clock")
+                    .font(.body)
+                    .foregroundColor(scheduledTimeHour != nil ? .daisyHabit : .daisyTextSecondary)
+
+                Text(scheduledTimeDisplayText)
+                    .font(.subheadline)
+                    .foregroundColor(scheduledTimeHour != nil ? .daisyText : .daisyTextSecondary)
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+            }
+            .padding()
+            .background(Color.daisySurface)
+            .cornerRadius(12)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Display text for scheduled time
+    private var scheduledTimeDisplayText: String {
+        guard let hour = scheduledTimeHour, let minute = scheduledTimeMinute else {
+            return "Set Scheduled Time"
+        }
+
+        var components = DateComponents()
+        components.hour = hour
+        components.minute = minute
+
+        guard let date = Calendar.current.date(from: components) else {
+            return "Set Scheduled Time"
+        }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return "Scheduled at \(formatter.string(from: date))"
+    }
 
     private var primaryFieldsSection: some View {
         VStack(spacing: Spacing.medium) {
@@ -411,10 +494,14 @@ struct AddHabitView: View {
             }
 
             // Set reminder if provided
+            // For recurring habits, use reminderOffset and scheduledTime; for non-recurring, use reminderDate
             habit.reminderDate = reminderDate
+            habit.reminderOffset = reminderOffset
+            habit.scheduledTimeHour = scheduledTimeHour
+            habit.scheduledTimeMinute = scheduledTimeMinute
 
             // Notify to trigger notification scheduling if reminder was set
-            if reminderDate != nil {
+            if reminderDate != nil || reminderOffset != nil {
                 NotificationCenter.default.post(
                     name: .habitDidChange,
                     object: nil,

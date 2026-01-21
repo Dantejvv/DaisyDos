@@ -20,9 +20,6 @@ struct InputValidation {
 
         /// Maximum characters for tag names
         static let tagName: Int = 20
-
-        /// Maximum characters for skip reasons
-        static let skipReason: Int = 100
     }
 
     // MARK: - Color Thresholds

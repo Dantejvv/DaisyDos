@@ -49,7 +49,6 @@ struct TodayView: View {
     @State private var itemToDelete: TodayItem?
     @State private var taskToReschedule: Task?
     @State private var habitToSkip: Habit?
-    @State private var skipReason: String = ""
     @State private var rescheduleDate: Date = Date()
 
     // Note: Detail navigation now uses NavigationPath via NavigationManager
@@ -217,7 +216,13 @@ struct TodayView: View {
             }
             .sheet(isPresented: $showingSkipReasonSheet) {
                 if let habit = habitToSkip {
-                    skipReasonSheet(for: habit)
+                    SimpleHabitSkipView(
+                        habit: habit,
+                        onSkip: {
+                            _ = habitManager.skipHabit(habit)
+                        }
+                    )
+                    .presentationDetents([.medium])
                 }
             }
             .alert(
@@ -506,58 +511,6 @@ struct TodayView: View {
         .presentationDetents([.medium])
     }
 
-    // MARK: - Skip Reason Sheet
-
-    @ViewBuilder
-    private func skipReasonSheet(for habit: Habit) -> some View {
-        NavigationStack {
-            VStack(spacing: 20) {
-                Text("Why are you skipping this habit?")
-                    .font(.headline)
-                    .padding(.top, 20)
-
-                TextField("Reason (optional)", text: $skipReason, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(3...6)
-                    .padding(.horizontal)
-
-                HStack(spacing: 16) {
-                    Button("Skip Without Reason") {
-                        _ = habitManager.skipHabit(habit, reason: nil)
-                        showingSkipReasonSheet = false
-                        habitToSkip = nil
-                        skipReason = ""
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Skip With Reason") {
-                        let reason = skipReason.isEmpty ? nil : skipReason
-                        _ = habitManager.skipHabit(habit, reason: reason)
-                        showingSkipReasonSheet = false
-                        habitToSkip = nil
-                        skipReason = ""
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(skipReason.isEmpty)
-                }
-                .padding(.horizontal)
-
-                Spacer()
-            }
-            .navigationTitle("Skip Habit")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        showingSkipReasonSheet = false
-                        habitToSkip = nil
-                        skipReason = ""
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
 
     // MARK: - Helper Methods
 

@@ -57,8 +57,16 @@ class Habit {
     /// Priority level for habit importance and organization
     var priority: Priority = Priority.none
 
-    /// Absolute date/time for reminder notification (aligned with Task model)
+    /// Absolute date/time for reminder notification (non-recurring habits only)
     var reminderDate: Date?
+
+    /// Scheduled time of day for the habit (hour/minute components for recurring habits)
+    /// Used as the reference point for relative reminder offsets
+    var scheduledTimeHour: Int?
+    var scheduledTimeMinute: Int?
+
+    /// Seconds before scheduled time for relative reminders (recurring habits only, negative value e.g., -900 for 15 min before)
+    var reminderOffset: TimeInterval?
 
     /// Tracks if the reminder notification has been delivered (resets daily for recurring habits)
     var notificationFired: Bool = false
@@ -165,20 +173,87 @@ class Habit {
     }
 
     var hasAlert: Bool {
-        reminderDate != nil
+        reminderDate != nil || reminderOffset != nil
     }
 
     var hasReminder: Bool {
-        reminderDate != nil
+        reminderDate != nil || reminderOffset != nil
+    }
+
+    /// Computed accessor for scheduled time as DateComponents
+    var scheduledTime: DateComponents? {
+        get {
+            guard let hour = scheduledTimeHour, let minute = scheduledTimeMinute else {
+                return nil
+            }
+            return DateComponents(hour: hour, minute: minute)
+        }
+        set {
+            scheduledTimeHour = newValue?.hour
+            scheduledTimeMinute = newValue?.minute
+        }
+    }
+
+    /// Computes the effective reminder date based on whether this is a recurring or non-recurring habit
+    /// - Recurring habits: Calculate from today's scheduledTime + reminderOffset
+    /// - Non-recurring habits: Use absolute reminderDate
+    var effectiveReminderDate: Date? {
+        // For recurring habits with a relative offset and scheduled time
+        if let offset = reminderOffset, let scheduled = scheduledTime, recurrenceRule != nil {
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+
+            // Build today's scheduled datetime from scheduledTime components
+            guard let hour = scheduled.hour, let minute = scheduled.minute else {
+                return nil
+            }
+
+            var components = calendar.dateComponents([.year, .month, .day], from: today)
+            components.hour = hour
+            components.minute = minute
+
+            guard let scheduledDateTime = calendar.date(from: components) else {
+                return nil
+            }
+
+            // Apply the offset
+            let reminderDateTime = scheduledDateTime.addingTimeInterval(offset)
+
+            // If the reminder time has already passed today, schedule for next occurrence
+            if reminderDateTime < Date() {
+                // Find next due date based on recurrence rule
+                if let nextDue = nextDueDate(after: Date()) {
+                    var nextComponents = calendar.dateComponents([.year, .month, .day], from: nextDue)
+                    nextComponents.hour = hour
+                    nextComponents.minute = minute
+                    if let nextScheduledDateTime = calendar.date(from: nextComponents) {
+                        return nextScheduledDateTime.addingTimeInterval(offset)
+                    }
+                }
+            }
+
+            return reminderDateTime
+        }
+
+        // For non-recurring habits with an absolute reminder date
+        return reminderDate
     }
 
     /// Returns true if the habit has a reminder/alert that hasn't fired yet
     var hasPendingAlert: Bool {
-        hasAlert && !notificationFired
+        effectiveReminderDate != nil && !notificationFired
     }
 
     /// Short display text for reminder (used in toolbar labels)
+    /// For recurring habits with relative offsets, shows the offset (e.g., "15m before")
+    /// For non-recurring habits, shows the absolute date/time
     var reminderDisplayText: String? {
+        // For recurring habits with relative offset, show the offset description
+        if recurrenceRule != nil, let offset = reminderOffset {
+            return ReminderOffset.displayText(for: offset)
+        }
+
+        // For non-recurring habits, show the absolute reminder date
         guard let reminderDate = reminderDate else { return nil }
 
         let calendar = Calendar.current
@@ -197,6 +272,24 @@ class Habit {
             formatter.dateFormat = "MMM d"
             return formatter.string(from: reminderDate)
         }
+    }
+
+    /// Display text for the scheduled time (e.g., "9:00 AM")
+    var scheduledTimeDisplayText: String? {
+        guard let hour = scheduledTimeHour, let minute = scheduledTimeMinute else {
+            return nil
+        }
+
+        let calendar = Calendar.current
+        var components = DateComponents()
+        components.hour = hour
+        components.minute = minute
+
+        guard let date = calendar.date(from: components) else { return nil }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: date)
     }
 
     var subtaskProgressText: String? {
@@ -454,16 +547,15 @@ class Habit {
         return completion
     }
 
-    /// Skip habit with optional reason
-    func skipHabit(reason: String? = nil) -> HabitSkip? {
+    /// Skip habit for today without breaking streak
+    func skipHabit() -> HabitSkip? {
         guard canSkip() else { return nil }
 
         let today = Calendar.current.startOfDay(for: Date())
 
         let skip = HabitSkip(
             habit: self,
-            skippedDate: today,
-            reason: reason
+            skippedDate: today
         )
 
         // Add to skip entries

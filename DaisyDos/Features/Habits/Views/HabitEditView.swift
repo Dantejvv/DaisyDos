@@ -28,7 +28,11 @@ struct HabitEditView: View {
     @State private var showingRecurrencePicker = false
     @State private var showingPriorityPicker = false
     @State private var showingReminderPicker = false
+    @State private var showingScheduledTimePicker = false
     @State private var reminderDate: Date?
+    @State private var reminderOffset: TimeInterval?
+    @State private var scheduledTimeHour: Int?
+    @State private var scheduledTimeMinute: Int?
     @State private var showingUnsavedChangesAlert = false
     @State private var showingAttachmentSourcePicker = false
     @State private var showingPhotoPicker = false
@@ -92,6 +96,9 @@ struct HabitEditView: View {
         self._selectedTags = State(initialValue: habit.tags ?? [])
         self._recurrenceRule = State(initialValue: habit.recurrenceRule)
         self._reminderDate = State(initialValue: habit.reminderDate)
+        self._reminderOffset = State(initialValue: habit.reminderOffset)
+        self._scheduledTimeHour = State(initialValue: habit.scheduledTimeHour)
+        self._scheduledTimeMinute = State(initialValue: habit.scheduledTimeMinute)
 
         // Initialize staged attachments from existing habit attachments
         // Convert existing attachments to temporary URLs for staging
@@ -169,6 +176,9 @@ struct HabitEditView: View {
                priority != habit.priority ||
                recurrenceRule != habit.recurrenceRule ||
                reminderDate != habit.reminderDate ||
+               reminderOffset != habit.reminderOffset ||
+               scheduledTimeHour != habit.scheduledTimeHour ||
+               scheduledTimeMinute != habit.scheduledTimeMinute ||
                Set(selectedTags.map(\.id)) != Set((habit.tags ?? []).map(\.id)) ||
                subtasksChanged ||
                attachmentsChanged
@@ -293,18 +303,72 @@ struct HabitEditView: View {
     }
 
     private var toolbarSection: some View {
-        MetadataToolbar(
-            config: .habit,
-            recurrenceRule: recurrenceRule,
-            reminderDate: reminderDate,
-            priority: priority,
-            accentColor: .daisyHabit,
-            onRecurrenceTap: { showingRecurrencePicker = true },
-            onReminderTap: { showingReminderPicker = true },
-            onPriorityTap: { showingPriorityPicker = true }
-        )
+        VStack(spacing: Spacing.small) {
+            MetadataToolbar(
+                config: .habit,
+                recurrenceRule: recurrenceRule,
+                reminderDate: reminderDate,
+                reminderOffset: reminderOffset,
+                priority: priority,
+                accentColor: .daisyHabit,
+                onRecurrenceTap: { showingRecurrencePicker = true },
+                onReminderTap: { showingReminderPicker = true },
+                onPriorityTap: { showingPriorityPicker = true }
+            )
+
+            // Scheduled time picker (only shown when recurrence is set)
+            if recurrenceRule != nil {
+                scheduledTimeRow
+            }
+        }
         .padding(.horizontal)
         .padding(.top, Spacing.medium)
+    }
+
+    /// Row for setting scheduled time (shown for recurring habits)
+    private var scheduledTimeRow: some View {
+        Button(action: {
+            showingScheduledTimePicker = true
+        }) {
+            HStack(spacing: Spacing.small) {
+                Image(systemName: "clock")
+                    .font(.body)
+                    .foregroundColor(scheduledTimeHour != nil ? .daisyHabit : .daisyTextSecondary)
+
+                Text(scheduledTimeDisplayText)
+                    .font(.subheadline)
+                    .foregroundColor(scheduledTimeHour != nil ? .daisyText : .daisyTextSecondary)
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.daisyTextSecondary)
+            }
+            .padding()
+            .background(Color.daisySurface)
+            .cornerRadius(12)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Display text for scheduled time
+    private var scheduledTimeDisplayText: String {
+        guard let hour = scheduledTimeHour, let minute = scheduledTimeMinute else {
+            return "Set Scheduled Time"
+        }
+
+        var components = DateComponents()
+        components.hour = hour
+        components.minute = minute
+
+        guard let date = Calendar.current.date(from: components) else {
+            return "Set Scheduled Time"
+        }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return "Scheduled at \(formatter.string(from: date))"
     }
 
     private var attachmentsSection: some View {
@@ -377,9 +441,19 @@ struct HabitEditView: View {
             .sheet(isPresented: $showingReminderPicker) {
                 ReminderPickerSheet(
                     reminderDate: $reminderDate,
+                    reminderOffset: $reminderOffset,
+                    hasRecurrence: recurrenceRule != nil,
                     accentColor: .daisyHabit
                 )
                 .presentationDetents([.large])
+            }
+            .sheet(isPresented: $showingScheduledTimePicker) {
+                ScheduledTimePickerSheet(
+                    scheduledTimeHour: $scheduledTimeHour,
+                    scheduledTimeMinute: $scheduledTimeMinute,
+                    accentColor: .daisyHabit
+                )
+                .presentationDetents([.medium])
             }
             .confirmationDialog("Add Attachment", isPresented: $showingAttachmentSourcePicker, titleVisibility: .visible) {
                 #if canImport(PhotosUI)
@@ -425,6 +499,21 @@ struct HabitEditView: View {
                 get: { habitManager.lastError },
                 set: { habitManager.lastError = $0 }
             ))
+            .onChange(of: recurrenceRule) { oldValue, newValue in
+                // Handle recurrence changes: clear the inappropriate reminder type
+                let hadRecurrence = oldValue != nil
+                let hasRecurrence = newValue != nil
+
+                if hadRecurrence && !hasRecurrence {
+                    // Recurrence was removed: clear relative reminders
+                    reminderOffset = nil
+                    scheduledTimeHour = nil
+                    scheduledTimeMinute = nil
+                } else if !hadRecurrence && hasRecurrence {
+                    // Recurrence was added: clear absolute reminder
+                    reminderDate = nil
+                }
+            }
         }
     }
 
@@ -442,6 +531,9 @@ struct HabitEditView: View {
         habit.priority = priority
         habit.recurrenceRule = recurrenceRule
         habit.reminderDate = reminderDate
+        habit.reminderOffset = reminderOffset
+        habit.scheduledTimeHour = scheduledTimeHour
+        habit.scheduledTimeMinute = scheduledTimeMinute
         habit.modifiedDate = Date()
 
         // Update tags

@@ -164,14 +164,15 @@ struct MetadataToolbar: View {
     let config: MetadataToolbarConfig
     let dueDate: Date?
     let recurrenceRule: RecurrenceRule?
-    let reminderDate: Date?  // For tasks - absolute reminder date/time
-    let alert: AlertOption?  // For habits - time-of-day alert
+    let reminderDate: Date?  // For non-recurring items - absolute reminder date/time
+    let reminderOffset: TimeInterval?  // For recurring items - relative reminder offset
+    let alert: AlertOption?  // For habits - time-of-day alert (legacy)
     let priority: Priority?
     let accentColor: Color
     let onDateTap: () -> Void
     let onRecurrenceTap: () -> Void
-    let onReminderTap: () -> Void  // For tasks
-    let onAlertTap: () -> Void     // For habits
+    let onReminderTap: () -> Void  // For tasks and habits
+    let onAlertTap: () -> Void     // For habits (legacy)
     let onPriorityTap: () -> Void
 
     init(
@@ -179,6 +180,7 @@ struct MetadataToolbar: View {
         dueDate: Date? = nil,
         recurrenceRule: RecurrenceRule? = nil,
         reminderDate: Date? = nil,
+        reminderOffset: TimeInterval? = nil,
         alert: AlertOption? = nil,
         priority: Priority? = nil,
         accentColor: Color = .daisyTask,
@@ -192,6 +194,7 @@ struct MetadataToolbar: View {
         self.dueDate = dueDate
         self.recurrenceRule = recurrenceRule
         self.reminderDate = reminderDate
+        self.reminderOffset = reminderOffset
         self.alert = alert
         self.priority = priority
         self.accentColor = accentColor
@@ -207,7 +210,8 @@ struct MetadataToolbar: View {
     }
 
     private var hasReminder: Bool {
-        reminderDate != nil
+        // Has reminder if either absolute date or relative offset is set
+        reminderDate != nil || reminderOffset != nil
     }
 
     private var formattedDueDate: String {
@@ -224,7 +228,14 @@ struct MetadataToolbar: View {
     }
 
     /// Short label for reminder display in toolbar
+    /// Shows relative offset text for recurring items, absolute date/time for non-recurring
     private var reminderShortLabel: String {
+        // For recurring items with relative offset
+        if recurrenceRule != nil, let offset = reminderOffset {
+            return ReminderOffset.displayText(for: offset)
+        }
+
+        // For non-recurring items with absolute date
         guard let date = reminderDate else { return "" }
         let calendar = Calendar.current
         let formatter = DateFormatter()

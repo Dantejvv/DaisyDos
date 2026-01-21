@@ -154,11 +154,12 @@ struct HabitsView: View {
             .sheet(item: $habitToSkip) { habit in
                 SimpleHabitSkipView(
                     habit: habit,
-                    onSkip: { reason in
-                        let _ = habitManager.skipHabit(habit, reason: reason)
+                    onSkip: {
+                        _ = habitManager.skipHabit(habit)
                         self.habitToSkip = nil
                     }
                 )
+                .presentationDetents([.medium])
                 .environment(habitManager)
             }
             .sheet(item: $habitToEdit) { habit in
