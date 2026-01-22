@@ -65,6 +65,9 @@ class Habit {
     /// Seconds before scheduled time for reminders (negative value e.g., -900 for 15 min before)
     var reminderOffset: TimeInterval?
 
+    /// When snoozed, this overrides the normal reminder time until the snooze fires
+    var snoozedUntil: Date?
+
     /// Tracks if the reminder notification has been delivered (resets daily for recurring habits)
     var notificationFired: Bool = false
 
@@ -184,7 +187,13 @@ class Habit {
     }
 
     /// Computes the effective reminder date from scheduledTime + reminderOffset
+    /// Priority: snoozedUntil > calculated reminder time
     var effectiveReminderDate: Date? {
+        // If snoozed, use the snooze time (overrides normal calculation)
+        if let snoozed = snoozedUntil {
+            return snoozed
+        }
+
         guard let offset = reminderOffset, let scheduled = scheduledTime else {
             return nil
         }
@@ -210,7 +219,13 @@ class Habit {
 
         // If the reminder time has already passed today, schedule for next occurrence
         if reminderDateTime < Date() {
-            // Find next due date based on recurrence rule
+            // For habits WITHOUT recurrence, just add 1 day
+            // This fixes the bug where non-recurring habits would return past dates
+            if recurrenceRule == nil {
+                return calendar.date(byAdding: .day, value: 1, to: reminderDateTime)
+            }
+
+            // For recurring habits, find next due date based on recurrence rule
             if let nextDue = nextDueDate(after: Date()) {
                 var nextComponents = calendar.dateComponents([.year, .month, .day], from: nextDue)
                 nextComponents.hour = hour

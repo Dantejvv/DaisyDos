@@ -144,19 +144,43 @@ class TaskNotificationManager: BaseNotificationManager {
     // MARK: - Task Notification Scheduling
 
     func scheduleTaskReminder(for task: Task) {
-        guard isNotificationsEnabled && isPermissionGranted else { return }
-        guard !task.isCompleted else { return } // Don't schedule for completed tasks
+        #if DEBUG
+        print("📣 scheduleTaskReminder called for '\(task.title)'")
+        print("   - isNotificationsEnabled: \(isNotificationsEnabled)")
+        print("   - isPermissionGranted: \(isPermissionGranted)")
+        print("   - isCompleted: \(task.isCompleted)")
+        print("   - effectiveReminderDate: \(task.effectiveReminderDate?.description ?? "nil")")
+        #endif
+
+        guard isNotificationsEnabled && isPermissionGranted else {
+            #if DEBUG
+            print("   ❌ Skipped: notifications disabled or no permission")
+            #endif
+            return
+        }
+        guard !task.isCompleted else {
+            #if DEBUG
+            print("   ❌ Skipped: task is completed")
+            #endif
+            return
+        }
 
         // Remove existing notifications
         removeTaskNotification(taskId: task.id.uuidString)
 
         // Use effectiveReminderDate which handles both absolute and relative reminders
         guard let reminderDate = task.effectiveReminderDate else {
+            #if DEBUG
+            print("   ❌ Skipped: no effectiveReminderDate")
+            #endif
             return
         }
 
         // Only schedule if reminder date is in the future
         guard reminderDate > Date() else {
+            #if DEBUG
+            print("   ❌ Skipped: reminderDate is in the past (\(reminderDate))")
+            #endif
             return
         }
 
@@ -164,6 +188,14 @@ class TaskNotificationManager: BaseNotificationManager {
         task.notificationFired = false
 
         let identifier = "task_\(task.id.uuidString)"
+        let timeInterval = reminderDate.timeIntervalSinceNow
+
+        #if DEBUG
+        print("   ✅ Scheduling notification:")
+        print("      - identifier: \(identifier)")
+        print("      - timeInterval: \(timeInterval) seconds (\(timeInterval / 3600) hours)")
+        print("      - reminderDate: \(reminderDate)")
+        #endif
 
         // Create notification content
         let content = UNMutableNotificationContent()
@@ -179,7 +211,7 @@ class TaskNotificationManager: BaseNotificationManager {
 
         // Schedule the notification using the absolute reminder date
         let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: reminderDate.timeIntervalSinceNow,
+            timeInterval: timeInterval,
             repeats: false
         )
 
@@ -191,7 +223,11 @@ class TaskNotificationManager: BaseNotificationManager {
 
         notificationCenter.add(request) { error in
             if let error = error {
-                print("Failed to schedule task notification: \(error)")
+                print("   ❌ Failed to schedule task notification: \(error)")
+            } else {
+                #if DEBUG
+                print("   ✅ Successfully added notification request to system")
+                #endif
             }
         }
     }

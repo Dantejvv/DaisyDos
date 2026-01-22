@@ -504,6 +504,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
                 if let uuid = UUID(uuidString: habitID),
                    let habit = fetchHabit(by: uuid) {
                     habit.notificationFired = true
+                    habit.snoozedUntil = nil // Clear snooze state when notification fires
                     #if DEBUG
                     print("NotificationDelegate: Marked delivered habit '\(habit.title)' notification as fired")
                     #endif
@@ -548,6 +549,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
            let uuid = UUID(uuidString: habitID),
            let habit = fetchHabit(by: uuid) {
             habit.notificationFired = true
+            habit.snoozedUntil = nil // Clear snooze state when notification fires
             #if DEBUG
             print("NotificationDelegate: Marked habit '\(habit.title)' notification as fired")
             #endif

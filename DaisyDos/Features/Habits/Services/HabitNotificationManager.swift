@@ -152,22 +152,58 @@ class HabitNotificationManager: BaseNotificationManager {
     /// Schedules a one-shot notification for the habit's next occurrence.
     /// This mirrors TaskNotificationManager's approach - schedule once, reschedule on completion.
     func scheduleHabitReminder(for habit: Habit) {
-        guard isNotificationsEnabled && isPermissionGranted else { return }
-        guard !habit.isCompletedToday else { return } // Don't schedule if already completed today
+        #if DEBUG
+        print("📣 scheduleHabitReminder called for '\(habit.title)'")
+        print("   - isNotificationsEnabled: \(isNotificationsEnabled)")
+        print("   - isPermissionGranted: \(isPermissionGranted)")
+        print("   - isCompletedToday: \(habit.isCompletedToday)")
+        print("   - effectiveReminderDate: \(habit.effectiveReminderDate?.description ?? "nil")")
+        #endif
+
+        guard isNotificationsEnabled && isPermissionGranted else {
+            #if DEBUG
+            print("   ❌ Skipped: notifications disabled or no permission")
+            #endif
+            return
+        }
+        guard !habit.isCompletedToday else {
+            #if DEBUG
+            print("   ❌ Skipped: habit is completed today")
+            #endif
+            return
+        }
 
         // Remove existing notification first
         removeHabitNotification(habitId: habit.id.uuidString)
 
         // Use effectiveReminderDate which handles both absolute and relative reminders
-        guard let reminderDate = habit.effectiveReminderDate else { return }
+        guard let reminderDate = habit.effectiveReminderDate else {
+            #if DEBUG
+            print("   ❌ Skipped: no effectiveReminderDate")
+            #endif
+            return
+        }
 
         // Only schedule if reminder date is in the future
-        guard reminderDate > Date() else { return }
+        guard reminderDate > Date() else {
+            #if DEBUG
+            print("   ❌ Skipped: reminderDate is in the past (\(reminderDate))")
+            #endif
+            return
+        }
 
         // Reset notification fired state since we're scheduling a new notification
         habit.notificationFired = false
 
         let identifier = "habit_\(habit.id.uuidString)"
+        let timeInterval = reminderDate.timeIntervalSinceNow
+
+        #if DEBUG
+        print("   ✅ Scheduling notification:")
+        print("      - identifier: \(identifier)")
+        print("      - timeInterval: \(timeInterval) seconds (\(timeInterval / 3600) hours)")
+        print("      - reminderDate: \(reminderDate)")
+        #endif
 
         // Create notification content
         let content = UNMutableNotificationContent()
@@ -183,7 +219,7 @@ class HabitNotificationManager: BaseNotificationManager {
 
         // Schedule using absolute time interval (one-shot, like tasks)
         let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: reminderDate.timeIntervalSinceNow,
+            timeInterval: timeInterval,
             repeats: false
         )
 
@@ -195,7 +231,11 @@ class HabitNotificationManager: BaseNotificationManager {
 
         notificationCenter.add(request) { error in
             if let error = error {
-                print("Failed to schedule habit notification: \(error)")
+                print("   ❌ Failed to schedule habit notification: \(error)")
+            } else {
+                #if DEBUG
+                print("   ✅ Successfully added notification request to system")
+                #endif
             }
         }
     }
@@ -234,8 +274,9 @@ class HabitNotificationManager: BaseNotificationManager {
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
         notificationCenter.removeDeliveredNotifications(withIdentifiers: [identifier])
 
-        // Reset notification fired state since we're scheduling a new snoozed notification
+        // Update habit state for snooze (mirrors Task snooze implementation)
         habit.notificationFired = false
+        habit.snoozedUntil = Date().addingTimeInterval(interval)
 
         let content = UNMutableNotificationContent()
         content.title = "Habit Reminder (Snoozed)"

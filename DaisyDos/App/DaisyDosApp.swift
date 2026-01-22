@@ -27,20 +27,44 @@ struct DaisyDosApp: App {
     let navigationManager = NavigationManager()
     let notificationPreferencesManager = NotificationPreferencesManager()
 
-    // CloudKit and network managers
+    // CloudKit and network managers (initialized lazily in .task)
     @State private var cloudKitSyncManager: CloudKitSyncManager?
     @State private var networkMonitor: NetworkMonitor?
     @State private var offlineQueueManager: OfflineQueueManager?
 
-    // Recurrence scheduler for deferred task creation
+    // Recurrence scheduler for deferred task creation (initialized lazily in .task)
     @State private var recurrenceScheduler: RecurrenceScheduler?
 
-    // Badge manager for dynamic app badge updates
+    // Badge manager for dynamic app badge updates (initialized lazily in .task)
     @State private var badgeManager: BadgeManager?
+
+    // MARK: - Shared Manager Instances (used by both environment and NotificationDelegate)
+    // These must be single instances to prevent state desync between notification scheduling
+    // in views and notification handling in the delegate.
+    // IMPORTANT: These are created eagerly at init time (not in .task) to ensure they exist
+    // when the environment modifiers are evaluated.
+    let taskManager: TaskManager
+    let habitManager: HabitManager
+    let taskNotificationManager: TaskNotificationManager
+    let habitNotificationManager: HabitNotificationManager
+    let tagManager: TagManager
+    let analyticsManager: AnalyticsManager
+    let logbookManager: LogbookManager
 
     // MARK: - Initialization
 
     init() {
+        // Create all managers eagerly using the shared container
+        // This ensures they exist before .environment() is evaluated
+        let context = Self.sharedModelContainer.mainContext
+        taskManager = TaskManager(modelContext: context)
+        habitManager = HabitManager(modelContext: context)
+        taskNotificationManager = TaskNotificationManager(modelContext: context)
+        habitNotificationManager = HabitNotificationManager(modelContext: context)
+        tagManager = TagManager(modelContext: context)
+        analyticsManager = AnalyticsManager(modelContext: context)
+        logbookManager = LogbookManager(modelContext: context)
+
         // Pass navigationManager to AppDelegate so it can create the NotificationDelegate
         // in didFinishLaunchingWithOptions (before .task { } runs)
         // This fixes the cold start notification bug where the delegate wasn't set early enough
@@ -48,7 +72,7 @@ struct DaisyDosApp: App {
     }
 
     // Shared model container - created first so managers can use its context
-    var sharedModelContainer: ModelContainer = {
+    static var sharedModelContainer: ModelContainer = {
         let schema = Schema(versionedSchema: DaisyDosSchemaV8.self)
 
         // Dynamic CloudKit configuration based on LocalOnlyModeManager
@@ -90,39 +114,52 @@ struct DaisyDosApp: App {
             ContentView()
                 .task {
                     // Set ModelContext on NavigationManager for deep linking entity fetches
-                    navigationManager.setModelContext(sharedModelContainer.mainContext)
+                    navigationManager.setModelContext(Self.sharedModelContainer.mainContext)
 
                     // Initialize CloudKit managers if sync is enabled
                     if !localOnlyModeManager.isLocalOnlyMode {
-                        cloudKitSyncManager = CloudKitSyncManager(modelContext: sharedModelContainer.mainContext)
+                        cloudKitSyncManager = CloudKitSyncManager(modelContext: Self.sharedModelContainer.mainContext)
                         networkMonitor = NetworkMonitor()
                         offlineQueueManager = OfflineQueueManager(
-                            modelContext: sharedModelContainer.mainContext,
+                            modelContext: Self.sharedModelContainer.mainContext,
                             networkMonitor: networkMonitor!
                         )
                     }
 
                     // Initialize BadgeManager for dynamic badge updates
-                    badgeManager = BadgeManager(modelContext: sharedModelContainer.mainContext)
+                    badgeManager = BadgeManager(modelContext: Self.sharedModelContainer.mainContext)
 
-                    // Inject managers into the NotificationDelegate that was created in AppDelegate.
+                    // Inject the shared manager instances into the NotificationDelegate
                     // The delegate was registered early in didFinishLaunchingWithOptions to catch cold start
                     // notification taps. Now that SwiftData is ready, we can inject the managers.
                     // This processes any pending actions/markFired calls that arrived before managers were ready.
-                    let taskManager = TaskManager(modelContext: sharedModelContainer.mainContext)
-                    let habitMgr = HabitManager(modelContext: sharedModelContainer.mainContext)
-                    let taskNotifMgr = TaskNotificationManager(modelContext: sharedModelContainer.mainContext)
-                    let habitNotifMgr = HabitNotificationManager(modelContext: sharedModelContainer.mainContext)
+                    // NOTE: The managers were created in init() to ensure they exist for .environment()
                     appDelegate.notificationDelegate?.setManagers(
-                        habitManager: habitMgr,
+                        habitManager: habitManager,
                         taskManager: taskManager,
-                        taskNotificationManager: taskNotifMgr,
-                        habitNotificationManager: habitNotifMgr,
+                        taskNotificationManager: taskNotificationManager,
+                        habitNotificationManager: habitNotificationManager,
                         badgeManager: badgeManager!
                     )
 
+                    // MARK: - Schedule All Notifications on App Launch
+                    // This ensures notifications survive app restarts. Previously, notifications
+                    // were only scheduled when tasks/habits changed, not on app launch.
+                    if await taskNotificationManager.requestNotificationPermissions() {
+                        taskNotificationManager.scheduleAllTaskNotifications()
+                        #if DEBUG
+                        print("✅ Scheduled all task notifications on app launch")
+                        #endif
+                    }
+                    // Habit notifications share the same permission, so just schedule them
+                    habitNotificationManager.checkNotificationPermissions()
+                    habitNotificationManager.scheduleAllHabitNotifications()
+                    #if DEBUG
+                    print("✅ Scheduled all habit notifications on app launch")
+                    #endif
+
                     // Initialize recurrence scheduler
-                    recurrenceScheduler = RecurrenceScheduler(modelContext: sharedModelContainer.mainContext)
+                    recurrenceScheduler = RecurrenceScheduler(modelContext: Self.sharedModelContainer.mainContext)
 
                     // Process any pending recurrences on app launch
                     await processPendingRecurrences()
@@ -151,18 +188,20 @@ struct DaisyDosApp: App {
                 }
                 .applyAppearance(appearanceManager)
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(Self.sharedModelContainer)
         .environment(navigationManager)
         .environment(localOnlyModeManager)
         .environment(appearanceManager)
         .environment(notificationPreferencesManager)
-        .environment(TaskManager(modelContext: sharedModelContainer.mainContext))
-        .environment(TaskNotificationManager(modelContext: sharedModelContainer.mainContext))
-        .environment(HabitManager(modelContext: sharedModelContainer.mainContext))
-        .environment(AnalyticsManager(modelContext: sharedModelContainer.mainContext))
-        .environment(TagManager(modelContext: sharedModelContainer.mainContext))
-        .environment(HabitNotificationManager(modelContext: sharedModelContainer.mainContext))
-        .environment(LogbookManager(modelContext: sharedModelContainer.mainContext))
+        // Use shared manager instances - these are the SAME instances injected into NotificationDelegate
+        // This fixes the duplicate manager bug that caused notification state desync
+        .environment(taskManager)
+        .environment(taskNotificationManager)
+        .environment(habitManager)
+        .environment(analyticsManager)
+        .environment(tagManager)
+        .environment(habitNotificationManager)
+        .environment(logbookManager)
         .environment(recurrenceScheduler)
         .environment(badgeManager)
         .environment(cloudKitSyncManager)
@@ -184,7 +223,7 @@ struct DaisyDosApp: App {
         }
 
         // Perform housekeeping in background
-        let manager = LogbookManager(modelContext: sharedModelContainer.mainContext)
+        let manager = LogbookManager(modelContext: Self.sharedModelContainer.mainContext)
         let result = manager.performHousekeeping()
 
         switch result {

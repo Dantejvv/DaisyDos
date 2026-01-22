@@ -21,6 +21,19 @@ This is a standard Xcode project. Use Xcode to build and run:
 - **Test**: Cmd+U in Xcode or `xcodebuild test -scheme DaisyDos -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`
 - **Archive**: Product → Archive in Xcode for distribution
 
+### Testing Policy
+
+**Claude should NOT run tests directly.** Running tests via CLI consumes excessive tokens and time. Instead:
+
+1. **Build only**: After making changes, run `xcodebuild build` to verify compilation succeeds
+2. **Leave test execution to the user**: The user will run tests themselves via Xcode (⌘U) or CLI
+3. **If tests fail**: The user will report failures, and Claude can help debug specific failing tests
+
+Quick build command:
+```bash
+xcodebuild build -scheme DaisyDos -destination 'platform=iOS Simulator,id=05C5E451-7DF0-4243-9E28-9B5D6641EC77' 2>&1 | grep -E "(error:|warning:|BUILD)" | head -40
+```
+
 ### Simulator Destination Notes
 
 When running xcodebuild from CLI, use a specific simulator name. If there are multiple simulators with the same name (different iOS versions), you may need to specify by ID:
