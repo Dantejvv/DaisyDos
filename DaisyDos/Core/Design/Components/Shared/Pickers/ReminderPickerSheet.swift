@@ -3,23 +3,24 @@
 //  DaisyDos
 //
 //  Created by Claude Code on 1/6/26.
-//  Reminder picker that supports both absolute and relative reminders
+//  Reminder picker that supports both absolute and time-of-day reminders
 //
 //  When recurrence is NOT set: Shows date/time picker for absolute reminders
-//  When recurrence IS set: Shows preset offset options for relative reminders
+//  When recurrence IS set: Shows time-of-day picker for alert time
 //
 
 import SwiftUI
 
 /// Sheet-based reminder picker with conditional UI based on recurrence
 /// - Non-recurring items: Absolute date/time picker
-/// - Recurring items: Relative offset preset list
+/// - Recurring items: Time-of-day picker for alert time
 struct ReminderPickerSheet: View {
     // For non-recurring items (absolute reminder)
     @Binding var reminderDate: Date?
 
-    // For recurring items (relative reminder)
-    @Binding var reminderOffset: TimeInterval?
+    // For recurring items (alert time)
+    @Binding var alertTimeHour: Int?
+    @Binding var alertTimeMinute: Int?
 
     /// Whether the item has a recurrence rule set
     let hasRecurrence: Bool
@@ -32,18 +33,21 @@ struct ReminderPickerSheet: View {
     @State private var workingDate: Date
     @State private var hasAbsoluteReminder: Bool
 
-    // Relative mode state
-    @State private var selectedOffset: ReminderOffset?
+    // Alert time mode state
+    @State private var hasAlertTime: Bool
+    @State private var alertTime: Date
 
     /// Initializer for items that may or may not have recurrence
     init(
         reminderDate: Binding<Date?>,
-        reminderOffset: Binding<TimeInterval?>,
+        alertTimeHour: Binding<Int?>,
+        alertTimeMinute: Binding<Int?>,
         hasRecurrence: Bool,
         accentColor: Color = .daisyTask
     ) {
         self._reminderDate = reminderDate
-        self._reminderOffset = reminderOffset
+        self._alertTimeHour = alertTimeHour
+        self._alertTimeMinute = alertTimeMinute
         self.hasRecurrence = hasRecurrence
         self.accentColor = accentColor
 
@@ -52,8 +56,16 @@ struct ReminderPickerSheet: View {
         self._hasAbsoluteReminder = State(initialValue: hasValue)
         self._workingDate = State(initialValue: reminderDate.wrappedValue ?? Date())
 
-        // Relative mode setup
-        self._selectedOffset = State(initialValue: ReminderOffset.from(timeInterval: reminderOffset.wrappedValue))
+        // Alert time mode setup
+        let hasAlert = alertTimeHour.wrappedValue != nil
+        self._hasAlertTime = State(initialValue: hasAlert)
+
+        // Create alert time Date from hour/minute or default to 9:00 AM
+        var components = DateComponents()
+        components.hour = alertTimeHour.wrappedValue ?? 9
+        components.minute = alertTimeMinute.wrappedValue ?? 0
+        let defaultTime = Calendar.current.date(from: components) ?? Date()
+        self._alertTime = State(initialValue: defaultTime)
     }
 
     /// Convenience initializer for non-recurring items (backward compatible)
@@ -62,14 +74,16 @@ struct ReminderPickerSheet: View {
         accentColor: Color = .daisyTask
     ) {
         self._reminderDate = reminderDate
-        self._reminderOffset = .constant(nil)
+        self._alertTimeHour = .constant(nil)
+        self._alertTimeMinute = .constant(nil)
         self.hasRecurrence = false
         self.accentColor = accentColor
 
         let hasValue = reminderDate.wrappedValue != nil
         self._hasAbsoluteReminder = State(initialValue: hasValue)
         self._workingDate = State(initialValue: reminderDate.wrappedValue ?? Date())
-        self._selectedOffset = State(initialValue: nil)
+        self._hasAlertTime = State(initialValue: false)
+        self._alertTime = State(initialValue: Date())
     }
 
     var body: some View {
@@ -110,8 +124,15 @@ struct ReminderPickerSheet: View {
 
     private func saveAndDismiss() {
         if hasRecurrence {
-            // Save relative offset
-            reminderOffset = selectedOffset?.rawValue
+            // Save alert time
+            if hasAlertTime {
+                let components = Calendar.current.dateComponents([.hour, .minute], from: alertTime)
+                alertTimeHour = components.hour
+                alertTimeMinute = components.minute
+            } else {
+                alertTimeHour = nil
+                alertTimeMinute = nil
+            }
             // Clear absolute reminder when switching to recurring
             reminderDate = nil
         } else {
@@ -121,39 +142,35 @@ struct ReminderPickerSheet: View {
             } else {
                 reminderDate = nil
             }
-            // Clear relative offset when non-recurring
-            reminderOffset = nil
+            // Clear alert time when non-recurring
+            alertTimeHour = nil
+            alertTimeMinute = nil
         }
         dismiss()
     }
 
-    // MARK: - Relative Reminder Content (for recurring items)
+    // MARK: - Alert Time Content (for recurring items)
 
     private var relativeReminderContent: some View {
-        VStack(spacing: Spacing.small) {
-            // No Reminder option
-            relativeOptionRow(
-                offset: nil,
-                title: "No Reminder",
-                symbolName: "bell.slash"
-            )
+        VStack(spacing: Spacing.medium) {
+            // No Alert option
+            alertOptionRow(hasAlert: false, title: "No Alert", symbolName: "bell.slash")
 
-            // Preset offset options
-            ForEach(ReminderOffset.allCases) { offset in
-                relativeOptionRow(
-                    offset: offset,
-                    title: offset.displayName,
-                    symbolName: offset.symbolName
-                )
+            // Alert at time option
+            alertOptionRow(hasAlert: true, title: "Alert at time", symbolName: "bell.badge")
+
+            // Time picker (shown when alert is enabled)
+            if hasAlertTime {
+                alertTimePicker
             }
         }
     }
 
-    private func relativeOptionRow(offset: ReminderOffset?, title: String, symbolName: String) -> some View {
-        let isSelected = selectedOffset == offset
+    private func alertOptionRow(hasAlert: Bool, title: String, symbolName: String) -> some View {
+        let isSelected = hasAlertTime == hasAlert
 
         return Button(action: {
-            selectedOffset = offset
+            hasAlertTime = hasAlert
         }) {
             HStack {
                 Image(systemName: symbolName)
@@ -165,6 +182,12 @@ struct ReminderPickerSheet: View {
                     .foregroundColor(.daisyText)
 
                 Spacer()
+
+                if isSelected && hasAlert {
+                    Text(formattedAlertTime)
+                        .font(.caption)
+                        .foregroundColor(accentColor)
+                }
 
                 if isSelected {
                     Image(systemName: "checkmark")
@@ -178,6 +201,28 @@ struct ReminderPickerSheet: View {
             .padding(.horizontal)
         }
         .buttonStyle(.plain)
+    }
+
+    private var alertTimePicker: some View {
+        VStack(spacing: 0) {
+            DatePicker(
+                "Alert Time",
+                selection: $alertTime,
+                displayedComponents: [.hourAndMinute]
+            )
+            .datePickerStyle(.wheel)
+            .labelsHidden()
+            .tint(accentColor)
+        }
+        .background(Color.daisySurface)
+        .cornerRadius(12)
+        .padding(.horizontal)
+    }
+
+    private var formattedAlertTime: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: alertTime)
     }
 
     // MARK: - Absolute Reminder Content (for non-recurring items)
@@ -322,23 +367,27 @@ struct ReminderPickerSheet: View {
 
 #Preview("Non-recurring (Absolute)") {
     @Previewable @State var reminder: Date? = nil
-    @Previewable @State var offset: TimeInterval? = nil
+    @Previewable @State var alertHour: Int? = nil
+    @Previewable @State var alertMinute: Int? = nil
 
     return ReminderPickerSheet(
         reminderDate: $reminder,
-        reminderOffset: $offset,
+        alertTimeHour: $alertHour,
+        alertTimeMinute: $alertMinute,
         hasRecurrence: false,
         accentColor: .daisyTask
     )
 }
 
-#Preview("Recurring (Relative)") {
+#Preview("Recurring (Alert Time)") {
     @Previewable @State var reminder: Date? = nil
-    @Previewable @State var offset: TimeInterval? = ReminderOffset.fifteenMinutesBefore.rawValue
+    @Previewable @State var alertHour: Int? = 9
+    @Previewable @State var alertMinute: Int? = 0
 
     return ReminderPickerSheet(
         reminderDate: $reminder,
-        reminderOffset: $offset,
+        alertTimeHour: $alertHour,
+        alertTimeMinute: $alertMinute,
         hasRecurrence: true,
         accentColor: .daisyHabit
     )

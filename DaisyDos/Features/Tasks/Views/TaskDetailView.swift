@@ -181,19 +181,22 @@ struct TaskDetailView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingRecurrencePicker) {
-            RecurrenceRulePickerView(recurrenceRule: .init(
-                get: { task.recurrenceRule },
-                set: { newRule in
-                    let _ = taskManager.updateTask(
-                        task,
-                        title: task.title,
-                        taskDescription: task.taskDescription,
-                        priority: task.priority,
-                        dueDate: task.dueDate,
-                        recurrenceRule: newRule
-                    )
-                }
-            ))
+            RecurrenceRulePickerView(
+                recurrenceRule: .init(
+                    get: { task.recurrenceRule },
+                    set: { newRule in
+                        let _ = taskManager.updateTask(
+                            task,
+                            title: task.title,
+                            taskDescription: task.taskDescription,
+                            priority: task.priority,
+                            dueDate: task.dueDate,
+                            recurrenceRule: newRule
+                        )
+                    }
+                ),
+                allowsNone: true
+            )
             .presentationDetents([.medium])
         }
         .sheet(isPresented: $showingDatePicker) {
@@ -203,6 +206,8 @@ struct TaskDetailView: View {
                     set: { newDate in
                         task.dueDate = newDate
                         task.modifiedDate = Date()
+                        // Explicit save to persist due date change
+                        try? taskManager.modelContext.save()
                     }
                 ),
                 hasDate: .constant(task.dueDate != nil),
@@ -217,6 +222,8 @@ struct TaskDetailView: View {
                     set: { newDate in
                         task.reminderDate = newDate
                         task.modifiedDate = Date()
+                        // Explicit save to persist reminder change
+                        try? taskManager.modelContext.save()
                         // Notify to trigger notification scheduling
                         NotificationCenter.default.post(
                             name: .taskDidChange,
@@ -227,7 +234,7 @@ struct TaskDetailView: View {
                 ),
                 accentColor: .daisyTask
             )
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.large])
         }
         .sheet(isPresented: $showingPriorityPicker) {
             PriorityPickerSheet(
@@ -474,8 +481,8 @@ struct TaskDetailView: View {
                             .foregroundColor(.daisyTextSecondary)
                         Spacer()
                         HStack(spacing: 4) {
-                            if let reminderDate = task.reminderDate {
-                                Text(formatReminderDate(reminderDate))
+                            if let displayText = task.reminderDisplayText {
+                                Text(displayText)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.daisyText)
                             } else {

@@ -3,53 +3,41 @@
 //  DaisyDos
 //
 //  Created by Claude Code on 1/21/26.
-//  Combined picker for habit reminders: scheduled time + relative offset
+//  Simplified picker for habit alert time (time-of-day)
 //
 
 import SwiftUI
 
-/// Sheet for setting habit reminders with scheduled time and relative offset
-/// Habits always use relative reminders (offset from scheduled time)
+/// Sheet for setting habit alert time
+/// Habits always use time-of-day alerts (no relative offsets)
 struct HabitReminderPickerSheet: View {
-    @Binding var reminderOffset: TimeInterval?
-    @Binding var scheduledTimeHour: Int?
-    @Binding var scheduledTimeMinute: Int?
+    @Binding var alertTimeHour: Int?
+    @Binding var alertTimeMinute: Int?
 
     let accentColor: Color
 
     @Environment(\.dismiss) private var dismiss
 
-    @State private var hasReminder: Bool
-    @State private var selectedOffset: ReminderOffset
+    @State private var hasAlert: Bool
     @State private var workingDate: Date
 
     init(
-        reminderOffset: Binding<TimeInterval?>,
-        scheduledTimeHour: Binding<Int?>,
-        scheduledTimeMinute: Binding<Int?>,
+        alertTimeHour: Binding<Int?>,
+        alertTimeMinute: Binding<Int?>,
         accentColor: Color = .daisyHabit
     ) {
-        self._reminderOffset = reminderOffset
-        self._scheduledTimeHour = scheduledTimeHour
-        self._scheduledTimeMinute = scheduledTimeMinute
+        self._alertTimeHour = alertTimeHour
+        self._alertTimeMinute = alertTimeMinute
         self.accentColor = accentColor
 
-        // Determine if there's an existing reminder
-        let hasExisting = reminderOffset.wrappedValue != nil
-        self._hasReminder = State(initialValue: hasExisting)
-
-        // Initialize selected offset
-        if let offset = reminderOffset.wrappedValue,
-           let preset = ReminderOffset.from(timeInterval: offset) {
-            self._selectedOffset = State(initialValue: preset)
-        } else {
-            self._selectedOffset = State(initialValue: .fifteenMinutesBefore)
-        }
+        // Determine if there's an existing alert time
+        let hasExisting = alertTimeHour.wrappedValue != nil
+        self._hasAlert = State(initialValue: hasExisting)
 
         // Create a date from the hour/minute components, or default to 9:00 AM
         var components = DateComponents()
-        components.hour = scheduledTimeHour.wrappedValue ?? 9
-        components.minute = scheduledTimeMinute.wrappedValue ?? 0
+        components.hour = alertTimeHour.wrappedValue ?? 9
+        components.minute = alertTimeMinute.wrappedValue ?? 0
 
         let defaultDate = Calendar.current.date(from: components) ?? Date()
         self._workingDate = State(initialValue: defaultDate)
@@ -62,22 +50,21 @@ struct HabitReminderPickerSheet: View {
                     // Info section
                     infoSection
 
-                    // No reminder option
+                    // No alert option
                     noneOption
 
-                    // Reminder enabled section
-                    if hasReminder {
-                        // Scheduled time section
-                        scheduledTimeSection
+                    // Alert at time option (always visible)
+                    alertAtTimeOption
 
-                        // Reminder offset section
-                        offsetSection
+                    // Time picker (only shown when alert is enabled)
+                    if hasAlert {
+                        timePickerSection
                     }
                 }
                 .padding(.vertical, Spacing.medium)
             }
             .background(Color.daisyBackground)
-            .navigationTitle("Reminder")
+            .navigationTitle("Alert")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -105,12 +92,12 @@ struct HabitReminderPickerSheet: View {
             HStack(spacing: Spacing.small) {
                 Image(systemName: "info.circle")
                     .foregroundColor(accentColor)
-                Text("About Habit Reminders")
+                Text("About Habit Alerts")
                     .font(.subheadline.weight(.medium))
                     .foregroundColor(.daisyText)
             }
 
-            Text("Set a scheduled time for your habit, then choose when to be reminded relative to that time.")
+            Text("Set a time of day when you'd like to be reminded about this habit.")
                 .font(.caption)
                 .foregroundColor(.daisyTextSecondary)
         }
@@ -125,50 +112,70 @@ struct HabitReminderPickerSheet: View {
 
     private var noneOption: some View {
         Button(action: {
-            hasReminder = false
+            hasAlert = false
         }) {
             HStack {
                 Image(systemName: "bell.slash")
                     .font(.body)
-                    .foregroundColor(!hasReminder ? accentColor : .daisyTextSecondary)
+                    .foregroundColor(!hasAlert ? accentColor : .daisyTextSecondary)
 
-                Text("No Reminder")
+                Text("No Alert")
                     .foregroundColor(.daisyText)
 
                 Spacer()
 
-                if !hasReminder {
+                if !hasAlert {
                     Image(systemName: "checkmark")
                         .foregroundColor(accentColor)
                         .font(.body.weight(.semibold))
                 }
             }
             .padding()
-            .background(!hasReminder ? accentColor.opacity(0.08) : Color.daisySurface)
+            .background(!hasAlert ? accentColor.opacity(0.08) : Color.daisySurface)
             .cornerRadius(12)
             .padding(.horizontal)
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Scheduled Time Section
+    // MARK: - Alert At Time Option
 
-    private var scheduledTimeSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.small) {
+    private var alertAtTimeOption: some View {
+        Button(action: {
+            hasAlert = true
+        }) {
             HStack {
-                Image(systemName: "clock.fill")
-                    .foregroundColor(accentColor)
-                Text("Scheduled Time")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(.daisyText)
-                Spacer()
-                Text(formattedTime)
-                    .font(.subheadline)
-                    .foregroundColor(accentColor)
-            }
-            .padding(.horizontal)
-            .padding(.top, Spacing.small)
+                Image(systemName: "bell.badge")
+                    .font(.body)
+                    .foregroundColor(hasAlert ? accentColor : .daisyTextSecondary)
 
+                Text("Alert at time")
+                    .foregroundColor(.daisyText)
+
+                Spacer()
+
+                if hasAlert {
+                    Text(formattedTime)
+                        .font(.caption)
+                        .foregroundColor(accentColor)
+
+                    Image(systemName: "checkmark")
+                        .foregroundColor(accentColor)
+                        .font(.body.weight(.semibold))
+                }
+            }
+            .padding()
+            .background(hasAlert ? accentColor.opacity(0.08) : Color.daisySurface)
+            .cornerRadius(12)
+            .padding(.horizontal)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Time Picker Section
+
+    private var timePickerSection: some View {
+        VStack(spacing: 0) {
             DatePicker(
                 "Time",
                 selection: $workingDate,
@@ -178,62 +185,6 @@ struct HabitReminderPickerSheet: View {
             .labelsHidden()
             .tint(accentColor)
         }
-        .padding(.vertical, Spacing.small)
-        .background(Color.daisySurface)
-        .cornerRadius(12)
-        .padding(.horizontal)
-    }
-
-    // MARK: - Offset Section
-
-    private var offsetSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.small) {
-            HStack {
-                Image(systemName: "bell.fill")
-                    .foregroundColor(accentColor)
-                Text("Remind Me")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(.daisyText)
-            }
-            .padding(.horizontal)
-            .padding(.top, Spacing.small)
-
-            VStack(spacing: 0) {
-                ForEach(ReminderOffset.allCases) { offset in
-                    Button(action: {
-                        selectedOffset = offset
-                    }) {
-                        HStack {
-                            Image(systemName: offset.symbolName)
-                                .font(.body)
-                                .foregroundColor(selectedOffset == offset ? accentColor : .daisyTextSecondary)
-                                .frame(width: 24)
-
-                            Text(offset.displayName)
-                                .foregroundColor(.daisyText)
-
-                            Spacer()
-
-                            if selectedOffset == offset {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(accentColor)
-                                    .font(.body.weight(.semibold))
-                            }
-                        }
-                        .padding(.vertical, 12)
-                        .padding(.horizontal)
-                        .background(selectedOffset == offset ? accentColor.opacity(0.08) : Color.clear)
-                    }
-                    .buttonStyle(.plain)
-
-                    if offset != ReminderOffset.allCases.last {
-                        Divider()
-                            .padding(.leading, 48)
-                    }
-                }
-            }
-        }
-        .padding(.bottom, Spacing.small)
         .background(Color.daisySurface)
         .cornerRadius(12)
         .padding(.horizontal)
@@ -248,19 +199,15 @@ struct HabitReminderPickerSheet: View {
     }
 
     private func saveAndDismiss() {
-        if hasReminder {
-            // Save scheduled time
+        if hasAlert {
+            // Save alert time
             let components = Calendar.current.dateComponents([.hour, .minute], from: workingDate)
-            scheduledTimeHour = components.hour
-            scheduledTimeMinute = components.minute
-
-            // Save reminder offset
-            reminderOffset = selectedOffset.rawValue
+            alertTimeHour = components.hour
+            alertTimeMinute = components.minute
         } else {
-            // Clear all reminder data
-            reminderOffset = nil
-            scheduledTimeHour = nil
-            scheduledTimeMinute = nil
+            // Clear alert time
+            alertTimeHour = nil
+            alertTimeMinute = nil
         }
         dismiss()
     }
@@ -268,28 +215,24 @@ struct HabitReminderPickerSheet: View {
 
 // MARK: - Preview
 
-#Preview("No Reminder") {
-    @Previewable @State var offset: TimeInterval? = nil
+#Preview("No Alert") {
     @Previewable @State var hour: Int? = nil
     @Previewable @State var minute: Int? = nil
 
-    return HabitReminderPickerSheet(
-        reminderOffset: $offset,
-        scheduledTimeHour: $hour,
-        scheduledTimeMinute: $minute,
+    HabitReminderPickerSheet(
+        alertTimeHour: $hour,
+        alertTimeMinute: $minute,
         accentColor: .daisyHabit
     )
 }
 
-#Preview("With Reminder") {
-    @Previewable @State var offset: TimeInterval? = -900
+#Preview("With Alert") {
     @Previewable @State var hour: Int? = 9
     @Previewable @State var minute: Int? = 0
 
-    return HabitReminderPickerSheet(
-        reminderOffset: $offset,
-        scheduledTimeHour: $hour,
-        scheduledTimeMinute: $minute,
+    HabitReminderPickerSheet(
+        alertTimeHour: $hour,
+        alertTimeMinute: $minute,
         accentColor: .daisyHabit
     )
 }

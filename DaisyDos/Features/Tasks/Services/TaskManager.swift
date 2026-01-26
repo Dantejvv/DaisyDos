@@ -510,21 +510,22 @@ class TaskManager: EntityManagerProtocol {
 
     /// Schedules a pending recurrence for deferred task creation
     /// The new task will appear when the app is opened after the scheduled date
+    /// Note: All recurring tasks now use "only create after completion" behavior
     private func scheduleRecurringInstanceIfNeeded(for task: Task) {
-        guard let recurrenceRule = task.recurrenceRule else { return }
+        guard task.recurrenceRule != nil else { return }
 
-        // Check recreateIfIncomplete flag - only schedule if task completed OR flag is true
-        if !task.isCompleted && !recurrenceRule.recreateIfIncomplete {
+        // Only schedule if task was completed
+        guard task.isCompleted else {
             #if DEBUG
-            print("⏭️ Skipping recurring instance: previous incomplete, recreateIfIncomplete=false")
+            print("⏭️ Skipping recurring instance: task not completed")
             #endif
             return
         }
 
-        // Check if next occurrence exists (respects endDate and maxOccurrences)
+        // Check if next occurrence exists (respects endDate)
         guard task.nextRecurrence() != nil else {
             #if DEBUG
-            print("⏭️ No more occurrences for '\(task.title)' (endDate or maxOccurrences reached)")
+            print("⏭️ No more occurrences for '\(task.title)' (endDate reached)")
             #endif
             return
         }

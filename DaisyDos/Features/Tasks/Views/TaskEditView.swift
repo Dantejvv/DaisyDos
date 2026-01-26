@@ -29,7 +29,8 @@ struct TaskEditView: View {
     @State private var showingPriorityPicker = false
     @State private var showingReminderPicker = false
     @State private var reminderDate: Date?
-    @State private var reminderOffset: TimeInterval?
+    @State private var alertTimeHour: Int?
+    @State private var alertTimeMinute: Int?
     @State private var showingUnsavedChangesAlert = false
     @State private var showingAttachmentSourcePicker = false
     @State private var showingPhotoPicker = false
@@ -89,7 +90,8 @@ struct TaskEditView: View {
         self._selectedTags = State(initialValue: task.tags ?? [])
         self._recurrenceRule = State(initialValue: task.recurrenceRule)
         self._reminderDate = State(initialValue: task.reminderDate)
-        self._reminderOffset = State(initialValue: task.reminderOffset)
+        self._alertTimeHour = State(initialValue: task.alertTimeHour)
+        self._alertTimeMinute = State(initialValue: task.alertTimeMinute)
 
         // Initialize staged attachments from existing task attachments
         // Convert existing attachments to temporary URLs for staging
@@ -168,7 +170,8 @@ struct TaskEditView: View {
                (hasDueDate ? dueDate : nil) != task.dueDate ||
                recurrenceRule != task.recurrenceRule ||
                reminderDate != task.reminderDate ||
-               reminderOffset != task.reminderOffset ||
+               alertTimeHour != task.alertTimeHour ||
+               alertTimeMinute != task.alertTimeMinute ||
                Set(selectedTags.map(\.id)) != Set((task.tags ?? []).map(\.id)) ||
                subtasksChanged ||
                attachmentsChanged
@@ -396,15 +399,16 @@ struct TaskEditView: View {
             .sheet(isPresented: $showingReminderPicker) {
                 ReminderPickerSheet(
                     reminderDate: $reminderDate,
-                    reminderOffset: $reminderOffset,
+                    alertTimeHour: $alertTimeHour,
+                    alertTimeMinute: $alertTimeMinute,
                     hasRecurrence: recurrenceRule != nil,
                     accentColor: .daisyTask
                 )
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
             }
             .sheet(isPresented: $showingRecurrencePicker) {
-                RecurrenceRulePickerView(recurrenceRule: $recurrenceRule)
-                    .presentationDetents([.large])
+                RecurrenceRulePickerView(recurrenceRule: $recurrenceRule, allowsNone: true)
+                    .presentationDetents([.medium])
             }
             .confirmationDialog("Add Attachment", isPresented: $showingAttachmentSourcePicker, titleVisibility: .visible) {
                 #if canImport(PhotosUI)
@@ -456,8 +460,9 @@ struct TaskEditView: View {
                 let hasRecurrence = newValue != nil
 
                 if hadRecurrence && !hasRecurrence {
-                    // Recurrence was removed: clear relative reminder
-                    reminderOffset = nil
+                    // Recurrence was removed: clear alert time
+                    alertTimeHour = nil
+                    alertTimeMinute = nil
                 } else if !hadRecurrence && hasRecurrence {
                     // Recurrence was added: clear absolute reminder
                     reminderDate = nil
@@ -481,7 +486,8 @@ struct TaskEditView: View {
         task.dueDate = hasDueDate ? dueDate : nil
         task.recurrenceRule = recurrenceRule
         task.reminderDate = reminderDate
-        task.reminderOffset = reminderOffset
+        task.alertTimeHour = alertTimeHour
+        task.alertTimeMinute = alertTimeMinute
         task.modifiedDate = Date()
 
         // Update tags
@@ -492,6 +498,9 @@ struct TaskEditView: View {
 
         // Update attachments
         updateTaskAttachments()
+
+        // Explicit save to persist all direct property mutations
+        try? taskManager.modelContext.save()
 
         // Notify to trigger notification scheduling for reminder changes
         NotificationCenter.default.post(

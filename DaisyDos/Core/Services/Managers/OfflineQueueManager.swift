@@ -171,8 +171,4 @@ class OfflineQueueManager {
         #endif
     }
 
-    /// Force process queue (for manual sync)
-    func forceProcessQueue() {
-        processQueue()
-    }
 }

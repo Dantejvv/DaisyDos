@@ -452,17 +452,7 @@ struct RecurrenceRuleTests {
         #expect(rule1.interval != rule3.interval)
     }
 
-    // MARK: - maxOccurrences + endDate Combination Tests
-
-    @Test("maxOccurrences alone limits occurrences")
-    func testMaxOccurrencesAlone() {
-        let calendar = Calendar.current
-        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1))!
-        let rule = RecurrenceRule(frequency: .daily, interval: 1, maxOccurrences: 5)
-
-        let occurrences = rule.occurrences(from: startDate, limit: 100)
-        #expect(occurrences.count == 5, "Should stop at maxOccurrences")
-    }
+    // MARK: - endDate Tests
 
     @Test("endDate alone limits occurrences")
     func testEndDateAlone() {
@@ -474,68 +464,6 @@ struct RecurrenceRuleTests {
         let occurrences = rule.occurrences(from: startDate, limit: 100)
         #expect(occurrences.count == 4, "Should stop at endDate")
         #expect(occurrences.allSatisfy { $0 <= endDate })
-    }
-
-    @Test("maxOccurrences reached before endDate - maxOccurrences wins")
-    func testMaxOccurrencesBeforeEndDate() {
-        let calendar = Calendar.current
-        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1))!
-        let endDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 10))!
-        let rule = RecurrenceRule(frequency: .daily, interval: 1, endDate: endDate, maxOccurrences: 3)
-
-        let occurrences = rule.occurrences(from: startDate, limit: 100)
-        #expect(occurrences.count == 3, "Should stop at maxOccurrences (3) before endDate allows 9")
-    }
-
-    @Test("endDate reached before maxOccurrences - endDate wins")
-    func testEndDateBeforeMaxOccurrences() {
-        let calendar = Calendar.current
-        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1))!
-        let endDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 3))!
-        let rule = RecurrenceRule(frequency: .daily, interval: 1, endDate: endDate, maxOccurrences: 10)
-
-        let occurrences = rule.occurrences(from: startDate, limit: 100)
-        #expect(occurrences.count == 2, "Should stop at endDate (2 days) before maxOccurrences allows 10")
-        #expect(occurrences.allSatisfy { $0 <= endDate })
-    }
-
-    @Test("maxOccurrences=1 creates single occurrence")
-    func testMaxOccurrencesSingle() {
-        let rule = RecurrenceRule(frequency: .daily, maxOccurrences: 1)
-        let startDate = Date()
-
-        let occurrences = rule.occurrences(from: startDate, limit: 100)
-        #expect(occurrences.count == 1, "maxOccurrences=1 should create only one occurrence")
-    }
-
-    @Test("maxOccurrences with weekly recurrence")
-    func testMaxOccurrencesWeekly() {
-        let calendar = Calendar.current
-        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 6))! // Monday
-        let rule = RecurrenceRule.weekly(daysOfWeek: [2, 4], interval: 1) // Mon, Wed
-        let ruleWithMax = RecurrenceRule(
-            frequency: rule.frequency,
-            interval: rule.interval,
-            daysOfWeek: rule.daysOfWeek,
-            maxOccurrences: 5
-        )
-
-        let occurrences = ruleWithMax.occurrences(from: startDate, limit: 100)
-        #expect(occurrences.count == 5, "Should create exactly 5 occurrences across Mon/Wed pattern")
-    }
-
-    @Test("maxOccurrences with monthly recurrence")
-    func testMaxOccurrencesMonthly() {
-        let calendar = Calendar.current
-        let startDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 15))!
-        let rule = RecurrenceRule(frequency: .monthly, dayOfMonth: 15, maxOccurrences: 3)
-
-        let occurrences = rule.occurrences(from: startDate, limit: 100)
-        #expect(occurrences.count == 3, "Should create 3 monthly occurrences")
-
-        // Verify dates are Feb 15, Mar 15, Apr 15
-        let months = occurrences.map { calendar.component(.month, from: $0) }
-        #expect(months == [2, 3, 4])
     }
 
     // MARK: - Time/DST Edge Case Tests

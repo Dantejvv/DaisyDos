@@ -179,22 +179,29 @@ struct HabitDetailView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingRecurrencePicker) {
-            RecurrenceRulePickerView(recurrenceRule: .init(
-                get: { habit.recurrenceRule },
-                set: { newRule in
-                    habit.recurrenceRule = newRule
-                    habit.modifiedDate = Date()
-                }
-            ))
+            RecurrenceRulePickerView(
+                recurrenceRule: .init(
+                    get: { habit.recurrenceRule },
+                    set: { newRule in
+                        habit.recurrenceRule = newRule
+                        habit.modifiedDate = Date()
+                        // Explicit save to persist recurrence change
+                        try? habitManager.modelContext.save()
+                    }
+                ),
+                allowsNone: false
+            )
             .presentationDetents([.medium])
         }
         .sheet(isPresented: $showingReminderPicker) {
             HabitReminderPickerSheet(
-                reminderOffset: .init(
-                    get: { habit.reminderOffset },
-                    set: { newOffset in
-                        habit.reminderOffset = newOffset
+                alertTimeHour: .init(
+                    get: { habit.alertTimeHour },
+                    set: { newHour in
+                        habit.alertTimeHour = newHour
                         habit.modifiedDate = Date()
+                        // Explicit save to persist alert time change
+                        try? habitManager.modelContext.save()
                         // Notify to trigger notification scheduling
                         NotificationCenter.default.post(
                             name: .habitDidChange,
@@ -203,18 +210,13 @@ struct HabitDetailView: View {
                         )
                     }
                 ),
-                scheduledTimeHour: .init(
-                    get: { habit.scheduledTimeHour },
-                    set: { newHour in
-                        habit.scheduledTimeHour = newHour
-                        habit.modifiedDate = Date()
-                    }
-                ),
-                scheduledTimeMinute: .init(
-                    get: { habit.scheduledTimeMinute },
+                alertTimeMinute: .init(
+                    get: { habit.alertTimeMinute },
                     set: { newMinute in
-                        habit.scheduledTimeMinute = newMinute
+                        habit.alertTimeMinute = newMinute
                         habit.modifiedDate = Date()
+                        // Explicit save to persist alert time change
+                        try? habitManager.modelContext.save()
                     }
                 ),
                 accentColor: .daisyHabit
@@ -228,6 +230,8 @@ struct HabitDetailView: View {
                     set: { newPriority in
                         habit.priority = newPriority
                         habit.modifiedDate = Date()
+                        // Explicit save to persist priority change
+                        try? habitManager.modelContext.save()
                     }
                 ),
                 accentColor: .daisyHabit

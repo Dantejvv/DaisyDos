@@ -21,9 +21,11 @@ extension Notification.Name {
 @Observable
 class RecurrenceScheduler {
     internal let modelContext: ModelContext
+    private let replenishmentTimeManager: ReplenishmentTimeManager
 
-    init(modelContext: ModelContext) {
+    init(modelContext: ModelContext, replenishmentTimeManager: ReplenishmentTimeManager = ReplenishmentTimeManager()) {
         self.modelContext = modelContext
+        self.replenishmentTimeManager = replenishmentTimeManager
     }
 
     // MARK: - Scheduling
@@ -35,25 +37,17 @@ class RecurrenceScheduler {
             operation: "schedule pending recurrence",
             entityType: "pending recurrence"
         ) {
-            guard let recurrenceRule = task.recurrenceRule else {
+            guard task.recurrenceRule != nil else {
                 throw DaisyDosError.invalidRecurrence
             }
 
-            // Check if maxOccurrences limit has been reached
-            if let maxOccurrences = recurrenceRule.maxOccurrences,
-               task.occurrenceIndex >= maxOccurrences {
-                throw DaisyDosError.validationFailed("Maximum occurrences reached")
-            }
-
             // Calculate the next occurrence date
-            guard let nextDate = task.nextRecurrence() else {
+            guard var nextDate = task.nextRecurrence() else {
                 throw DaisyDosError.validationFailed("No next occurrence available")
             }
 
-            // Check recreateIfIncomplete flag
-            if !task.isCompleted && !recurrenceRule.recreateIfIncomplete {
-                throw DaisyDosError.validationFailed("Task not completed and recreateIfIncomplete is false")
-            }
+            // Apply the global replenishment time to the scheduled date
+            nextDate = replenishmentTimeManager.applyReplenishmentTime(to: nextDate)
 
             // Create the pending recurrence
             let pendingRecurrence = PendingRecurrence(
@@ -145,11 +139,9 @@ class RecurrenceScheduler {
             dueDate: pendingRecurrence.scheduledDate,
             recurrenceRule: pendingRecurrence.recurrenceRule,
             reminderDate: nil, // Recurring instances don't use absolute reminders
-            reminderOffset: pendingRecurrence.reminderOffset // Inherit relative reminder offset
+            alertTimeHour: pendingRecurrence.alertTimeHour, // Inherit alert time
+            alertTimeMinute: pendingRecurrence.alertTimeMinute
         )
-
-        // Set occurrence index
-        newTask.occurrenceIndex = pendingRecurrence.occurrenceIndex
 
         modelContext.insert(newTask)
 

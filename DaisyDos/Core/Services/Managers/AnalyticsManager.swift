@@ -12,6 +12,8 @@ import SwiftData
 @Observable
 final class AnalyticsManager {
     // Dependencies
+    // NOTE: HabitManager is now injected to ensure we use the shared instance
+    // instead of creating a duplicate (which would cause state desync)
     private let habitManager: HabitManager
 
     // Cache
@@ -19,8 +21,8 @@ final class AnalyticsManager {
     private var lastCacheUpdate: [AnalyticsPeriod: Date] = [:]
     private let cacheValidityDuration: TimeInterval = 300 // 5 minutes
 
-    init(modelContext: ModelContext) {
-        self.habitManager = HabitManager(modelContext: modelContext)
+    init(habitManager: HabitManager) {
+        self.habitManager = habitManager
     }
 
     // MARK: - Public API
@@ -42,19 +44,6 @@ final class AnalyticsManager {
         lastCacheUpdate[period] = Date()
 
         return analytics
-    }
-
-    /// Force refresh analytics for a specific period
-    func refreshAnalytics(for period: AnalyticsPeriod) {
-        let analytics = calculateHabitAnalytics(for: period)
-        cachedAnalytics[period] = analytics
-        lastCacheUpdate[period] = Date()
-    }
-
-    /// Clear all cached analytics
-    func clearCache() {
-        cachedAnalytics.removeAll()
-        lastCacheUpdate.removeAll()
     }
 
     // MARK: - Private Methods

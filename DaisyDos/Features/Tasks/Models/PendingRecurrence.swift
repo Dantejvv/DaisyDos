@@ -35,11 +35,9 @@ class PendingRecurrence {
     /// Tags to copy (stored as tag IDs for lookup)
     var tagIds: [UUID]?
 
-    /// Track occurrence index for maxOccurrences enforcement
-    var occurrenceIndex: Int = 1
-
-    /// Relative reminder offset (inherited from source task for recurring reminders)
-    var reminderOffset: TimeInterval?
+    /// Alert time for recurring task notifications (inherited from source task)
+    var alertTimeHour: Int?
+    var alertTimeMinute: Int?
 
     /// When this pending recurrence was created
     var createdDate: Date = Date()
@@ -58,8 +56,8 @@ class PendingRecurrence {
         self.taskPriority = sourceTask.priority
         self.recurrenceRule = sourceTask.recurrenceRule
         self.tagIds = sourceTask.tags?.map { $0.id }
-        self.occurrenceIndex = sourceTask.occurrenceIndex + 1
-        self.reminderOffset = sourceTask.reminderOffset // Inherit relative reminder offset
+        self.alertTimeHour = sourceTask.alertTimeHour // Inherit alert time
+        self.alertTimeMinute = sourceTask.alertTimeMinute
         self.createdDate = Date()
     }
 

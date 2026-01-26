@@ -69,20 +69,4 @@ class RecentColorsManager {
         }
     }
 
-    /// Clears all recent colors for a specific category
-    /// - Parameter category: The category to clear
-    func clearRecentColors(for category: ColorCategory) {
-        UserDefaults.standard.removeObject(forKey: category.rawValue)
-    }
-
-    /// Clears all recent colors for all categories
-    func clearAllRecentColors() {
-        ColorCategory.allCases.forEach { category in
-            clearRecentColors(for: category)
-        }
-    }
 }
-
-// MARK: - ColorCategory Extensions
-
-extension RecentColorsManager.ColorCategory: CaseIterable {}

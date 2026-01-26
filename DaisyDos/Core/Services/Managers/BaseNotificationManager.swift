@@ -9,6 +9,36 @@ import Foundation
 import UserNotifications
 import SwiftData
 
+// MARK: - Notification Constants
+
+/// Shared constants for notification identifiers, categories, and actions.
+/// Single source of truth — used by AppDelegate, NotificationDelegate, and notification managers.
+enum NotificationConstants {
+    // MARK: - Category Identifiers
+    static let taskCategory = "task_reminder"
+    static let habitCategory = "habit_reminder"
+
+    // MARK: - Action Identifiers
+    static let completeTask = "complete_task"
+    static let snoozeTask = "snooze_task"
+    static let completeHabit = "complete_habit"
+    static let skipHabit = "skip_habit"
+    static let snoozeHabit = "snooze_habit"
+
+    // MARK: - Identifier Prefixes
+    static let taskPrefix = "task_"
+    static let habitPrefix = "habit_"
+
+    // MARK: - UserInfo Keys
+    static let taskIdKey = "task_id"
+    static let taskTitleKey = "task_title"
+    static let habitIdKey = "habit_id"
+    static let habitTitleKey = "habit_title"
+
+    // MARK: - Snooze Duration
+    static let snoozeDuration: TimeInterval = 3600 // 1 hour
+}
+
 /// Base protocol for notification managers providing shared permission and action management
 protocol BaseNotificationManager: AnyObject {
     // MARK: - Required Properties

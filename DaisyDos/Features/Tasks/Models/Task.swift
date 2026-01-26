@@ -53,10 +53,13 @@ class Task {
     var recurrenceRule: RecurrenceRule?
     var completedDate: Date?
     var reminderDate: Date? // Absolute date/time for reminder notification (non-recurring tasks only)
-    var reminderOffset: TimeInterval? // Seconds before due time for relative reminders (recurring tasks only, negative value e.g., -900 for 15 min before)
+
+    // Alert time for recurring tasks (time-of-day when notification fires)
+    var alertTimeHour: Int? // 0-23
+    var alertTimeMinute: Int? // 0-59
+
     var snoozedUntil: Date? // When snoozed, this overrides the normal reminder time until the snooze fires
     var notificationFired: Bool = false // Tracks if the reminder notification has been delivered
-    var occurrenceIndex: Int = 1 // Tracks which occurrence this is (1-based, for maxOccurrences enforcement)
 
     // MARK: - Ordering Properties
     var subtaskOrder: Int = 0 // For ordering within parent's subtask list
@@ -106,7 +109,8 @@ class Task {
         dueDate: Date? = nil,
         recurrenceRule: RecurrenceRule? = nil,
         reminderDate: Date? = nil,
-        reminderOffset: TimeInterval? = nil
+        alertTimeHour: Int? = nil,
+        alertTimeMinute: Int? = nil
     ) {
         self.id = UUID()
         self.title = title
@@ -115,7 +119,8 @@ class Task {
         self.dueDate = dueDate
         self.recurrenceRule = recurrenceRule
         self.reminderDate = reminderDate
-        self.reminderOffset = reminderOffset
+        self.alertTimeHour = alertTimeHour
+        self.alertTimeMinute = alertTimeMinute
         self.isCompleted = false
         self.createdDate = Date()
         self.modifiedDate = Date()
@@ -327,29 +332,37 @@ class Task {
     }
 
     var hasReminder: Bool {
-        reminderDate != nil || reminderOffset != nil
+        reminderDate != nil || alertTimeHour != nil
     }
 
     /// Computes the effective reminder date based on whether this is a recurring or non-recurring task
     /// - If snoozed: Use snoozedUntil date (overrides normal calculation)
-    /// - Recurring tasks: Calculate from dueDate + reminderOffset
+    /// - Recurring tasks: Use alertTime (time-of-day) applied to today's date
     /// - Non-recurring tasks: Use absolute reminderDate
     var effectiveReminderDate: Date? {
         // If snoozed, use the snooze time
         if let snoozed = snoozedUntil {
             return snoozed
         }
-        // For recurring tasks with a relative offset
-        if let offset = reminderOffset, let due = dueDate, recurrenceRule != nil {
-            return due.addingTimeInterval(offset)
+
+        // For recurring tasks with alert time
+        if recurrenceRule != nil, let hour = alertTimeHour, let minute = alertTimeMinute {
+            let calendar = Calendar.current
+            var components = calendar.dateComponents([.year, .month, .day], from: Date())
+            components.hour = hour
+            components.minute = minute
+            components.second = 0
+            return calendar.date(from: components)
         }
+
         // For non-recurring tasks with an absolute reminder date
         return reminderDate
     }
 
-    /// Returns true if the task has a reminder that hasn't fired yet
+    /// Returns true if the task has a future reminder that hasn't fired yet
     var hasPendingReminder: Bool {
-        effectiveReminderDate != nil && !notificationFired
+        guard let date = effectiveReminderDate else { return false }
+        return date > Date() && !notificationFired
     }
 
     var subtaskProgressText: String? {
@@ -395,12 +408,6 @@ class Task {
     }
 
     func createRecurringInstance() -> Task? {
-        // Check if maxOccurrences limit has been reached
-        if let maxOccurrences = recurrenceRule?.maxOccurrences,
-           occurrenceIndex >= maxOccurrences {
-            return nil // Reached max occurrences limit
-        }
-
         guard let nextDate = nextRecurrence() else { return nil }
 
         let newTask = Task(
@@ -410,14 +417,12 @@ class Task {
             dueDate: nextDate,
             recurrenceRule: recurrenceRule,
             reminderDate: nil, // Recurring instances don't use absolute reminders
-            reminderOffset: reminderOffset // Inherit the relative reminder offset
+            alertTimeHour: alertTimeHour, // Inherit the alert time
+            alertTimeMinute: alertTimeMinute
         )
 
         // Copy tags
         newTask.tags = tags
-
-        // Increment occurrence index for tracking maxOccurrences
-        newTask.occurrenceIndex = occurrenceIndex + 1
 
         return newTask
     }
@@ -446,7 +451,7 @@ class Task {
 
     /// Short display text for reminder (used in toolbar labels)
     /// For snoozed tasks, shows "Snoozed" with time
-    /// For recurring tasks with relative offsets, shows the offset (e.g., "15m before")
+    /// For recurring tasks with alert time, shows the time-of-day
     /// For non-recurring tasks, shows the absolute date/time
     var reminderDisplayText: String? {
         // If snoozed, show snooze time
@@ -456,9 +461,16 @@ class Task {
             return "Snoozed \(formatter.string(from: snoozed))"
         }
 
-        // For recurring tasks with relative offset, show the offset description
-        if recurrenceRule != nil, let offset = reminderOffset {
-            return ReminderOffset.displayText(for: offset)
+        // For recurring tasks with alert time, show the time-of-day
+        if recurrenceRule != nil, let hour = alertTimeHour, let minute = alertTimeMinute {
+            var components = DateComponents()
+            components.hour = hour
+            components.minute = minute
+            if let date = Calendar.current.date(from: components) {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "h:mm a"
+                return formatter.string(from: date)
+            }
         }
 
         // For non-recurring tasks, show the absolute reminder date

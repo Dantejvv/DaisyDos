@@ -29,7 +29,8 @@ struct AddTaskView: View {
     @State private var showingPriorityPicker = false
     @State private var showingReminderPicker = false
     @State private var reminderDate: Date?
-    @State private var reminderOffset: TimeInterval?
+    @State private var alertTimeHour: Int?
+    @State private var alertTimeMinute: Int?
     @State private var showingUnsavedChangesAlert = false
     @State private var subtasks: [SubtaskItem] = []
     @State private var newSubtaskTitle = ""
@@ -121,7 +122,8 @@ struct AddTaskView: View {
                         dueDate: dueDate,
                         recurrenceRule: recurrenceRule,
                         reminderDate: reminderDate,
-                        reminderOffset: reminderOffset,
+                        alertTimeHour: alertTimeHour,
+                        alertTimeMinute: alertTimeMinute,
                         priority: priority,
                         accentColor: .daisyTask,
                         onDateTap: { showingDatePicker = true },
@@ -201,18 +203,20 @@ struct AddTaskView: View {
             }
             .sheet(isPresented: $showingRecurrencePicker) {
                 RecurrenceRulePickerView(
-                    recurrenceRule: $recurrenceRule
+                    recurrenceRule: $recurrenceRule,
+                    allowsNone: true
                 )
-                .presentationDetents([.large])
+                .presentationDetents([.medium])
             }
             .sheet(isPresented: $showingReminderPicker) {
                 ReminderPickerSheet(
                     reminderDate: $reminderDate,
-                    reminderOffset: $reminderOffset,
+                    alertTimeHour: $alertTimeHour,
+                    alertTimeMinute: $alertTimeMinute,
                     hasRecurrence: recurrenceRule != nil,
                     accentColor: .daisyTask
                 )
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showingPriorityPicker) {
@@ -263,8 +267,9 @@ struct AddTaskView: View {
                 let hasRecurrence = newValue != nil
 
                 if hadRecurrence && !hasRecurrence {
-                    // Recurrence was removed: clear relative reminder
-                    reminderOffset = nil
+                    // Recurrence was removed: clear alert time
+                    alertTimeHour = nil
+                    alertTimeMinute = nil
                 } else if !hadRecurrence && hasRecurrence {
                     // Recurrence was added: clear absolute reminder
                     reminderDate = nil
@@ -441,10 +446,11 @@ struct AddTaskView: View {
             }
 
             // Add reminder if set - use updateTask to ensure notification is scheduled
-            // For recurring tasks, use reminderOffset; for non-recurring, use reminderDate
-            if reminderDate != nil || reminderOffset != nil {
+            // For recurring tasks, use alertTimeHour/Minute; for non-recurring, use reminderDate
+            if reminderDate != nil || alertTimeHour != nil {
                 task.reminderDate = reminderDate
-                task.reminderOffset = reminderOffset
+                task.alertTimeHour = alertTimeHour
+                task.alertTimeMinute = alertTimeMinute
                 // Notify to trigger notification scheduling
                 NotificationCenter.default.post(
                     name: .taskDidChange,

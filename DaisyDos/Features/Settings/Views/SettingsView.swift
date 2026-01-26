@@ -14,15 +14,15 @@ struct SettingsView: View {
     @Environment(NotificationPreferencesManager.self) private var notificationPreferencesManager
     @Environment(TaskNotificationManager.self) private var taskNotificationManager
     @Environment(CloudKitSyncManager.self) private var cloudKitSyncManager: CloudKitSyncManager?
+    @Environment(ReplenishmentTimeManager.self) private var replenishmentTimeManager
 
     @State private var showingAbout = false
     @State private var showingAppearanceSettings = false
     @State private var showingCloudKitStatus = false
     @State private var showingPrivacyPolicy = false
     @State private var showingImportExport = false
-    @State private var showingTestDataGenerator = false
-    @State private var showingErrorMessageTest = false
     @State private var showingRestartAlert = false
+    @State private var showingReplenishmentTimePicker = false
     @State private var pendingLocalOnlyMode: Bool?
 
     private var localOnlyModeBinding: Binding<Bool> {
@@ -45,11 +45,9 @@ struct SettingsView: View {
         List {
             privacySection
             appearanceSection
+            recurringItemsSection
             notificationsSection
             dataManagementSection
-            #if DEBUG
-            developerSection
-            #endif
             appInformationSection
         }
         .navigationTitle("Settings")
@@ -68,16 +66,9 @@ struct SettingsView: View {
         .sheet(isPresented: $showingImportExport) {
             ImportExportView()
         }
-        .sheet(isPresented: $showingTestDataGenerator) {
-            TestDataGeneratorView()
+        .sheet(isPresented: $showingReplenishmentTimePicker) {
+            ReplenishmentTimePickerView()
         }
-        #if DEBUG
-        .sheet(isPresented: $showingErrorMessageTest) {
-            NavigationStack {
-                ErrorMessageTestView()
-            }
-        }
-        #endif
         .alert("Restart Required", isPresented: $showingRestartAlert) {
             Button("Cancel", role: .cancel) {
                 // Revert to original value by clearing pending change
@@ -184,6 +175,32 @@ struct SettingsView: View {
         }
     }
 
+    private var recurringItemsSection: some View {
+        Section("Recurring Items") {
+            Button(action: { showingReplenishmentTimePicker = true }) {
+                HStack {
+                    Label {
+                        Text("Replenishment Time")
+                            .foregroundColor(.daisyText)
+                    } icon: {
+                        Image(systemName: "arrow.clockwise.circle")
+                    }
+                    Spacer()
+                    Text(replenishmentTimeManager.displayText)
+                        .foregroundColor(.daisyTextSecondary)
+                        .font(.caption)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.daisyTextSecondary)
+                }
+            }
+
+            Text("New recurring tasks and habits appear at this time each day after completion.")
+                .font(.caption)
+                .foregroundColor(.daisyTextSecondary)
+        }
+    }
+
     private var notificationsSection: some View {
         Section("Notifications") {
             Toggle(isOn: Binding(
@@ -247,28 +264,6 @@ struct SettingsView: View {
                     Image(systemName: "chevron.right")
                         .font(.caption)
                         .foregroundColor(.daisyTextSecondary)
-                }
-            }
-        }
-    }
-
-    private var developerSection: some View {
-        Section("Developer") {
-            Button(action: { showingTestDataGenerator = true }) {
-                Label {
-                    Text("Test Data Generator")
-                        .foregroundColor(.daisyText)
-                } icon: {
-                    Image(systemName: "wrench.and.screwdriver")
-                }
-            }
-
-            Button(action: { showingErrorMessageTest = true }) {
-                Label {
-                    Text("Test Error Messages")
-                        .foregroundColor(.daisyText)
-                } icon: {
-                    Image(systemName: "exclamationmark.triangle")
                 }
             }
         }

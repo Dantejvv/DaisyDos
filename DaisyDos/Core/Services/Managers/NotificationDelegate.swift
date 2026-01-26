@@ -19,6 +19,8 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     // MARK: - Dependencies
 
     private let navigationManager: NavigationManager
+    /// Weak reference to AppDelegate for setting the cold-start flag
+    private weak var appDelegate: AppDelegate?
 
     /// Managers are optional to support cold start - they're injected after SwiftData is ready
     private var habitManager: HabitManager?
@@ -58,8 +60,9 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
     /// Initialize with just navigationManager for early registration in didFinishLaunchingWithOptions
     /// Call setManagers() later when SwiftData context is available
-    init(navigationManager: NavigationManager) {
+    init(navigationManager: NavigationManager, appDelegate: AppDelegate? = nil) {
         self.navigationManager = navigationManager
+        self.appDelegate = appDelegate
         super.init()
     }
 
@@ -167,17 +170,26 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         print("NotificationDelegate: didReceive called with action '\(actionIdentifier)', managersReady=\(managersReady)")
         #endif
 
+        // Signal that this launch was triggered by a notification action (cold-start scenario).
+        // This prevents scheduleAll* from running and destructively re-adding all notifications.
+        if actionIdentifier != UNNotificationDefaultActionIdentifier {
+            appDelegate?.launchedFromNotificationAction = true
+            #if DEBUG
+            print("NotificationDelegate: Set launchedFromNotificationAction = true (action: \(actionIdentifier))")
+            #endif
+        }
+
         // Mark the notification as fired ONLY for non-snooze actions
         // Snooze actions will reschedule the notification, so the alert badge should remain visible
-        let isSnoozeAction = actionIdentifier == "snooze_task" || actionIdentifier == "snooze_habit"
+        let isSnoozeAction = actionIdentifier == NotificationConstants.snoozeTask || actionIdentifier == NotificationConstants.snoozeHabit
         if !isSnoozeAction {
             markNotificationFired(userInfo: userInfo)
         }
 
         // Handle different notification types
-        if let habitID = userInfo["habit_id"] as? String {
+        if let habitID = userInfo[NotificationConstants.habitIdKey] as? String {
             handleHabitNotificationResponse(habitID: habitID, actionIdentifier: actionIdentifier)
-        } else if let taskID = userInfo["task_id"] as? String {
+        } else if let taskID = userInfo[NotificationConstants.taskIdKey] as? String {
             handleTaskNotificationResponse(taskID: taskID, actionIdentifier: actionIdentifier)
         }
 
@@ -190,7 +202,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         guard let uuid = UUID(uuidString: habitID) else { return }
 
         switch actionIdentifier {
-        case "complete_habit":
+        case NotificationConstants.completeHabit:
             // Complete the habit (or queue if managers not ready)
             // No navigation - action runs in background without launching app
             if managersReady {
@@ -202,7 +214,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
                 #endif
             }
 
-        case "skip_habit":
+        case NotificationConstants.skipHabit:
             // Skip the habit for today (or queue if managers not ready)
             // No navigation - action runs in background without launching app
             if managersReady {
@@ -214,7 +226,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
                 #endif
             }
 
-        case "snooze_habit":
+        case NotificationConstants.snoozeHabit:
             // Snooze the notification reminder (or queue if managers not ready)
             // No navigation - action runs in background without launching app
             if managersReady {
@@ -242,7 +254,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         guard let uuid = UUID(uuidString: taskID) else { return }
 
         switch actionIdentifier {
-        case "complete_task":
+        case NotificationConstants.completeTask:
             // Complete the task (or queue if managers not ready)
             // No navigation - action runs in background without launching app
             if managersReady {
@@ -254,7 +266,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
                 #endif
             }
 
-        case "snooze_task":
+        case NotificationConstants.snoozeTask:
             // Snooze the task (or queue if managers not ready)
             // No navigation - action runs in background without launching app
             if managersReady {
@@ -382,8 +394,8 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             return
         }
 
-        // Snooze habit notification for 1 hour
-        habitNotificationManager.snoozeHabit(habit, by: 3600) // 1 hour
+        // Snooze habit notification
+        habitNotificationManager.snoozeHabit(habit, by: NotificationConstants.snoozeDuration)
 
         #if DEBUG
         print("NotificationDelegate: Successfully snoozed habit '\(habit.title)' for 1 hour")
@@ -438,8 +450,8 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             return
         }
 
-        // Snooze task for 1 hour using TaskNotificationManager
-        taskNotificationManager.snoozeTask(task, by: 3600) // 1 hour
+        // Snooze task notification
+        taskNotificationManager.snoozeTask(task, by: NotificationConstants.snoozeDuration)
 
         #if DEBUG
         print("NotificationDelegate: Successfully snoozed task '\(task.title)' for 1 hour")
@@ -487,9 +499,9 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
         for notification in delivered {
             let userInfo = notification.request.content.userInfo
-            if let habitID = userInfo["habit_id"] as? String {
+            if let habitID = userInfo[NotificationConstants.habitIdKey] as? String {
                 habitIDs.append(habitID)
-            } else if let taskID = userInfo["task_id"] as? String {
+            } else if let taskID = userInfo[NotificationConstants.taskIdKey] as? String {
                 taskIDs.append(taskID)
             }
         }
@@ -503,8 +515,14 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             for habitID in capturedHabitIDs {
                 if let uuid = UUID(uuidString: habitID),
                    let habit = fetchHabit(by: uuid) {
+                    // Skip if already snoozed — snooze action already set the correct state
+                    guard habit.snoozedUntil == nil else {
+                        #if DEBUG
+                        print("NotificationDelegate: Skipping delivered habit '\(habit.title)' - already snoozed")
+                        #endif
+                        continue
+                    }
                     habit.notificationFired = true
-                    habit.snoozedUntil = nil // Clear snooze state when notification fires
                     #if DEBUG
                     print("NotificationDelegate: Marked delivered habit '\(habit.title)' notification as fired")
                     #endif
@@ -513,13 +531,22 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             for taskID in capturedTaskIDs {
                 if let uuid = UUID(uuidString: taskID),
                    let task = fetchTask(by: uuid) {
+                    // Skip if already snoozed — snooze action already set the correct state
+                    guard task.snoozedUntil == nil else {
+                        #if DEBUG
+                        print("NotificationDelegate: Skipping delivered task '\(task.title)' - already snoozed")
+                        #endif
+                        continue
+                    }
                     task.notificationFired = true
-                    task.snoozedUntil = nil // Clear snooze state when notification fires
                     #if DEBUG
                     print("NotificationDelegate: Marked delivered task '\(task.title)' notification as fired")
                     #endif
                 }
             }
+
+            // Explicit save after all mutations
+            try? self.taskManager?.modelContext.save()
         }
     }
 
@@ -545,19 +572,23 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     /// Internal synchronous implementation - must be called on main thread
     /// Requires managers to be set
     private func markNotificationFiredSync(userInfo: [AnyHashable: Any]) {
-        if let habitID = userInfo["habit_id"] as? String,
+        if let habitID = userInfo[NotificationConstants.habitIdKey] as? String,
            let uuid = UUID(uuidString: habitID),
            let habit = fetchHabit(by: uuid) {
             habit.notificationFired = true
             habit.snoozedUntil = nil // Clear snooze state when notification fires
+            // Explicit save for cold-start scenarios
+            try? habitManager?.modelContext.save()
             #if DEBUG
             print("NotificationDelegate: Marked habit '\(habit.title)' notification as fired")
             #endif
-        } else if let taskID = userInfo["task_id"] as? String,
+        } else if let taskID = userInfo[NotificationConstants.taskIdKey] as? String,
                   let uuid = UUID(uuidString: taskID),
                   let task = fetchTask(by: uuid) {
             task.notificationFired = true
             task.snoozedUntil = nil // Clear snooze state when notification fires
+            // Explicit save for cold-start scenarios
+            try? taskManager?.modelContext.save()
             #if DEBUG
             print("NotificationDelegate: Marked task '\(task.title)' notification as fired")
             #endif

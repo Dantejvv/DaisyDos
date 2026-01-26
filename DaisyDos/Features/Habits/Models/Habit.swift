@@ -57,13 +57,9 @@ class Habit {
     /// Priority level for habit importance and organization
     var priority: Priority = Priority.none
 
-    /// Scheduled time of day for the habit (hour/minute components)
-    /// Used as the reference point for relative reminder offsets
-    var scheduledTimeHour: Int?
-    var scheduledTimeMinute: Int?
-
-    /// Seconds before scheduled time for reminders (negative value e.g., -900 for 15 min before)
-    var reminderOffset: TimeInterval?
+    /// Alert time for habit reminders (time-of-day when notification fires)
+    var alertTimeHour: Int? // 0-23
+    var alertTimeMinute: Int? // 0-59
 
     /// When snoozed, this overrides the normal reminder time until the snooze fires
     var snoozedUntil: Date?
@@ -165,64 +161,40 @@ class Habit {
     }
 
     var hasAlert: Bool {
-        reminderOffset != nil
+        alertTimeHour != nil
     }
 
     var hasReminder: Bool {
-        reminderOffset != nil
+        alertTimeHour != nil
     }
 
-    /// Computed accessor for scheduled time as DateComponents
-    var scheduledTime: DateComponents? {
-        get {
-            guard let hour = scheduledTimeHour, let minute = scheduledTimeMinute else {
-                return nil
-            }
-            return DateComponents(hour: hour, minute: minute)
-        }
-        set {
-            scheduledTimeHour = newValue?.hour
-            scheduledTimeMinute = newValue?.minute
-        }
-    }
-
-    /// Computes the effective reminder date from scheduledTime + reminderOffset
-    /// Priority: snoozedUntil > calculated reminder time
+    /// Computes the effective reminder date from alertTime
+    /// Priority: snoozedUntil > alert time applied to today
     var effectiveReminderDate: Date? {
         // If snoozed, use the snooze time (overrides normal calculation)
         if let snoozed = snoozedUntil {
             return snoozed
         }
 
-        guard let offset = reminderOffset, let scheduled = scheduledTime else {
+        guard let hour = alertTimeHour, let minute = alertTimeMinute else {
             return nil
         }
 
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-
-        // Build today's scheduled datetime from scheduledTime components
-        guard let hour = scheduled.hour, let minute = scheduled.minute else {
-            return nil
-        }
-
-        var components = calendar.dateComponents([.year, .month, .day], from: today)
+        var components = calendar.dateComponents([.year, .month, .day], from: Date())
         components.hour = hour
         components.minute = minute
+        components.second = 0
 
-        guard let scheduledDateTime = calendar.date(from: components) else {
+        guard let alertDateTime = calendar.date(from: components) else {
             return nil
         }
 
-        // Apply the offset
-        let reminderDateTime = scheduledDateTime.addingTimeInterval(offset)
-
-        // If the reminder time has already passed today, schedule for next occurrence
-        if reminderDateTime < Date() {
+        // If the alert time has already passed today, schedule for next occurrence
+        if alertDateTime < Date() {
             // For habits WITHOUT recurrence, just add 1 day
-            // This fixes the bug where non-recurring habits would return past dates
             if recurrenceRule == nil {
-                return calendar.date(byAdding: .day, value: 1, to: reminderDateTime)
+                return calendar.date(byAdding: .day, value: 1, to: alertDateTime)
             }
 
             // For recurring habits, find next due date based on recurrence rule
@@ -230,38 +202,32 @@ class Habit {
                 var nextComponents = calendar.dateComponents([.year, .month, .day], from: nextDue)
                 nextComponents.hour = hour
                 nextComponents.minute = minute
-                if let nextScheduledDateTime = calendar.date(from: nextComponents) {
-                    return nextScheduledDateTime.addingTimeInterval(offset)
+                if let nextAlertDateTime = calendar.date(from: nextComponents) {
+                    return nextAlertDateTime
                 }
             }
         }
 
-        return reminderDateTime
+        return alertDateTime
     }
 
-    /// Returns true if the habit has a reminder/alert that hasn't fired yet
+    /// Returns true if the habit has a future reminder/alert that hasn't fired yet
     var hasPendingAlert: Bool {
-        effectiveReminderDate != nil && !notificationFired
+        guard let date = effectiveReminderDate else { return false }
+        return date > Date() && !notificationFired
     }
 
-    /// Short display text for reminder showing the offset (e.g., "15m before")
+    /// Short display text for alert time (e.g., "9:00 AM")
     var reminderDisplayText: String? {
-        guard let offset = reminderOffset else { return nil }
-        return ReminderOffset.displayText(for: offset)
-    }
-
-    /// Display text for the scheduled time (e.g., "9:00 AM")
-    var scheduledTimeDisplayText: String? {
-        guard let hour = scheduledTimeHour, let minute = scheduledTimeMinute else {
+        guard let hour = alertTimeHour, let minute = alertTimeMinute else {
             return nil
         }
 
-        let calendar = Calendar.current
         var components = DateComponents()
         components.hour = hour
         components.minute = minute
 
-        guard let date = calendar.date(from: components) else { return nil }
+        guard let date = Calendar.current.date(from: components) else { return nil }
 
         let formatter = DateFormatter()
         formatter.dateFormat = "h:mm a"

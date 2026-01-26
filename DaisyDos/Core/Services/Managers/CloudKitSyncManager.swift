@@ -148,55 +148,6 @@ class CloudKitSyncManager {
         }
     }
 
-    // MARK: - Conflict Resolution
-
-    /// Handle merge conflicts using last-write-wins strategy
-    func handleConflict<T: PersistentModel>(local: T, remote: T) -> ConflictResolution {
-        // Get modification dates
-        let localDate = getModificationDate(from: local)
-        let remoteDate = getModificationDate(from: remote)
-
-        // Last-write-wins: Keep the version with the newer modification date
-        if remoteDate > localDate {
-            #if DEBUG
-            print("🔀 Conflict resolved: Remote version is newer, using remote")
-            #endif
-            return .useRemote
-        } else {
-            #if DEBUG
-            print("🔀 Conflict resolved: Local version is newer, using local")
-            #endif
-            return .useLocal
-        }
-    }
-
-    /// Extract modification date from a model
-    private func getModificationDate<T: PersistentModel>(from model: T) -> Date {
-        // Use reflection to find modifiedDate or lastModifiedDate property
-        let mirror = Mirror(reflecting: model)
-
-        for child in mirror.children {
-            if let label = child.label {
-                if label == "modifiedDate" || label == "lastModifiedDate" {
-                    if let date = child.value as? Date {
-                        return date
-                    }
-                }
-            }
-        }
-
-        // Fallback to epoch if no modification date found
-        return Date(timeIntervalSince1970: 0)
-    }
-
-    /// Conflict resolution strategy
-    enum ConflictResolution {
-        case useLocal
-        case useRemote
-        case merge
-        case askUser
-    }
-
     // MARK: - Sync Statistics
 
     /// Get a summary of sync status

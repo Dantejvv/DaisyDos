@@ -63,8 +63,7 @@ import SwiftUI
 struct MetadataToolbarConfig {
     var showDate: Bool
     var showRecurrence: Bool
-    var showReminder: Bool
-    var showAlert: Bool  // For habits (uses time-of-day alert)
+    var showReminder: Bool  // For both tasks and habits (absolute date or alert time)
     var showPriority: Bool
 
     // MARK: - Predefined Configurations
@@ -75,7 +74,6 @@ struct MetadataToolbarConfig {
         showDate: true,
         showRecurrence: true,
         showReminder: true,
-        showAlert: false,
         showPriority: true
     )
 
@@ -83,13 +81,12 @@ struct MetadataToolbarConfig {
     /// Rationale: Tasks are deadline-oriented work items with absolute reminders
     static let task = full
 
-    /// Habit configuration - no due date, uses reminder (same as tasks now)
-    /// Rationale: Habits now use absolute reminder dates like tasks for unified notification system
+    /// Habit configuration - no due date, uses reminder (alert time)
+    /// Rationale: Habits use alert time for time-of-day notifications
     static let habit = MetadataToolbarConfig(
         showDate: false,
         showRecurrence: true,
         showReminder: true,
-        showAlert: false,
         showPriority: true
     )
 
@@ -99,7 +96,6 @@ struct MetadataToolbarConfig {
         showDate: false,
         showRecurrence: false,
         showReminder: false,
-        showAlert: false,
         showPriority: true
     )
 
@@ -119,7 +115,6 @@ struct MetadataToolbarConfig {
             showDate: features.contains(.date),
             showRecurrence: features.contains(.recurrence),
             showReminder: features.contains(.reminder),
-            showAlert: features.contains(.alert),
             showPriority: features.contains(.priority)
         )
     }
@@ -129,7 +124,6 @@ struct MetadataToolbarConfig {
         case date = "Due Date"
         case recurrence = "Recurrence"
         case reminder = "Reminder"
-        case alert = "Alert"
         case priority = "Priority"
     }
 }
@@ -165,14 +159,13 @@ struct MetadataToolbar: View {
     let dueDate: Date?
     let recurrenceRule: RecurrenceRule?
     let reminderDate: Date?  // For non-recurring items - absolute reminder date/time
-    let reminderOffset: TimeInterval?  // For recurring items - relative reminder offset
-    let alert: AlertOption?  // For habits - time-of-day alert (legacy)
+    let alertTimeHour: Int?  // For recurring items - alert time hour (0-23)
+    let alertTimeMinute: Int?  // For recurring items - alert time minute (0-59)
     let priority: Priority?
     let accentColor: Color
     let onDateTap: () -> Void
     let onRecurrenceTap: () -> Void
     let onReminderTap: () -> Void  // For tasks and habits
-    let onAlertTap: () -> Void     // For habits (legacy)
     let onPriorityTap: () -> Void
 
     init(
@@ -180,28 +173,26 @@ struct MetadataToolbar: View {
         dueDate: Date? = nil,
         recurrenceRule: RecurrenceRule? = nil,
         reminderDate: Date? = nil,
-        reminderOffset: TimeInterval? = nil,
-        alert: AlertOption? = nil,
+        alertTimeHour: Int? = nil,
+        alertTimeMinute: Int? = nil,
         priority: Priority? = nil,
         accentColor: Color = .daisyTask,
         onDateTap: @escaping () -> Void = {},
         onRecurrenceTap: @escaping () -> Void = {},
         onReminderTap: @escaping () -> Void = {},
-        onAlertTap: @escaping () -> Void = {},
         onPriorityTap: @escaping () -> Void = {}
     ) {
         self.config = config
         self.dueDate = dueDate
         self.recurrenceRule = recurrenceRule
         self.reminderDate = reminderDate
-        self.reminderOffset = reminderOffset
-        self.alert = alert
+        self.alertTimeHour = alertTimeHour
+        self.alertTimeMinute = alertTimeMinute
         self.priority = priority
         self.accentColor = accentColor
         self.onDateTap = onDateTap
         self.onRecurrenceTap = onRecurrenceTap
         self.onReminderTap = onReminderTap
-        self.onAlertTap = onAlertTap
         self.onPriorityTap = onPriorityTap
     }
 
@@ -210,8 +201,8 @@ struct MetadataToolbar: View {
     }
 
     private var hasReminder: Bool {
-        // Has reminder if either absolute date or relative offset is set
-        reminderDate != nil || reminderOffset != nil
+        // Has reminder if either absolute date or alert time is set
+        reminderDate != nil || alertTimeHour != nil
     }
 
     private var formattedDueDate: String {
@@ -228,11 +219,18 @@ struct MetadataToolbar: View {
     }
 
     /// Short label for reminder display in toolbar
-    /// Shows relative offset text for recurring items, absolute date/time for non-recurring
+    /// Shows alert time for recurring items, absolute date/time for non-recurring
     private var reminderShortLabel: String {
-        // For recurring items with relative offset
-        if recurrenceRule != nil, let offset = reminderOffset {
-            return ReminderOffset.displayText(for: offset)
+        // For recurring items with alert time
+        if recurrenceRule != nil, let hour = alertTimeHour, let minute = alertTimeMinute {
+            var components = DateComponents()
+            components.hour = hour
+            components.minute = minute
+            if let date = Calendar.current.date(from: components) {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "h:mm a"
+                return formatter.string(from: date)
+            }
         }
 
         // For non-recurring items with absolute date
@@ -322,26 +320,6 @@ struct MetadataToolbar: View {
                     }
                 }
 
-                // Alert Icon with label (for Habits - time-of-day alert)
-                if config.showAlert {
-                    VStack(spacing: 2) {
-                        CompactIconButton(
-                            icon: alert != nil ? "bell.fill" : "bell",
-                            isActive: alert != nil,
-                            accentColor: accentColor,
-                            action: onAlertTap
-                        )
-                        .accessibilityLabel(alert != nil ? "Alert: \(alert!.shortLabel)" : "Set alert")
-
-                        if let alert = alert {
-                            Text(alert.shortLabel)
-                                .font(.system(size: 9))
-                                .foregroundColor(accentColor)
-                                .accessibilityHidden(true)
-                        }
-                    }
-                }
-
                 // Priority Icon with label
                 if config.showPriority {
                     VStack(spacing: 2) {
@@ -413,15 +391,16 @@ struct MetadataToolbar: View {
         Text("Habit Toolbar (.habit)")
             .font(.headline)
 
-        // Habit - No due date (by design), uses alert for time-of-day
+        // Habit - No due date (by design), uses alert time
         MetadataToolbar(
             config: .habit,
             recurrenceRule: RecurrenceRule(frequency: .weekly, interval: 1),
-            alert: .fifteenMinutesBefore,
+            alertTimeHour: 9,
+            alertTimeMinute: 0,
             priority: .medium,
             accentColor: .daisyHabit,
             onRecurrenceTap: { print("Recurrence tapped") },
-            onAlertTap: { print("Alert tapped") },
+            onReminderTap: { print("Alert tapped") },
             onPriorityTap: { print("Priority tapped") }
         )
         .padding()

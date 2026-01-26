@@ -26,6 +26,7 @@ struct DaisyDosApp: App {
     let appearanceManager = AppearanceManager()
     let navigationManager = NavigationManager()
     let notificationPreferencesManager = NotificationPreferencesManager()
+    let replenishmentTimeManager = ReplenishmentTimeManager()
 
     // CloudKit and network managers (initialized lazily in .task)
     @State private var cloudKitSyncManager: CloudKitSyncManager?
@@ -57,12 +58,17 @@ struct DaisyDosApp: App {
         // Create all managers eagerly using the shared container
         // This ensures they exist before .environment() is evaluated
         let context = Self.sharedModelContainer.mainContext
+
+        // Create managers in dependency order
+        // HabitManager must be created first since AnalyticsManager depends on it
+        let habitMgr = HabitManager(modelContext: context)
+        habitManager = habitMgr
+
         taskManager = TaskManager(modelContext: context)
-        habitManager = HabitManager(modelContext: context)
         taskNotificationManager = TaskNotificationManager(modelContext: context)
         habitNotificationManager = HabitNotificationManager(modelContext: context)
         tagManager = TagManager(modelContext: context)
-        analyticsManager = AnalyticsManager(modelContext: context)
+        analyticsManager = AnalyticsManager(habitManager: habitMgr)  // Pass shared HabitManager
         logbookManager = LogbookManager(modelContext: context)
 
         // Pass navigationManager to AppDelegate so it can create the NotificationDelegate
@@ -143,23 +149,40 @@ struct DaisyDosApp: App {
                     )
 
                     // MARK: - Schedule All Notifications on App Launch
-                    // This ensures notifications survive app restarts. Previously, notifications
-                    // were only scheduled when tasks/habits changed, not on app launch.
+                    // Only run scheduleAll* on foreground launches. On background cold-starts
+                    // triggered by notification actions (e.g., snooze), the execution window is
+                    // too short and destructive re-scheduling could lose pending notifications.
+                    let isBackgroundNotificationLaunch = appDelegate.launchedFromNotificationAction
                     if await taskNotificationManager.requestNotificationPermissions() {
-                        taskNotificationManager.scheduleAllTaskNotifications()
+                        if !isBackgroundNotificationLaunch {
+                            taskNotificationManager.scheduleAllTaskNotifications()
+                            #if DEBUG
+                            print("✅ Scheduled all task notifications on foreground app launch")
+                            #endif
+                        } else {
+                            #if DEBUG
+                            print("⏭️ Skipped scheduleAllTaskNotifications (background notification launch)")
+                            #endif
+                        }
+                    }
+                    // Habit notifications share the same permission, so just check them
+                    habitNotificationManager.checkNotificationPermissions()
+                    if !isBackgroundNotificationLaunch {
+                        habitNotificationManager.scheduleAllHabitNotifications()
                         #if DEBUG
-                        print("✅ Scheduled all task notifications on app launch")
+                        print("✅ Scheduled all habit notifications on foreground app launch")
+                        #endif
+                    } else {
+                        #if DEBUG
+                        print("⏭️ Skipped scheduleAllHabitNotifications (background notification launch)")
                         #endif
                     }
-                    // Habit notifications share the same permission, so just schedule them
-                    habitNotificationManager.checkNotificationPermissions()
-                    habitNotificationManager.scheduleAllHabitNotifications()
-                    #if DEBUG
-                    print("✅ Scheduled all habit notifications on app launch")
-                    #endif
 
-                    // Initialize recurrence scheduler
-                    recurrenceScheduler = RecurrenceScheduler(modelContext: Self.sharedModelContainer.mainContext)
+                    // Initialize recurrence scheduler with replenishment time manager
+                    recurrenceScheduler = RecurrenceScheduler(
+                        modelContext: Self.sharedModelContainer.mainContext,
+                        replenishmentTimeManager: replenishmentTimeManager
+                    )
 
                     // Process any pending recurrences on app launch
                     await processPendingRecurrences()
@@ -207,6 +230,7 @@ struct DaisyDosApp: App {
         .environment(cloudKitSyncManager)
         .environment(networkMonitor)
         .environment(offlineQueueManager)
+        .environment(replenishmentTimeManager)
     }
 
     // MARK: - Logbook Housekeeping
@@ -222,9 +246,9 @@ struct DaisyDosApp: App {
             return
         }
 
-        // Perform housekeeping in background
-        let manager = LogbookManager(modelContext: Self.sharedModelContainer.mainContext)
-        let result = manager.performHousekeeping()
+        // Perform housekeeping using the shared LogbookManager instance
+        // (avoids creating duplicate manager)
+        let result = logbookManager.performHousekeeping()
 
         switch result {
         case .success(let stats):

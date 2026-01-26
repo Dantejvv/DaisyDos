@@ -25,6 +25,11 @@ class BadgeManager {
 
     private let modelContext: ModelContext
 
+    // MARK: - Debounce State
+
+    private var badgeUpdateWorkItem: DispatchWorkItem?
+    private static let debounceInterval: TimeInterval = 0.5
+
     // MARK: - Initialization
 
     init(modelContext: ModelContext) {
@@ -104,11 +109,16 @@ class BadgeManager {
         }
     }
 
-    /// Synchronous version that dispatches badge update to background
+    /// Debounced badge update — coalesces rapid changes into a single update
     func updateBadgeAsync() {
-        _Concurrency.Task {
-            await updateBadge()
+        badgeUpdateWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            _Concurrency.Task {
+                await self?.updateBadge()
+            }
         }
+        badgeUpdateWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.debounceInterval, execute: workItem)
     }
 
     // MARK: - Notification Observers

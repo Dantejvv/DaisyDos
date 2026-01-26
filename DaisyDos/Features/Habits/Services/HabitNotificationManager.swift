@@ -24,7 +24,7 @@ class HabitNotificationManager: BaseNotificationManager {
     var isPermissionGranted: Bool = false
 
     var notificationCategoryIdentifier: String {
-        return "habit_reminder"
+        return NotificationConstants.habitCategory
     }
 
     var isNotificationsEnabled: Bool = true {
@@ -194,15 +194,16 @@ class HabitNotificationManager: BaseNotificationManager {
 
         // Reset notification fired state since we're scheduling a new notification
         habit.notificationFired = false
+        // Explicit save for consistency
+        try? modelContext.save()
 
-        let identifier = "habit_\(habit.id.uuidString)"
-        let timeInterval = reminderDate.timeIntervalSinceNow
+        let identifier = "\(NotificationConstants.habitPrefix)\(habit.id.uuidString)"
 
         #if DEBUG
         print("   ✅ Scheduling notification:")
         print("      - identifier: \(identifier)")
-        print("      - timeInterval: \(timeInterval) seconds (\(timeInterval / 3600) hours)")
         print("      - reminderDate: \(reminderDate)")
+        print("      - isSnoozed: \(habit.snoozedUntil != nil)")
         #endif
 
         // Create notification content
@@ -212,16 +213,24 @@ class HabitNotificationManager: BaseNotificationManager {
         content.sound = .default
         content.categoryIdentifier = notificationCategoryIdentifier
         content.userInfo = [
-            "habit_id": habit.id.uuidString,
-            "habit_title": habit.title
+            NotificationConstants.habitIdKey: habit.id.uuidString,
+            NotificationConstants.habitTitleKey: habit.title
         ]
         content.badge = NSNumber(value: getPendingHabitsCount())
 
-        // Schedule using absolute time interval (one-shot, like tasks)
-        let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: timeInterval,
-            repeats: false
-        )
+        // Use UNCalendarNotificationTrigger for non-snoozed notifications (absolute date, idempotent).
+        // Snoozed notifications use UNTimeIntervalNotificationTrigger (relative from now).
+        let trigger: UNNotificationTrigger
+        if habit.snoozedUntil != nil {
+            let timeInterval = reminderDate.timeIntervalSinceNow
+            trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(timeInterval, 1), repeats: false)
+        } else {
+            let components = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute, .second],
+                from: reminderDate
+            )
+            trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        }
 
         let request = UNNotificationRequest(
             identifier: identifier,
@@ -241,7 +250,7 @@ class HabitNotificationManager: BaseNotificationManager {
     }
 
     func removeHabitNotification(habitId: String) {
-        let identifier = "habit_\(habitId)"
+        let identifier = "\(NotificationConstants.habitPrefix)\(habitId)"
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
     }
 
@@ -252,22 +261,64 @@ class HabitNotificationManager: BaseNotificationManager {
     func scheduleAllHabitNotifications() {
         guard isNotificationsEnabled && isPermissionGranted else { return }
 
-        let habits = getAllHabits()
-        for habit in habits where !habit.isCompletedToday {
-            scheduleHabitReminder(for: habit)
+        let habits = getAllHabits().filter { !$0.isCompletedToday }
+
+        // Fetch all pending notifications in a single batch to avoid redundant remove+add cycles
+        notificationCenter.getPendingNotificationRequests { [weak self] pendingRequests in
+            guard let self = self else { return }
+
+            // Build a lookup of existing pending notifications by identifier
+            let pendingByID = Dictionary(uniqueKeysWithValues:
+                pendingRequests.map { ($0.identifier, $0) }
+            )
+
+            DispatchQueue.main.async {
+                for habit in habits {
+                    let identifier = "\(NotificationConstants.habitPrefix)\(habit.id.uuidString)"
+
+                    // If a notification already exists with a matching trigger date, skip it
+                    if let existing = pendingByID[identifier],
+                       let targetDate = habit.effectiveReminderDate,
+                       self.triggerMatchesDate(existing.trigger, targetDate: targetDate) {
+                        #if DEBUG
+                        print("⏭️ Skipping habit '\(habit.title)' - notification already scheduled correctly")
+                        #endif
+                        continue
+                    }
+
+                    self.scheduleHabitReminder(for: habit)
+                }
+            }
         }
+    }
+
+    // MARK: - Trigger Comparison
+
+    /// Compares a notification trigger's fire date against an expected date (1-second tolerance).
+    /// Works with both UNCalendarNotificationTrigger and UNTimeIntervalNotificationTrigger.
+    private func triggerMatchesDate(_ trigger: UNNotificationTrigger?, targetDate: Date) -> Bool {
+        guard let trigger = trigger else { return false }
+
+        if let calendarTrigger = trigger as? UNCalendarNotificationTrigger,
+           let nextDate = calendarTrigger.nextTriggerDate() {
+            return abs(nextDate.timeIntervalSince(targetDate)) < 1.0
+        }
+
+        // For time-interval triggers (snoozed notifications), we can't reliably compare
+        // since the relative time drifts. Always reschedule these.
+        return false
     }
 
     func removeAllHabitNotifications() {
         _Concurrency.Task {
-            await removeNotifications(withPrefix: "habit_")
+            await removeNotifications(withPrefix: NotificationConstants.habitPrefix)
         }
     }
 
     // MARK: - Snooze Functionality
 
-    func snoozeHabit(_ habit: Habit, by interval: TimeInterval = 3600) {
-        let identifier = "habit_\(habit.id.uuidString)"
+    func snoozeHabit(_ habit: Habit, by interval: TimeInterval = NotificationConstants.snoozeDuration) {
+        let identifier = "\(NotificationConstants.habitPrefix)\(habit.id.uuidString)"
 
         // Remove both pending AND delivered notifications to prevent markDeliveredNotificationsAsFired
         // from re-marking this habit as fired during cold start
@@ -278,6 +329,10 @@ class HabitNotificationManager: BaseNotificationManager {
         habit.notificationFired = false
         habit.snoozedUntil = Date().addingTimeInterval(interval)
 
+        // Explicit save required for cold-start scenarios where iOS may terminate
+        // the app before SwiftData autosave completes
+        try? modelContext.save()
+
         let content = UNMutableNotificationContent()
         content.title = "Habit Reminder (Snoozed)"
         content.body = habit.title
@@ -285,8 +340,8 @@ class HabitNotificationManager: BaseNotificationManager {
         content.badge = NSNumber(value: getPendingHabitsCount())
         content.categoryIdentifier = notificationCategoryIdentifier
         content.userInfo = [
-            "habit_id": habit.id.uuidString,
-            "habit_title": habit.title
+            NotificationConstants.habitIdKey: habit.id.uuidString,
+            NotificationConstants.habitTitleKey: habit.title
         ]
 
         let trigger = UNTimeIntervalNotificationTrigger(
@@ -311,30 +366,9 @@ class HabitNotificationManager: BaseNotificationManager {
         }
     }
 
-    // MARK: - Notification Handling
-
-    func handleNotificationAction(identifier: String, habitId: String) async -> Bool {
-        guard let habit = getHabit(by: habitId) else { return false }
-
-        let habitManager = HabitManager(modelContext: modelContext)
-
-        switch identifier {
-        case "complete_habit":
-            return habitManager.markHabitCompleted(habit)
-
-        case "skip_habit":
-            return habitManager.skipHabit(habit) != nil
-
-        case "snooze_habit":
-            snoozeHabit(habit)
-            return true
-
-        default:
-            return false
-        }
-    }
-
     // MARK: - Helper Methods
+    // NOTE: Notification actions (complete, skip, snooze) are handled directly by NotificationDelegate,
+    // which has access to the shared HabitManager instance. This avoids duplicate manager issues.
 
     private func getAllHabits() -> [Habit] {
         let descriptor = FetchDescriptor<Habit>(sortBy: [SortDescriptor(\.createdDate, order: .reverse)])
@@ -360,6 +394,6 @@ class HabitNotificationManager: BaseNotificationManager {
     // MARK: - Settings Management
 
     func getScheduledNotificationsCount() async -> Int {
-        return await getScheduledNotificationsCount(prefix: "habit_")
+        return await getScheduledNotificationsCount(prefix: NotificationConstants.habitPrefix)
     }
 }
