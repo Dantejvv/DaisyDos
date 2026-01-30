@@ -36,6 +36,9 @@ struct DaisyDosApp: App {
     // Recurrence scheduler for deferred task creation (initialized lazily in .task)
     @State private var recurrenceScheduler: RecurrenceScheduler?
 
+    // Habit replenishment service for instance-based alert tracking (initialized lazily in .task)
+    @State private var habitReplenishmentService: HabitReplenishmentService?
+
     // Badge manager for dynamic app badge updates (initialized lazily in .task)
     @State private var badgeManager: BadgeManager?
 
@@ -79,7 +82,7 @@ struct DaisyDosApp: App {
 
     // Shared model container - created first so managers can use its context
     static var sharedModelContainer: ModelContainer = {
-        let schema = Schema(versionedSchema: DaisyDosSchemaV8.self)
+        let schema = Schema(versionedSchema: DaisyDosSchemaV9.self)
 
         // Dynamic CloudKit configuration based on LocalOnlyModeManager
         // Note: Changing this requires app restart, handled in LocalOnlyModeManager
@@ -184,8 +187,17 @@ struct DaisyDosApp: App {
                         replenishmentTimeManager: replenishmentTimeManager
                     )
 
+                    // Initialize habit replenishment service
+                    habitReplenishmentService = HabitReplenishmentService(
+                        modelContext: Self.sharedModelContainer.mainContext,
+                        replenishmentTimeManager: replenishmentTimeManager
+                    )
+
                     // Process any pending recurrences on app launch
                     await processPendingRecurrences()
+
+                    // Process habit replenishments on app launch
+                    await processHabitReplenishments()
 
                     // Run logbook housekeeping on app launch (if needed)
                     await runLogbookHousekeepingIfNeeded()
@@ -198,10 +210,11 @@ struct DaisyDosApp: App {
                     navigationManager.markReady()
                 }
                 .onChange(of: scenePhase) {
-                    // Process pending recurrences when app comes to foreground
+                    // Process pending recurrences and habit replenishments when app comes to foreground
                     if scenePhase == .active {
                         _Concurrency.Task {
                             await processPendingRecurrences()
+                            await processHabitReplenishments()
                         }
                     }
                 }
@@ -286,6 +299,32 @@ struct DaisyDosApp: App {
         case .failure(let error):
             #if DEBUG
             print("❌ Failed to process pending recurrences: \(error.userMessage)")
+            #endif
+        }
+    }
+
+    // MARK: - Habit Replenishments
+
+    /// Process habit replenishments - reset instance state for habits that are due
+    private func processHabitReplenishments() async {
+        guard let service = habitReplenishmentService else { return }
+
+        let result = service.processHabitReplenishments()
+
+        switch result {
+        case .success(let replenishedHabits):
+            if !replenishedHabits.isEmpty {
+                #if DEBUG
+                print("✅ Replenished \(replenishedHabits.count) habit(s)")
+                for habit in replenishedHabits {
+                    print("   - '\(habit.title)' instance started \(habit.currentInstanceDate?.formatted() ?? "nil")")
+                }
+                #endif
+            }
+
+        case .failure(let error):
+            #if DEBUG
+            print("❌ Failed to process habit replenishments: \(error.userMessage)")
             #endif
         }
     }

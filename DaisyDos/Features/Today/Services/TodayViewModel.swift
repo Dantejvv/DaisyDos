@@ -37,9 +37,6 @@ class TodayViewModel {
         let today = calendar.startOfDay(for: Date())
 
         return tasks.filter { task in
-            // Only root tasks (no parent)
-            guard task.parentTask == nil else { return false }
-
             // Include if:
             // 1. Due today
             if let dueDate = task.dueDate {

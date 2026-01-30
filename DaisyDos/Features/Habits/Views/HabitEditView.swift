@@ -45,24 +45,18 @@ struct HabitEditView: View {
     struct SubtaskItem: Identifiable, Equatable, SubtaskItemProtocol {
         let id: UUID
         var title: String
-        var isCompletedToday: Bool
+        var isCompleted: Bool
         var subtaskOrder: Int
 
-        // SubtaskItemProtocol conformance
-        var isCompleted: Bool {
-            get { isCompletedToday }
-            set { isCompletedToday = newValue }
-        }
-
-        init(id: UUID = UUID(), title: String, isCompletedToday: Bool = false, subtaskOrder: Int = 0) {
+        init(id: UUID = UUID(), title: String, isCompleted: Bool = false, subtaskOrder: Int = 0) {
             self.id = id
             self.title = title
-            self.isCompletedToday = isCompletedToday
+            self.isCompleted = isCompleted
             self.subtaskOrder = subtaskOrder
         }
 
         static func == (lhs: SubtaskItem, rhs: SubtaskItem) -> Bool {
-            lhs.id == rhs.id && lhs.title == rhs.title && lhs.isCompletedToday == rhs.isCompletedToday && lhs.subtaskOrder == rhs.subtaskOrder
+            lhs.id == rhs.id && lhs.title == rhs.title && lhs.isCompleted == rhs.isCompleted && lhs.subtaskOrder == rhs.subtaskOrder
         }
     }
 
@@ -117,7 +111,7 @@ struct HabitEditView: View {
             SubtaskItem(
                 id: subtask.id,
                 title: subtask.title,
-                isCompletedToday: subtask.isCompletedToday,
+                isCompleted: subtask.isCompleted,
                 subtaskOrder: subtask.subtaskOrder
             )
         })
@@ -153,7 +147,7 @@ struct HabitEditView: View {
             SubtaskItem(
                 id: subtask.id,
                 title: subtask.title,
-                isCompletedToday: subtask.isCompletedToday,
+                isCompleted: subtask.isCompleted,
                 subtaskOrder: subtask.subtaskOrder
             )
         }
@@ -225,8 +219,12 @@ struct HabitEditView: View {
                                 ForEach(stagedSubtasks) { subtask in
                                     SubtaskRowStaging(
                                         subtask: subtask,
+                                        accentColor: .daisyHabit,
                                         onToggle: {
                                             toggleSubtask(subtask)
+                                        },
+                                        onTitleChange: { newTitle in
+                                            updateSubtaskTitle(subtask, title: newTitle)
                                         }
                                     )
                                     .id(subtask.id)
@@ -502,25 +500,24 @@ struct HabitEditView: View {
         // Delete subtasks that are no longer in stagedSubtasks
         for subtask in (habit.subtasks ?? []) {
             if !stagedSubtasks.contains(where: { $0.id == subtask.id }) {
-                _ = habitManager.deleteHabitSubtask(subtask, from: habit)
+                _ = habitManager.deleteSubtask(subtask, from: habit)
                 existingSubtasks.removeValue(forKey: subtask.id)
             }
         }
 
         // Add or update subtasks
-        for stagedSubtask in stagedSubtasks {
+        for (index, stagedSubtask) in stagedSubtasks.enumerated() {
             if let existingSubtask = existingSubtasks[stagedSubtask.id] {
                 // Update existing subtask
-                existingSubtask.title = stagedSubtask.title
-                existingSubtask.isCompletedToday = stagedSubtask.isCompletedToday
-                existingSubtask.subtaskOrder = stagedSubtask.subtaskOrder
-                existingSubtask.modifiedDate = Date()
+                existingSubtask.updateTitle(stagedSubtask.title)
+                existingSubtask.isCompleted = stagedSubtask.isCompleted
+                existingSubtask.subtaskOrder = index
             } else {
                 // Create new subtask
-                let result = habitManager.createHabitSubtask(for: habit, title: stagedSubtask.title)
+                let result = habitManager.createSubtask(for: habit, title: stagedSubtask.title)
                 if case .success(let newSubtask) = result {
-                    newSubtask.isCompletedToday = stagedSubtask.isCompletedToday
-                    newSubtask.subtaskOrder = stagedSubtask.subtaskOrder
+                    newSubtask.isCompleted = stagedSubtask.isCompleted
+                    newSubtask.subtaskOrder = index
                 }
             }
         }
@@ -597,12 +594,18 @@ struct HabitEditView: View {
 
     private func toggleSubtask(_ subtask: SubtaskItem) {
         if let index = stagedSubtasks.firstIndex(where: { $0.id == subtask.id }) {
-            stagedSubtasks[index].isCompletedToday.toggle()
+            stagedSubtasks[index].isCompleted.toggle()
         }
     }
 
     private func deleteSubtask(_ subtask: SubtaskItem) {
         stagedSubtasks.removeAll { $0.id == subtask.id }
+    }
+
+    private func updateSubtaskTitle(_ subtask: SubtaskItem, title: String) {
+        if let index = stagedSubtasks.firstIndex(where: { $0.id == subtask.id }) {
+            stagedSubtasks[index].title = title
+        }
     }
 
     private func moveSubtasks(from source: IndexSet, to destination: Int) {

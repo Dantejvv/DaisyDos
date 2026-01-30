@@ -61,9 +61,6 @@ class Task {
     var snoozedUntil: Date? // When snoozed, this overrides the normal reminder time until the snooze fires
     var notificationFired: Bool = false // Tracks if the reminder notification has been delivered
 
-    // MARK: - Ordering Properties
-    var subtaskOrder: Int = 0 // For ordering within parent's subtask list
-
     // MARK: - Relationships (CloudKit-compatible: all optional)
     @Relationship(deleteRule: .nullify, inverse: \Tag.tasks)
     var tags: [Tag]? {
@@ -75,10 +72,7 @@ class Task {
     }
 
     @Relationship(deleteRule: .cascade)
-    var subtasks: [Task]?
-
-    @Relationship(inverse: \Task.subtasks)
-    var parentTask: Task?
+    var subtasks: [Subtask]?
 
     @Relationship(deleteRule: .cascade, inverse: \TaskAttachment.task)
     var attachments: [TaskAttachment]?
@@ -90,7 +84,7 @@ class Task {
         set { tags = newValue }
     }
 
-    private var subtasksArray: [Task] {
+    private var subtasksArray: [Subtask] {
         get { subtasks ?? [] }
         set { subtasks = newValue }
     }
@@ -151,8 +145,8 @@ class Task {
     }
 
     /// Returns subtasks ordered by their subtaskOrder property
-    var orderedSubtasks: [Task] {
-        // Ensure order values are assigned for existing tasks
+    var orderedSubtasks: [Subtask] {
+        // Ensure order values are assigned for existing subtasks
         ensureSubtaskOrderValues()
         return subtasksArray.sorted { $0.subtaskOrder < $1.subtaskOrder }
     }
@@ -168,10 +162,6 @@ class Task {
                 subtask.subtaskOrder = index
             }
         }
-    }
-
-    var isRootTask: Bool {
-        parentTask == nil
     }
 
     var hasOverdueStatus: Bool {
@@ -238,50 +228,12 @@ class Task {
         isCompleted = completed
         completedDate = completed ? Date() : nil
         modifiedDate = Date()
-
-        if completed {
-            // When completing a parent task, mark all subtasks as complete
-            // and inherit the parent's completion date for age-based housekeeping
-            for subtask in subtasksArray {
-                if !subtask.isCompleted {
-                    subtask.setCompleted(true)
-                    subtask.completedDate = self.completedDate
-                }
-            }
-        } else {
-            // When uncompleting a parent task, also uncomplete all subtasks
-            for subtask in subtasksArray {
-                if subtask.isCompleted {
-                    subtask.setCompleted(false)
-                }
-            }
-
-            // When uncompleting a subtask, propagate up to parent if necessary
-            updateParentCompletionStatus()
-        }
-    }
-
-    private func updateParentCompletionStatus() {
-        guard let parent = parentTask else { return }
-
-        // If parent is complete but this subtask is now incomplete, uncomplete the parent
-        if parent.isCompleted && !isCompleted {
-            parent.setCompleted(false)
-        }
+        // Note: Subtask completion is independent - no cascade behavior
     }
 
     // MARK: - Subtask Management
 
-    func addSubtask(_ subtask: Task) -> Bool {
-        // Prevent subtasks of subtasks - only one level allowed
-        guard self.parentTask == nil else {
-            return false // This task is already a subtask, cannot have subtasks
-        }
-
-        guard subtask != self else {
-            return false // Prevent self-reference
-        }
-
+    func addSubtask(_ subtask: Subtask) -> Bool {
         // Assign the next order value
         let maxOrder = subtasksArray.map(\.subtaskOrder).max() ?? -1
         subtask.subtaskOrder = maxOrder + 1
@@ -292,27 +244,15 @@ class Task {
         return true
     }
 
-    func removeSubtask(_ subtask: Task) {
+    func removeSubtask(_ subtask: Subtask) {
         subtasksArray.removeAll { $0 == subtask }
         subtask.parentTask = nil
         modifiedDate = Date()
     }
 
-    func createSubtask(
-        title: String,
-        taskDescription: String = "",
-        priority: Priority = .none
-    ) -> Task {
-        let subtask = Task(
-            title: title,
-            taskDescription: taskDescription,
-            priority: priority,
-            dueDate: self.dueDate // Inherit due date by default
-        )
-
-        // Inherit parent's creation date for age-based housekeeping
-        subtask.createdDate = self.createdDate
-
+    func createSubtask(title: String) -> Subtask {
+        let subtask = Subtask(title: title)
+        subtask.createdDate = self.createdDate  // Inherit parent's creation date
         _ = addSubtask(subtask)
         return subtask
     }
@@ -337,7 +277,7 @@ class Task {
 
     /// Computes the effective reminder date based on whether this is a recurring or non-recurring task
     /// - If snoozed: Use snoozedUntil date (overrides normal calculation)
-    /// - Recurring tasks: Use alertTime (time-of-day) applied to today's date
+    /// - Recurring tasks: Use alertTime (time-of-day) applied to today's date or next occurrence
     /// - Non-recurring tasks: Use absolute reminderDate
     var effectiveReminderDate: Date? {
         // If snoozed, use the snooze time
@@ -352,7 +292,25 @@ class Task {
             components.hour = hour
             components.minute = minute
             components.second = 0
-            return calendar.date(from: components)
+
+            guard let alertDateTime = calendar.date(from: components) else {
+                return nil
+            }
+
+            // If the alert time has already passed today, find next occurrence
+            if alertDateTime < Date() {
+                if let nextDue = nextRecurrence() {
+                    var nextComponents = calendar.dateComponents([.year, .month, .day], from: nextDue)
+                    nextComponents.hour = hour
+                    nextComponents.minute = minute
+                    nextComponents.second = 0
+                    return calendar.date(from: nextComponents)
+                }
+                // Fallback: add one day if no next recurrence calculated
+                return calendar.date(byAdding: .day, value: 1, to: alertDateTime)
+            }
+
+            return alertDateTime
         }
 
         // For non-recurring tasks with an absolute reminder date
@@ -512,8 +470,21 @@ extension Task: Hashable {
     }
 }
 
-// MARK: - SubtaskDisplayable Conformance
+// MARK: - Alertable Conformance
 
-/// Enables Task to be displayed in unified SubtaskRow component
-/// Task already has required properties: title, isCompleted
-extension Task: SubtaskDisplayable {}
+extension Task: Alertable {
+    /// For tasks, completion is a boolean flag
+    var isItemCompleted: Bool {
+        isCompleted
+    }
+
+    /// For recurring tasks, use dueDate as the instance date
+    /// For non-recurring tasks, this is nil (they use absolute reminderDate instead)
+    var currentInstanceDate: Date? {
+        recurrenceRule != nil ? dueDate : nil
+    }
+
+    // Note: Task has custom effectiveReminderDate and hasPendingReminder
+    // that handle both absolute (non-recurring) and time-of-day (recurring) reminders
+    // These override the protocol defaults for Task-specific behavior
+}

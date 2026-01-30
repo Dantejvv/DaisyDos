@@ -15,7 +15,7 @@ struct TasksView: View {
     @Environment(NavigationManager.self) private var navigationManager
     @Query(
         filter: #Predicate<Task> { task in
-            task.parentTask == nil && !task.isCompleted
+            !task.isCompleted
         },
         sort: \Task.createdDate,
         order: .reverse
@@ -204,8 +204,7 @@ struct TasksView: View {
             return rootTasks
         } else {
             // Filter search results to only include root tasks
-            return taskManager.searchTasksSafely(query: searchText).filter { $0.parentTask == nil }
-        }
+            return taskManager.searchTasksSafely(query: searchText)        }
     }
 
     private var sortedTasks: [Task] {

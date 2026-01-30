@@ -3,8 +3,8 @@ import Foundation
 import SwiftData
 @testable import DaisyDos
 
-/// Comprehensive tests for Task model - Focus on completion propagation and subtask relationships
-/// Tests cover complex cascade logic for parent-child task relationships
+/// Comprehensive tests for Task model
+/// Tests cover task completion, subtask management, tags, due dates, and recurrence
 @Suite("Task Model Tests")
 struct TaskModelTests {
 
@@ -18,7 +18,6 @@ struct TaskModelTests {
         #expect(task.isCompleted == false)
         #expect(task.completedDate == nil)
         #expect((task.subtasks ?? []).isEmpty)
-        #expect(task.parentTask == nil)
         #expect(task.priority == .none)
         #expect(task.dueDate == nil)
     }
@@ -43,101 +42,7 @@ struct TaskModelTests {
         #expect(task.recurrenceRule != nil)
     }
 
-    // MARK: - Completion Propagation Tests
-
-    @Test("Completing parent completes all subtasks")
-    func testCompleteParentCompletesSubtasks() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-
-        let parent = Task(title: "Parent")
-        let subtask1 = Task(title: "Subtask 1")
-        let subtask2 = Task(title: "Subtask 2")
-
-        parent.subtasks = (parent.subtasks ?? []) + [subtask1]
-        parent.subtasks = (parent.subtasks ?? []) + [subtask2]
-
-        context.insert(parent)
-
-        // Complete parent
-        parent.setCompleted(true)
-
-        // Verify all subtasks are completed
-        #expect(parent.isCompleted)
-        #expect(subtask1.isCompleted)
-        #expect(subtask2.isCompleted)
-    }
-
-    @Test("Completing parent inherits completion date to subtasks")
-    func testCompleteParentInheritsCompletionDate() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-
-        let parent = Task(title: "Parent")
-        let subtask = Task(title: "Subtask")
-
-        parent.subtasks = (parent.subtasks ?? []) + [subtask]
-        context.insert(parent)
-
-        // Complete parent
-        parent.setCompleted(true)
-
-        // Verify subtask inherits parent's completion date
-        #expect(subtask.completedDate == parent.completedDate)
-    }
-
-    @Test("Uncompleting parent uncompletes all subtasks")
-    func testUncompleteParentUncompletesSubtasks() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-
-        let parent = Task(title: "Parent")
-        let subtask1 = Task(title: "Subtask 1")
-        let subtask2 = Task(title: "Subtask 2")
-
-        parent.subtasks = (parent.subtasks ?? []) + [subtask1]
-        parent.subtasks = (parent.subtasks ?? []) + [subtask2]
-
-        context.insert(parent)
-
-        // Complete parent (which completes subtasks)
-        parent.setCompleted(true)
-        #expect(subtask1.isCompleted)
-        #expect(subtask2.isCompleted)
-
-        // Uncomplete parent
-        parent.setCompleted(false)
-
-        // Verify all subtasks are uncompleted
-        #expect(!parent.isCompleted)
-        #expect(!subtask1.isCompleted)
-        #expect(!subtask2.isCompleted)
-    }
-
-    @Test("Uncompleting subtask uncompletes parent")
-    func testUncompleteSubtaskUncompletesParent() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-
-        let parent = Task(title: "Parent")
-        let subtask1 = Task(title: "Subtask 1")
-
-        parent.subtasks = (parent.subtasks ?? []) + [subtask1]
-
-        context.insert(parent)
-
-        // Complete parent
-        parent.setCompleted(true)
-        #expect(parent.isCompleted)
-        #expect(subtask1.isCompleted)
-
-        // Uncomplete subtask
-        subtask1.setCompleted(false)
-
-        // Parent should be uncompleted (propagates up)
-        #expect(!parent.isCompleted)
-        #expect(!subtask1.isCompleted)
-    }
+    // MARK: - Completion Tests
 
     @Test("Toggle completion works correctly")
     func testToggleCompletion() async throws {
@@ -181,26 +86,30 @@ struct TaskModelTests {
         #expect(task.completedDate == firstCompletionDate)
     }
 
-    // MARK: - Subtask Relationship Tests
+    // MARK: - Subtask Tests
 
     @Test("Task can have multiple subtasks")
     func testMultipleSubtasks() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
 
-        let parent = Task(title: "Parent")
-        let subtask1 = Task(title: "Subtask 1")
-        let subtask2 = Task(title: "Subtask 2")
-        let subtask3 = Task(title: "Subtask 3")
+        let task = Task(title: "Parent Task")
+        context.insert(task)
 
-        parent.subtasks = (parent.subtasks ?? []) + [subtask1]
-        parent.subtasks = (parent.subtasks ?? []) + [subtask2]
-        parent.subtasks = (parent.subtasks ?? []) + [subtask3]
+        let subtask1 = Subtask(title: "Subtask 1")
+        let subtask2 = Subtask(title: "Subtask 2")
+        let subtask3 = Subtask(title: "Subtask 3")
 
-        context.insert(parent)
+        context.insert(subtask1)
+        context.insert(subtask2)
+        context.insert(subtask3)
 
-        #expect((parent.subtasks ?? []).count == 3)
-        #expect(parent.subtaskCount == 3)
+        _ = task.addSubtask(subtask1)
+        _ = task.addSubtask(subtask2)
+        _ = task.addSubtask(subtask3)
+
+        #expect((task.subtasks ?? []).count == 3)
+        #expect(task.subtaskCount == 3)
     }
 
     @Test("Subtask has correct parent reference")
@@ -208,43 +117,120 @@ struct TaskModelTests {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
 
-        let parent = Task(title: "Parent")
-        let subtask = Task(title: "Subtask")
+        let task = Task(title: "Parent Task")
+        context.insert(task)
 
-        parent.subtasks = (parent.subtasks ?? []) + [subtask]
-        context.insert(parent)
+        let subtask = Subtask(title: "Subtask")
+        context.insert(subtask)
+        _ = task.addSubtask(subtask)
 
-        #expect(subtask.parentTask == parent)
-        #expect(parent.parentTask == nil)
+        #expect(subtask.parentTask?.id == task.id)
     }
 
-    @Test("Task with mixed completion states")
-    func testMixedCompletionStates() async throws {
+    @Test("Subtask completion is independent of task completion")
+    func testSubtaskIndependentCompletion() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
 
-        let parent = Task(title: "Parent")
-        let subtask1 = Task(title: "Subtask 1")
-        let subtask2 = Task(title: "Subtask 2")
-        let subtask3 = Task(title: "Subtask 3")
+        let task = Task(title: "Parent Task")
+        context.insert(task)
 
-        parent.subtasks = (parent.subtasks ?? []) + [subtask1]
-        parent.subtasks = (parent.subtasks ?? []) + [subtask2]
-        parent.subtasks = (parent.subtasks ?? []) + [subtask3]
+        let subtask1 = Subtask(title: "Subtask 1")
+        let subtask2 = Subtask(title: "Subtask 2")
+        context.insert(subtask1)
+        context.insert(subtask2)
+        _ = task.addSubtask(subtask1)
+        _ = task.addSubtask(subtask2)
 
-        context.insert(parent)
-
-        // Complete some subtasks manually
+        // Complete subtasks independently
         subtask1.setCompleted(true)
-        subtask2.setCompleted(true)
 
-        // Parent not complete, mixed subtask states
-        #expect(!parent.isCompleted)
+        // Parent task is not affected
+        #expect(!task.isCompleted)
         #expect(subtask1.isCompleted)
-        #expect(subtask2.isCompleted)
-        #expect(!subtask3.isCompleted)
+        #expect(!subtask2.isCompleted)
 
-        #expect(parent.completedSubtaskCount == 2)
+        // Task completion doesn't cascade to subtasks
+        task.setCompleted(true)
+        #expect(task.isCompleted)
+        // Subtasks retain their individual completion states
+        #expect(subtask1.isCompleted)
+        #expect(!subtask2.isCompleted)
+    }
+
+    @Test("completedSubtaskCount calculates correctly")
+    func testCompletedSubtaskCount() async throws {
+        let container = try TestHelpers.createTestContainer()
+        let context = ModelContext(container)
+
+        let task = Task(title: "Parent Task")
+        context.insert(task)
+
+        let subtask1 = Subtask(title: "Subtask 1")
+        let subtask2 = Subtask(title: "Subtask 2")
+        let subtask3 = Subtask(title: "Subtask 3")
+
+        context.insert(subtask1)
+        context.insert(subtask2)
+        context.insert(subtask3)
+
+        _ = task.addSubtask(subtask1)
+        _ = task.addSubtask(subtask2)
+        _ = task.addSubtask(subtask3)
+
+        #expect(task.completedSubtaskCount == 0)
+
+        subtask1.setCompleted(true)
+        #expect(task.completedSubtaskCount == 1)
+
+        subtask2.setCompleted(true)
+        #expect(task.completedSubtaskCount == 2)
+
+        subtask3.setCompleted(true)
+        #expect(task.completedSubtaskCount == 3)
+    }
+
+    @Test("hasSubtasks property works correctly")
+    func testHasSubtasks() async throws {
+        let container = try TestHelpers.createTestContainer()
+        let context = ModelContext(container)
+
+        let task = Task(title: "Parent Task")
+        context.insert(task)
+
+        #expect(!task.hasSubtasks)
+
+        let subtask = Subtask(title: "Subtask")
+        context.insert(subtask)
+        _ = task.addSubtask(subtask)
+
+        #expect(task.hasSubtasks)
+    }
+
+    @Test("Subtask ordering works correctly")
+    func testSubtaskOrdering() async throws {
+        let container = try TestHelpers.createTestContainer()
+        let context = ModelContext(container)
+
+        let task = Task(title: "Parent Task")
+        context.insert(task)
+
+        let subtask1 = Subtask(title: "First")
+        let subtask2 = Subtask(title: "Second")
+        let subtask3 = Subtask(title: "Third")
+
+        context.insert(subtask1)
+        context.insert(subtask2)
+        context.insert(subtask3)
+
+        _ = task.addSubtask(subtask1)
+        _ = task.addSubtask(subtask2)
+        _ = task.addSubtask(subtask3)
+
+        let ordered = task.orderedSubtasks
+        #expect(ordered.count == 3)
+        #expect(ordered[0].subtaskOrder < ordered[1].subtaskOrder)
+        #expect(ordered[1].subtaskOrder < ordered[2].subtaskOrder)
     }
 
     // MARK: - Tag Management Tests
@@ -340,52 +326,6 @@ struct TaskModelTests {
         #expect(!task.hasOverdueStatus)
     }
 
-    // MARK: - Subtask Progress Tests
-
-    @Test("completedSubtaskCount calculates correctly")
-    func testCompletedSubtaskCount() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-
-        let parent = Task(title: "Parent")
-        let subtask1 = Task(title: "Subtask 1")
-        let subtask2 = Task(title: "Subtask 2")
-        let subtask3 = Task(title: "Subtask 3")
-
-        parent.subtasks = (parent.subtasks ?? []) + [subtask1]
-        parent.subtasks = (parent.subtasks ?? []) + [subtask2]
-        parent.subtasks = (parent.subtasks ?? []) + [subtask3]
-
-        context.insert(parent)
-
-        #expect(parent.completedSubtaskCount == 0)
-
-        subtask1.setCompleted(true)
-        #expect(parent.completedSubtaskCount == 1)
-
-        subtask2.setCompleted(true)
-        #expect(parent.completedSubtaskCount == 2)
-
-        subtask3.setCompleted(true)
-        #expect(parent.completedSubtaskCount == 3)
-    }
-
-    @Test("hasSubtasks property works correctly")
-    func testHasSubtasks() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-
-        let parent = Task(title: "Parent")
-        context.insert(parent)
-
-        #expect(!parent.hasSubtasks)
-
-        let subtask = Task(title: "Subtask")
-        parent.subtasks = (parent.subtasks ?? []) + [subtask]
-
-        #expect(parent.hasSubtasks)
-    }
-
     // MARK: - Priority Tests
 
     @Test("Task priority is settable", arguments: [Priority.none, Priority.low, Priority.medium, Priority.high])
@@ -447,20 +387,5 @@ struct TaskModelTests {
 
         task.setCompleted(false)
         #expect(!task.isCompleted)
-    }
-
-    @Test("Task without parent works independently")
-    func testTaskWithoutParent() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-
-        let task = Task(title: "Test")
-        context.insert(task)
-
-        #expect(task.parentTask == nil)
-
-        // Should complete independently
-        task.setCompleted(true)
-        #expect(task.isCompleted)
     }
 }

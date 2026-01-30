@@ -11,7 +11,7 @@ struct InfrastructureTests {
         // Create container using our helper
         let container = try TestHelpers.createTestContainer()
 
-        // Verify container is valid (10 entities: Task, Habit, Tag, HabitCompletion, HabitSkip, HabitSubtask, TaskLogEntry, TaskAttachment, HabitAttachment, PendingRecurrence)
+        // Verify container is valid (10 entities: Task, Habit, Tag, HabitCompletion, HabitSkip, Subtask, TaskLogEntry, TaskAttachment, HabitAttachment, PendingRecurrence)
         #expect(container.schema.entities.count == 10)
 
         // Verify we can create a context

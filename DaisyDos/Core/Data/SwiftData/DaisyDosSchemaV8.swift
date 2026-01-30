@@ -11,6 +11,7 @@ import SwiftData
 
 /// Schema V8 for DaisyDos - Added PendingRecurrence model
 /// Supports deferred recurring task creation (tasks appear at scheduled time, not immediately)
+/// Note: HabitSubtask replaced by Subtask in V9
 enum DaisyDosSchemaV8: VersionedSchema {
     static var versionIdentifier = Schema.Version(8, 0, 0)
 
@@ -21,7 +22,7 @@ enum DaisyDosSchemaV8: VersionedSchema {
             Tag.self,
             HabitCompletion.self,
             HabitSkip.self,
-            HabitSubtask.self,
+            Subtask.self,  // Updated: Was HabitSubtask, now unified Subtask
             TaskLogEntry.self,
             TaskAttachment.self,
             HabitAttachment.self,

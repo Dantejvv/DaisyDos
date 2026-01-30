@@ -426,52 +426,28 @@ struct AddTaskView: View {
         // Convert AttributedString to String for task description
         let taskDescriptionString = String(taskDescriptionAttributed.characters)
 
-        // Create task
+        // Build subtask titles with order
+        let subtaskTitles = subtasks.enumerated().map { (index, item) in
+            (title: item.title, order: index)
+        }
+
+        // Create task with all properties in a single atomic save
         let result = taskManager.createTask(
             title: trimmedTitle,
             taskDescription: taskDescriptionString,
             priority: priority,
             dueDate: hasDueDate ? dueDate : nil,
-            recurrenceRule: recurrenceRule
+            recurrenceRule: recurrenceRule,
+            tags: selectedTags,
+            reminderDate: reminderDate,
+            alertTimeHour: alertTimeHour,
+            alertTimeMinute: alertTimeMinute,
+            subtaskTitles: subtaskTitles,
+            attachmentURLs: attachments
         )
 
         switch result {
-        case .success(let task):
-            // Add tags
-            for tag in selectedTags {
-                if !(task.tags ?? []).contains(tag) {
-                    if task.tags == nil { task.tags = [] }
-                    task.tags!.append(tag)
-                }
-            }
-
-            // Add reminder if set - use updateTask to ensure notification is scheduled
-            // For recurring tasks, use alertTimeHour/Minute; for non-recurring, use reminderDate
-            if reminderDate != nil || alertTimeHour != nil {
-                task.reminderDate = reminderDate
-                task.alertTimeHour = alertTimeHour
-                task.alertTimeMinute = alertTimeMinute
-                // Notify to trigger notification scheduling
-                NotificationCenter.default.post(
-                    name: .taskDidChange,
-                    object: nil,
-                    userInfo: ["taskId": task.id.uuidString]
-                )
-            }
-
-            // Add subtasks using batch method (follows SwiftData best practices)
-            if !subtasks.isEmpty {
-                let subtaskTitles = subtasks.enumerated().map { (index, item) in
-                    (title: item.title, order: index)
-                }
-                _ = taskManager.createSubtasks(for: task, titles: subtaskTitles)
-            }
-
-            // Add attachments
-            for fileURL in attachments {
-                _ = taskManager.addAttachment(to: task, from: fileURL)
-            }
-
+        case .success:
             dismiss()
 
         case .failure(let error):

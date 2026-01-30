@@ -44,7 +44,7 @@ struct TaskDetailView: View {
     let isLogbookMode: Bool
 
     // Query subtasks directly from database to work around SwiftData relationship observation issues
-    @Query private var allSubtasks: [Task]
+    @Query private var allSubtasks: [Subtask]
 
     @State private var showingEditView = false
     @State private var showingTagAssignment = false
@@ -66,7 +66,7 @@ struct TaskDetailView: View {
     }
 
     // Get subtasks for this specific task from the query results
-    private var taskSubtasks: [Task] {
+    private var taskSubtasks: [Subtask] {
         allSubtasks.filter { $0.parentTask?.id == task.id }
             .sorted { $0.subtaskOrder < $1.subtaskOrder }
     }
@@ -752,7 +752,7 @@ struct TaskDetailView: View {
         _ = taskManager.removeTagSafely(tag, from: task)
     }
 
-    private func toggleSubtask(_ subtask: Task) {
+    private func toggleSubtask(_ subtask: Subtask) {
         if canModify {
             _ = taskManager.toggleSubtask(subtask)
         }
@@ -762,11 +762,7 @@ struct TaskDetailView: View {
         let trimmedTitle = newSubtaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return }
 
-        let result = taskManager.createSubtask(
-            for: task,
-            title: trimmedTitle,
-            priority: .none
-        )
+        let result = taskManager.createSubtask(for: task, title: trimmedTitle)
 
         if case .success = result {
             newSubtaskTitle = ""

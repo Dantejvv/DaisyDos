@@ -66,11 +66,19 @@ class HabitNotificationManager: BaseNotificationManager {
             object: nil
         )
 
-        // Observe habit completions - reschedule for next occurrence
+        // Observe habit completions - cancel alert (don't reschedule until replenishment)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(habitWasCompleted(_:)),
             name: .habitWasCompleted,
+            object: nil
+        )
+
+        // Observe habit replenishment - schedule alert for new instance
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(habitWasReplenished(_:)),
+            name: .habitReplenished,
             object: nil
         )
 
@@ -113,16 +121,29 @@ class HabitNotificationManager: BaseNotificationManager {
     @objc private func habitWasCompleted(_ notification: Foundation.Notification) {
         guard let habitId = notification.userInfo?["habitId"] as? String else { return }
 
+        // When habit is completed, CANCEL the alert but DO NOT reschedule
+        // The new alert will be scheduled at replenishment time by habitWasReplenished
+        removeHabitNotification(habitId: habitId)
+
+        #if DEBUG
+        print("Cancelled notification for completed habit (ID: \(habitId))")
+        print("   Alert will be rescheduled at next replenishment")
+        #endif
+    }
+
+    @objc private func habitWasReplenished(_ notification: Foundation.Notification) {
+        guard let habitId = notification.userInfo?["habitId"] as? String else { return }
+
         // SwiftData ModelContext is not thread-safe - ensure main thread access
         DispatchQueue.main.async { [weak self] in
             guard let self = self,
                   let habit = self.getHabit(by: habitId) else { return }
 
-            // Reschedule for next occurrence (removes today's, schedules tomorrow's)
+            // Schedule alert for the new instance
             self.scheduleHabitReminder(for: habit)
 
             #if DEBUG
-            print("Rescheduled notifications for completed habit '\(habit.title)'")
+            print("Scheduled notification for replenished habit '\(habit.title)'")
             #endif
         }
     }

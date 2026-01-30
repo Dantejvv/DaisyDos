@@ -62,11 +62,15 @@ extension HabitManager {
     ///   - fileURL: URL of the file to attach
     /// - Returns: Result containing the created HabitAttachment or an error
     func addAttachment(to habit: Habit, from fileURL: URL) -> Result<HabitAttachment, Error> {
-        // Ensure we can access the file
-        guard fileURL.startAccessingSecurityScopedResource() else {
-            return .failure(HabitAttachmentError.fileReadFailed(fileName: fileURL.lastPathComponent))
+        // Try to access security-scoped resource if needed
+        // Note: Returns false for non-security-scoped URLs (e.g., temp directory files)
+        // which is expected and not an error - we can still read those files
+        let didStartAccessing = fileURL.startAccessingSecurityScopedResource()
+        defer {
+            if didStartAccessing {
+                fileURL.stopAccessingSecurityScopedResource()
+            }
         }
-        defer { fileURL.stopAccessingSecurityScopedResource() }
 
         do {
             // Read file data

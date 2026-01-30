@@ -30,18 +30,6 @@ struct LogEntryRow: View {
                     .foregroundColor(.daisyTextSecondary)
                     .lineLimit(2)
 
-                // Parent task indicator if this was a subtask
-                if entry.wasSubtask, let parentTitle = entry.parentTaskTitle {
-                    HStack(spacing: 4) {
-                        Image(systemName: "folder")
-                            .font(.caption2)
-                        Text(parentTitle)
-                            .font(.caption2)
-                            .lineLimit(1)
-                    }
-                    .foregroundColor(Colors.Primary.textTertiary)
-                }
-
                 // Metadata row
                 HStack(spacing: 8) {
                     // Completion date
@@ -98,16 +86,7 @@ struct LogEntryRow: View {
     // MARK: - Accessibility
 
     private var accessibilityLabel: String {
-        var label = ""
-
-        if entry.wasSubtask {
-            label = "Subtask: \(entry.displayTitle)"
-            if let parentTitle = entry.parentTaskTitle {
-                label += ", parent task: \(parentTitle)"
-            }
-        } else {
-            label = "\(entry.displayTitle)"
-        }
+        var label = entry.displayTitle
 
         label += ", completed \(entry.formattedCompletedDate)"
 
@@ -147,28 +126,8 @@ struct LogEntryRow: View {
             wasOverdue: true,
             subtaskCount: 3,
             completedSubtaskCount: 3,
-            wasSubtask: false,
-            parentTaskTitle: nil,
             tagNames: ["Work", "Urgent"],
             completionDuration: 1296000  // 15 days
-        ))
-
-        // Subtask example
-        LogEntryRow(entry: TaskLogEntry(
-            originalTaskId: UUID(),
-            title: "Gather financial data",
-            taskDescription: "",
-            completedDate: Calendar.current.date(byAdding: .day, value: -100, to: Date())!,
-            createdDate: Calendar.current.date(byAdding: .day, value: -105, to: Date())!,
-            dueDate: nil,
-            priority: .high,
-            wasOverdue: false,
-            subtaskCount: 0,
-            completedSubtaskCount: 0,
-            wasSubtask: true,
-            parentTaskTitle: "Complete Quarterly Report",
-            tagNames: ["Work"],
-            completionDuration: 432000  // 5 days
         ))
 
         // Medium priority, on time
@@ -183,8 +142,6 @@ struct LogEntryRow: View {
             wasOverdue: false,
             subtaskCount: 0,
             completedSubtaskCount: 0,
-            wasSubtask: false,
-            parentTaskTitle: nil,
             tagNames: ["Personal", "Writing"],
             completionDuration: 432000  // 5 days
         ))

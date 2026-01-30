@@ -31,7 +31,6 @@ struct TaskLogEntryTests {
         #expect(logEntry.priority == .high)
         #expect(logEntry.completedDate != nil)
         #expect(!logEntry.wasOverdue)
-        #expect(!logEntry.wasSubtask)
     }
 
     @Test("Log entry captures overdue status")
@@ -54,51 +53,38 @@ struct TaskLogEntryTests {
         #expect(logEntry.dueDate == yesterday)
     }
 
-    @Test("Log entry captures subtask relationships")
-    func testLogEntrySubtaskRelationships() async throws {
-        let container = try TestHelpers.createTestContainer()
-        let context = ModelContext(container)
-
-        let parent = Task(title: "Parent Task")
-        let subtask = Task(title: "Subtask")
-        parent.subtasks = [subtask]
-
-        subtask.setCompleted(true)
-        context.insert(parent)
-        context.insert(subtask)
-        try context.save()
-
-        let logEntry = TaskLogEntry(from: subtask)
-
-        #expect(logEntry.wasSubtask)
-        #expect(logEntry.parentTaskTitle == "Parent Task")
-    }
-
     @Test("Log entry captures subtask counts")
     func testLogEntrySubtaskCounts() async throws {
         let container = try TestHelpers.createTestContainer()
         let context = ModelContext(container)
 
-        let parent = Task(title: "Parent")
-        let subtask1 = Task(title: "Subtask 1")
-        let subtask2 = Task(title: "Subtask 2")
-        let subtask3 = Task(title: "Subtask 3")
+        let task = Task(title: "Parent Task")
+        context.insert(task)
 
-        parent.subtasks = [subtask1, subtask2, subtask3]
+        let subtask1 = Subtask(title: "Subtask 1")
+        let subtask2 = Subtask(title: "Subtask 2")
+        let subtask3 = Subtask(title: "Subtask 3")
 
+        context.insert(subtask1)
+        context.insert(subtask2)
+        context.insert(subtask3)
+
+        _ = task.addSubtask(subtask1)
+        _ = task.addSubtask(subtask2)
+        _ = task.addSubtask(subtask3)
+
+        // Complete some subtasks
         subtask1.setCompleted(true)
         subtask2.setCompleted(true)
-        // Note: Completing parent completes all subtasks
-        parent.setCompleted(true)
 
-        context.insert(parent)
+        // Complete the task
+        task.setCompleted(true)
         try context.save()
 
-        let logEntry = TaskLogEntry(from: parent)
+        let logEntry = TaskLogEntry(from: task)
 
         #expect(logEntry.subtaskCount == 3)
-        // After parent completion, all subtasks are completed
-        #expect(logEntry.completedSubtaskCount == 3)
+        #expect(logEntry.completedSubtaskCount == 2)
     }
 
     @Test("Log entry captures tag names")

@@ -9,28 +9,19 @@
 //
 // DESIGN DECISION: Simplified one-way cascade (parent → subtasks only)
 //
-// WHEN HABIT IS MARKED COMPLETE TODAY:
-// - All subtasks automatically complete for today (CASCADE DOWN)
-// - Ensures data consistency (habit can't be "done" with incomplete subtasks)
+// WHEN HABIT IS MARKED COMPLETE:
+// - All subtasks automatically complete (CASCADE DOWN)
 //
-// WHEN HABIT COMPLETION IS UNDONE:
-// - Subtasks retain their completion state for today (NO CASCADE)
-// - Note: Subtasks reset daily anyway (isCompletedToday resets at midnight)
+// WHEN HABIT REPLENISHES (based on recurrence rule):
+// - All subtask completion states reset to false
 //
 // WHEN INDIVIDUAL SUBTASK IS TOGGLED:
 // - Parent habit state UNCHANGED (NO PROPAGATION UP)
 // - Users can complete subtasks without forcing habit completion
-// - Removed complexity: toggleHabitSubtaskCompletion() is now simple
-//
-// RATIONALE:
-// - Habits track daily behavioral patterns, not discrete work items
-// - Subtasks are supporting milestones, not required completions
-// - Daily reset makes the cascade behavior less critical than for tasks
-//
-// See also: TaskManager+Subtasks.swift for similar task cascade logic
 
 import Foundation
 import SwiftData
+import UniformTypeIdentifiers
 
 // MARK: - Notification Names
 
@@ -97,7 +88,20 @@ class HabitManager: EntityManagerProtocol {
 
     // MARK: - CRUD Operations
 
-    func createHabit(title: String, habitDescription: String = "", isCustomSortActive: Bool = false) -> Result<Habit, AnyRecoverableError> {
+    /// Enhanced habit creation with full parameter support - atomic batch save
+    /// All properties are saved in a single transaction for data integrity
+    func createHabit(
+        title: String,
+        habitDescription: String = "",
+        isCustomSortActive: Bool = false,
+        priority: Priority = .none,
+        recurrenceRule: RecurrenceRule? = nil,
+        alertTimeHour: Int? = nil,
+        alertTimeMinute: Int? = nil,
+        tags: [Tag] = [],
+        subtaskTitles: [(title: String, order: Int)] = [],
+        attachmentURLs: [URL] = []
+    ) -> Result<Habit, AnyRecoverableError> {
         let result = ErrorTransformer.safely(
             operation: "create habit",
             entityType: "habit"
@@ -115,7 +119,9 @@ class HabitManager: EntityManagerProtocol {
 
             let habit = Habit(
                 title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                habitDescription: habitDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                habitDescription: habitDescription.trimmingCharacters(in: .whitespacesAndNewlines),
+                recurrenceRule: recurrenceRule,
+                priority: priority
             )
 
             // Set order to 0 for custom mode, or assign next sequential order for other modes
@@ -127,7 +133,69 @@ class HabitManager: EntityManagerProtocol {
                 habit.habitOrder = maxOrder + 1
             }
 
+            // Set alert time
+            habit.alertTimeHour = alertTimeHour
+            habit.alertTimeMinute = alertTimeMinute
+
             modelContext.insert(habit)
+
+            // Add tags (up to 5)
+            for tag in tags.prefix(5) {
+                _ = habit.addTag(tag)
+            }
+
+            // Create and add subtasks
+            for (subtaskTitle, order) in subtaskTitles {
+                let trimmedTitle = subtaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmedTitle.isEmpty else { continue }
+
+                let subtask = Subtask(title: trimmedTitle, subtaskOrder: order)
+                subtask.createdDate = habit.createdDate
+
+                modelContext.insert(subtask)
+                _ = habit.addSubtask(subtask)
+            }
+
+            // Add attachments
+            for fileURL in attachmentURLs {
+                // Try to access security-scoped resource if needed
+                let didStartAccessing = fileURL.startAccessingSecurityScopedResource()
+                defer {
+                    if didStartAccessing {
+                        fileURL.stopAccessingSecurityScopedResource()
+                    }
+                }
+
+                // Read file data
+                guard let fileData = try? Data(contentsOf: fileURL) else { continue }
+                let fileName = fileURL.lastPathComponent
+                let fileSize = Int64(fileData.count)
+
+                // Skip files that are too large
+                guard fileSize <= HabitAttachment.maxFileSize else { continue }
+
+                // Detect MIME type
+                let mimeType: String
+                if let uti = UTType(filenameExtension: fileURL.pathExtension),
+                   let mime = uti.preferredMIMEType {
+                    mimeType = mime
+                } else {
+                    mimeType = "application/octet-stream"
+                }
+
+                let attachment = HabitAttachment(
+                    fileName: fileName,
+                    fileSize: fileSize,
+                    mimeType: mimeType,
+                    fileData: fileData,
+                    thumbnailData: nil
+                )
+
+                if habit.attachments == nil { habit.attachments = [] }
+                habit.attachments!.append(attachment)
+            }
+
+            // Single atomic save for all data
             try modelContext.save()
             return habit
         }
@@ -214,10 +282,8 @@ class HabitManager: EntityManagerProtocol {
         // CASCADE: When habit is marked complete today, complete all subtasks
         // This ensures data consistency and provides clear completion state
         for subtask in (habit.subtasks ?? []) {
-            if !subtask.isCompletedToday {
-                subtask.isCompletedToday = true
-                subtask.lastCompletedDate = Date()
-                subtask.modifiedDate = Date()
+            if !subtask.isCompleted {
+                subtask.setCompleted(true)
             }
         }
 
@@ -381,14 +447,9 @@ class HabitManager: EntityManagerProtocol {
 
             // Copy subtasks
             for subtask in (habit.subtasks ?? []) {
-                let duplicateSubtask = HabitSubtask(title: subtask.title)
-                duplicateSubtask.subtaskOrder = subtask.subtaskOrder
-
-                if duplicateHabit.subtasks == nil {
-                    duplicateHabit.subtasks = []
-                }
-                duplicateHabit.subtasks?.append(duplicateSubtask)
+                let duplicateSubtask = Subtask(title: subtask.title, subtaskOrder: subtask.subtaskOrder)
                 modelContext.insert(duplicateSubtask)
+                _ = duplicateHabit.addSubtask(duplicateSubtask)
             }
 
             // Copy attachments
@@ -449,25 +510,19 @@ class HabitManager: EntityManagerProtocol {
 
     // MARK: - Subtask Management
 
-    func createHabitSubtask(for habit: Habit, title: String) -> Result<HabitSubtask, AnyRecoverableError> {
+    func createSubtask(for habit: Habit, title: String) -> Result<Subtask, AnyRecoverableError> {
         return ErrorTransformer.safely(
-            operation: "create habit subtask",
+            operation: "create subtask",
             entityType: "subtask"
         ) {
             guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw DaisyDosError.validationFailed("title")
             }
 
-            // Create subtask object
-            let subtask = HabitSubtask(title: title.trimmingCharacters(in: .whitespacesAndNewlines))
-
-            // Inherit parent's creation date
+            let subtask = Subtask(title: title.trimmingCharacters(in: .whitespacesAndNewlines))
             subtask.createdDate = habit.createdDate
 
-            // Insert into context FIRST so SwiftData can track the relationship
             modelContext.insert(subtask)
-
-            // THEN establish the relationship (this is now tracked by SwiftData)
             _ = habit.addSubtask(subtask)
 
             try modelContext.save()
@@ -475,60 +530,9 @@ class HabitManager: EntityManagerProtocol {
         }
     }
 
-    /// Batch create multiple habit subtasks - follows SwiftData best practice of inserting all objects before manipulating relationships
-    func createHabitSubtasks(
-        for habit: Habit,
-        titles: [(title: String, order: Int)]
-    ) -> Result<[HabitSubtask], AnyRecoverableError> {
+    func deleteSubtask(_ subtask: Subtask, from habit: Habit) -> Result<Void, AnyRecoverableError> {
         return ErrorTransformer.safely(
-            operation: "create habit subtasks",
-            entityType: "subtask"
-        ) {
-            var createdSubtasks: [HabitSubtask] = []
-
-            // Step 1: Create and insert ALL subtask objects FIRST
-            for (title, order) in titles {
-                let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmedTitle.isEmpty else { continue }
-
-                let subtask = HabitSubtask(title: trimmedTitle)
-                subtask.createdDate = habit.createdDate
-                subtask.subtaskOrder = order
-
-                modelContext.insert(subtask)
-                createdSubtasks.append(subtask)
-            }
-
-            // Step 2: THEN establish relationships after all are inserted
-            for subtask in createdSubtasks {
-                _ = habit.addSubtask(subtask)
-            }
-
-            // Step 3: Save once at the end
-            try modelContext.save()
-
-            return createdSubtasks
-        }
-    }
-
-    func updateHabitSubtask(_ subtask: HabitSubtask, title: String) -> Result<Void, AnyRecoverableError> {
-        return ErrorTransformer.safely(
-            operation: "update habit subtask",
-            entityType: "subtask"
-        ) {
-            guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                throw DaisyDosError.validationFailed("title")
-            }
-
-            subtask.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
-            subtask.modifiedDate = Date()
-            try modelContext.save()
-        }
-    }
-
-    func deleteHabitSubtask(_ subtask: HabitSubtask, from habit: Habit) -> Result<Void, AnyRecoverableError> {
-        return ErrorTransformer.safely(
-            operation: "delete habit subtask",
+            operation: "delete subtask",
             entityType: "subtask"
         ) {
             habit.removeSubtask(subtask)
@@ -537,9 +541,23 @@ class HabitManager: EntityManagerProtocol {
         }
     }
 
-    func toggleHabitSubtaskCompletion(_ subtask: HabitSubtask) -> Result<Void, AnyRecoverableError> {
+    func updateSubtaskTitle(_ subtask: Subtask, title: String) -> Result<Void, AnyRecoverableError> {
         return ErrorTransformer.safely(
-            operation: "toggle habit subtask completion",
+            operation: "update subtask title",
+            entityType: "subtask"
+        ) {
+            let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else {
+                throw DaisyDosError.validationFailed("title")
+            }
+            subtask.updateTitle(trimmed)
+            try modelContext.save()
+        }
+    }
+
+    func toggleSubtask(_ subtask: Subtask) -> Result<Void, AnyRecoverableError> {
+        return ErrorTransformer.safely(
+            operation: "toggle subtask",
             entityType: "subtask"
         ) {
             subtask.toggleCompletion()

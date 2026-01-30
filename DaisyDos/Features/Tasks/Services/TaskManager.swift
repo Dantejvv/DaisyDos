@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftData
+import UniformTypeIdentifiers
 
 // MARK: - Notification Names
 
@@ -68,9 +69,6 @@ class TaskManager: EntityManagerProtocol {
 
     var allTasks: [Task] {
         let descriptor = FetchDescriptor<Task>(
-            predicate: #Predicate<Task> { task in
-                task.parentTask == nil
-            },
             sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
         )
         return (try? modelContext.fetch(descriptor)) ?? []
@@ -79,7 +77,7 @@ class TaskManager: EntityManagerProtocol {
     var completedTasks: [Task] {
         let descriptor = FetchDescriptor<Task>(
             predicate: #Predicate<Task> { task in
-                task.isCompleted == true && task.parentTask == nil
+                task.isCompleted == true
             },
             sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
         )
@@ -121,13 +119,20 @@ class TaskManager: EntityManagerProtocol {
         return result
     }
 
-    /// Enhanced task creation with full parameter support
+    /// Enhanced task creation with full parameter support - atomic batch save
+    /// All properties are saved in a single transaction for data integrity
     func createTask(
         title: String,
         taskDescription: String = "",
         priority: Priority = .medium,
         dueDate: Date? = nil,
-        recurrenceRule: RecurrenceRule? = nil
+        recurrenceRule: RecurrenceRule? = nil,
+        tags: [Tag] = [],
+        reminderDate: Date? = nil,
+        alertTimeHour: Int? = nil,
+        alertTimeMinute: Int? = nil,
+        subtaskTitles: [(title: String, order: Int)] = [],
+        attachmentURLs: [URL] = []
     ) -> Result<Task, AnyRecoverableError> {
         let result = ErrorTransformer.safely(
             operation: "create enhanced task",
@@ -147,10 +152,71 @@ class TaskManager: EntityManagerProtocol {
                 taskDescription: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),
                 priority: priority,
                 dueDate: dueDate,
-                recurrenceRule: recurrenceRule
+                recurrenceRule: recurrenceRule,
+                reminderDate: reminderDate,
+                alertTimeHour: alertTimeHour,
+                alertTimeMinute: alertTimeMinute
             )
 
             modelContext.insert(task)
+
+            // Add tags (up to 5)
+            for tag in tags.prefix(5) {
+                _ = task.addTag(tag)
+            }
+
+            // Create and add subtasks
+            for (subtaskTitle, order) in subtaskTitles {
+                let trimmedTitle = subtaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmedTitle.isEmpty else { continue }
+
+                let subtask = Subtask(title: trimmedTitle, subtaskOrder: order)
+                subtask.createdDate = task.createdDate
+
+                modelContext.insert(subtask)
+                _ = task.addSubtask(subtask)
+            }
+
+            // Add attachments
+            for fileURL in attachmentURLs {
+                // Try to access security-scoped resource if needed
+                let didStartAccessing = fileURL.startAccessingSecurityScopedResource()
+                defer {
+                    if didStartAccessing {
+                        fileURL.stopAccessingSecurityScopedResource()
+                    }
+                }
+
+                // Read file data
+                guard let fileData = try? Data(contentsOf: fileURL) else { continue }
+                let fileName = fileURL.lastPathComponent
+                let fileSize = Int64(fileData.count)
+
+                // Skip files that are too large
+                guard fileSize <= TaskAttachment.maxFileSize else { continue }
+
+                // Detect MIME type
+                let mimeType: String
+                if let uti = UTType(filenameExtension: fileURL.pathExtension),
+                   let mime = uti.preferredMIMEType {
+                    mimeType = mime
+                } else {
+                    mimeType = "application/octet-stream"
+                }
+
+                let attachment = TaskAttachment(
+                    fileName: fileName,
+                    fileSize: fileSize,
+                    mimeType: mimeType,
+                    fileData: fileData,
+                    thumbnailData: nil
+                )
+
+                if task.attachments == nil { task.attachments = [] }
+                task.attachments!.append(attachment)
+            }
+
+            // Single atomic save for all data
             try modelContext.save()
             return task
         }
@@ -396,38 +462,20 @@ class TaskManager: EntityManagerProtocol {
 
     func createSubtask(
         for parentTask: Task,
-        title: String,
-        taskDescription: String = "",
-        priority: Priority = .none
-    ) -> Result<Task, AnyRecoverableError> {
+        title: String
+    ) -> Result<Subtask, AnyRecoverableError> {
         return ErrorTransformer.safely(
             operation: "create subtask",
-            entityType: "task"
+            entityType: "subtask"
         ) {
             guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw DaisyDosError.validationFailed("title")
             }
 
-            // Prevent subtasks of subtasks - only one level allowed
-            guard parentTask.parentTask == nil else {
-                throw DaisyDosError.circularReference
-            }
-
-            // Create subtask object
-            let subtask = Task(
-                title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                taskDescription: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),
-                priority: priority,
-                dueDate: parentTask.dueDate // Inherit due date by default
-            )
-
-            // Inherit parent's creation date for age-based housekeeping
+            let subtask = Subtask(title: title.trimmingCharacters(in: .whitespacesAndNewlines))
             subtask.createdDate = parentTask.createdDate
 
-            // Insert into context FIRST so SwiftData can track the relationship
             modelContext.insert(subtask)
-
-            // THEN establish the relationship (this is now tracked by SwiftData)
             _ = parentTask.addSubtask(subtask)
 
             try modelContext.save()
@@ -435,71 +483,27 @@ class TaskManager: EntityManagerProtocol {
         }
     }
 
-    /// Batch create multiple subtasks - follows SwiftData best practice of inserting all objects before manipulating relationships
-    func createSubtasks(
-        for parentTask: Task,
-        titles: [(title: String, order: Int)]
-    ) -> Result<[Task], AnyRecoverableError> {
+    func deleteSubtask(_ subtask: Subtask, from parentTask: Task) -> Result<Void, AnyRecoverableError> {
         return ErrorTransformer.safely(
-            operation: "create subtasks",
-            entityType: "task"
+            operation: "delete subtask",
+            entityType: "subtask"
         ) {
-            guard parentTask.parentTask == nil else {
-                throw DaisyDosError.circularReference
-            }
-
-            var createdSubtasks: [Task] = []
-
-            // Step 1: Create and insert ALL subtask objects FIRST
-            for (title, order) in titles {
-                let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmedTitle.isEmpty else { continue }
-
-                let subtask = Task(
-                    title: trimmedTitle,
-                    taskDescription: "",
-                    priority: .none,
-                    dueDate: parentTask.dueDate
-                )
-                subtask.createdDate = parentTask.createdDate
-                subtask.subtaskOrder = order
-
-                modelContext.insert(subtask)
-                createdSubtasks.append(subtask)
-            }
-
-            // Step 2: THEN establish relationships after all are inserted
-            for subtask in createdSubtasks {
-                _ = parentTask.addSubtask(subtask)
-            }
-
-            // Step 3: Save once at the end
+            parentTask.removeSubtask(subtask)
+            modelContext.delete(subtask)
             try modelContext.save()
-
-            return createdSubtasks
         }
     }
 
-    func moveSubtask(
-        _ subtask: Task,
-        to newParent: Task?
-    ) -> Result<Void, AnyRecoverableError> {
+    func updateSubtaskTitle(_ subtask: Subtask, title: String) -> Result<Void, AnyRecoverableError> {
         return ErrorTransformer.safely(
-            operation: "move subtask",
-            entityType: "task"
+            operation: "update subtask title",
+            entityType: "subtask"
         ) {
-            // Remove from current parent
-            if let currentParent = subtask.parentTask {
-                currentParent.removeSubtask(subtask)
+            let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else {
+                throw DaisyDosError.validationFailed("title")
             }
-
-            // Add to new parent
-            if let newParent = newParent {
-                guard newParent.addSubtask(subtask) else {
-                    throw DaisyDosError.circularReference
-                }
-            }
-
+            subtask.updateTitle(trimmed)
             try modelContext.save()
         }
     }
@@ -585,22 +589,9 @@ class TaskManager: EntityManagerProtocol {
 
             // Copy subtasks
             for subtask in (task.subtasks ?? []) {
-                let duplicateSubtask = Task(
-                    title: subtask.title,
-                    taskDescription: subtask.taskDescription,
-                    priority: subtask.priority,
-                    dueDate: nil, // Subtasks don't have due dates
-                    recurrenceRule: nil
-                )
-                duplicateSubtask.subtaskOrder = subtask.subtaskOrder
-
-                // Copy subtask tags
-                for tag in (subtask.tags ?? []) {
-                    _ = duplicateSubtask.addTag(tag)
-                }
-
-                duplicateTask.addSubtask(duplicateSubtask)
+                let duplicateSubtask = Subtask(title: subtask.title, subtaskOrder: subtask.subtaskOrder)
                 modelContext.insert(duplicateSubtask)
+                _ = duplicateTask.addSubtask(duplicateSubtask)
             }
 
             // Copy attachments

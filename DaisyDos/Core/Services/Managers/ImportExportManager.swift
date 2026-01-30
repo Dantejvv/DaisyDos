@@ -397,15 +397,12 @@ class ImportExportManager {
 
         // Restore subtasks
         if !export.subtasks.isEmpty {
-            var subtasks: [Task] = []
             for subtaskExport in export.subtasks {
-                let subtask = Task(title: subtaskExport.title)
+                let subtask = Subtask(title: subtaskExport.title, subtaskOrder: subtaskExport.order)
                 subtask.isCompleted = subtaskExport.isCompleted
-                subtask.subtaskOrder = subtaskExport.order
                 modelContext.insert(subtask)
-                subtasks.append(subtask)
+                _ = task.addSubtask(subtask)
             }
-            task.subtasks = subtasks
         }
 
         return true
@@ -456,15 +453,12 @@ class ImportExportManager {
 
         // Restore subtasks
         if !export.subtasks.isEmpty {
-            var subtasks: [HabitSubtask] = []
             for subtaskExport in export.subtasks {
-                let subtask = HabitSubtask(title: subtaskExport.title)
-                subtask.isCompletedToday = subtaskExport.isCompleted
-                subtask.subtaskOrder = subtaskExport.order
+                let subtask = Subtask(title: subtaskExport.title, subtaskOrder: subtaskExport.order)
+                subtask.isCompleted = subtaskExport.isCompleted
                 modelContext.insert(subtask)
-                subtasks.append(subtask)
+                _ = habit.addSubtask(subtask)
             }
-            habit.subtasks = subtasks
         }
 
         return true

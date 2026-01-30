@@ -49,7 +49,7 @@ struct HabitDetailView: View {
     let habit: Habit
 
     // Query subtasks directly from database to work around SwiftData relationship observation issues
-    @Query private var allSubtasks: [HabitSubtask]
+    @Query private var allSubtasks: [Subtask]
 
     @State private var showingEditView = false
     @State private var showingDeleteAlert = false
@@ -67,7 +67,7 @@ struct HabitDetailView: View {
     // MARK: - Computed Properties
 
     // Get subtasks for this specific habit from the query results
-    private var habitSubtasks: [HabitSubtask] {
+    private var habitSubtasks: [Subtask] {
         allSubtasks.filter { $0.parentHabit?.id == habit.id }
             .sorted { $0.subtaskOrder < $1.subtaskOrder }
     }
@@ -420,7 +420,9 @@ struct HabitDetailView: View {
                             .foregroundColor(.daisyTextSecondary)
                         Spacer()
                         HStack(spacing: 4) {
-                            if habit.hasReminder, let displayText = habit.reminderDisplayText {
+                            // Use configuredAlertDisplayText to always show the set time
+                            // regardless of instance state or whether notification fired
+                            if let displayText = habit.configuredAlertDisplayText {
                                 Text(displayText)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.daisyText)
@@ -739,8 +741,8 @@ struct HabitDetailView: View {
         _ = habitManager.removeTag(tag, from: habit)
     }
 
-    private func toggleSubtask(_ subtask: HabitSubtask) {
-        _ = habitManager.toggleHabitSubtaskCompletion(subtask)
+    private func toggleSubtask(_ subtask: Subtask) {
+        _ = habitManager.toggleSubtask(subtask)
     }
 
     private func addSubtask() {

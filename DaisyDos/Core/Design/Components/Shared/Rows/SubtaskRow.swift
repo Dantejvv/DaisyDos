@@ -93,23 +93,92 @@ struct SubtaskRow<T: SubtaskDisplayable>: View {
 
 /// Wrapper for staging mode subtasks (Add/Edit views)
 /// Used by AddTaskView, TaskEditView, AddHabitView, HabitEditView
+/// Supports inline title editing when onTitleChange is provided
 struct SubtaskRowStaging: View {
     let subtask: SubtaskItemProtocol
     let accentColor: Color
     let onToggle: () -> Void
+    var onTitleChange: ((String) -> Void)?
 
-    init(subtask: SubtaskItemProtocol, accentColor: Color = .daisyTask, onToggle: @escaping () -> Void) {
+    @State private var isEditing = false
+    @State private var editingTitle = ""
+    @FocusState private var isFocused: Bool
+
+    init(
+        subtask: SubtaskItemProtocol,
+        accentColor: Color = .daisyTask,
+        onToggle: @escaping () -> Void,
+        onTitleChange: ((String) -> Void)? = nil
+    ) {
         self.subtask = subtask
         self.accentColor = accentColor
         self.onToggle = onToggle
+        self.onTitleChange = onTitleChange
     }
 
     var body: some View {
-        SubtaskRow(
-            subtask: SubtaskItemWrapper(item: subtask),
-            accentColor: accentColor,
-            onToggle: onToggle
-        )
+        HStack(spacing: Spacing.small) {
+            // Completion checkbox
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    onToggle()
+                }
+            }) {
+                Image(systemName: subtask.isCompleted ? "checkmark.circle.fill" : "circle")
+                    .font(.body)
+                    .foregroundColor(subtask.isCompleted ? accentColor : .daisyTextSecondary)
+                    .frame(width: 20, height: 20)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(subtask.isCompleted ? "Completed" : "Not completed")
+            .accessibilityHint("Tap to toggle completion")
+
+            // Title - editable when onTitleChange is provided
+            if isEditing && onTitleChange != nil {
+                TextField("Subtask", text: $editingTitle)
+                    .font(.body)
+                    .foregroundColor(subtask.isCompleted ? .daisyTextSecondary : .daisyText)
+                    .focused($isFocused)
+                    .onSubmit {
+                        commitEdit()
+                    }
+            } else {
+                Text(subtask.title)
+                    .font(.body)
+                    .foregroundColor(subtask.isCompleted ? .daisyTextSecondary : .daisyText)
+                    .strikethrough(subtask.isCompleted, color: .daisyTextSecondary)
+                    .onTapGesture {
+                        if onTitleChange != nil {
+                            startEditing()
+                        }
+                    }
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 0)
+        .padding(.horizontal, Spacing.medium)
+        .frame(height: 30)
+        .contentShape(Rectangle())
+        .onChange(of: isFocused) { _, newValue in
+            if !newValue && isEditing {
+                commitEdit()
+            }
+        }
+    }
+
+    private func startEditing() {
+        editingTitle = subtask.title
+        isEditing = true
+        isFocused = true
+    }
+
+    private func commitEdit() {
+        let trimmed = editingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty && trimmed != subtask.title {
+            onTitleChange?(trimmed)
+        }
+        isEditing = false
     }
 }
 

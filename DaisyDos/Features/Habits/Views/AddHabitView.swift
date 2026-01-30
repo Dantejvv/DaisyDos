@@ -406,58 +406,28 @@ struct AddHabitView: View {
         // Convert AttributedString to String for habit description
         let habitDescriptionString = String(habitDescriptionAttributed.characters)
 
-        // Create habit with custom sort state
+        // Build subtask titles with order
+        let subtaskTitles = subtasks.enumerated().map { (index, item) in
+            (title: item.title, order: index)
+        }
+
+        // Create habit with all properties in a single atomic save
         let isCustomSortActive = habitSortOption == "Custom"
         let result = habitManager.createHabit(
             title: trimmedTitle,
             habitDescription: habitDescriptionString,
-            isCustomSortActive: isCustomSortActive
+            isCustomSortActive: isCustomSortActive,
+            priority: priority,
+            recurrenceRule: recurrenceRule,
+            alertTimeHour: alertTimeHour,
+            alertTimeMinute: alertTimeMinute,
+            tags: selectedTags,
+            subtaskTitles: subtaskTitles,
+            attachmentURLs: attachments
         )
 
         switch result {
-        case .success(let habit):
-            // Set priority
-            habit.priority = priority
-
-            // Set recurrence rule if provided
-            if let rule = recurrenceRule {
-                habit.recurrenceRule = rule
-            }
-
-            // Set alert time if provided
-            habit.alertTimeHour = alertTimeHour
-            habit.alertTimeMinute = alertTimeMinute
-
-            // Notify to trigger notification scheduling if alert time was set
-            if alertTimeHour != nil {
-                NotificationCenter.default.post(
-                    name: .habitDidChange,
-                    object: nil,
-                    userInfo: ["habitId": habit.id.uuidString]
-                )
-            }
-
-            // Add tags
-            for tag in selectedTags {
-                if !(habit.tags ?? []).contains(tag) {
-                    if habit.tags == nil { habit.tags = [] }
-                    habit.tags!.append(tag)
-                }
-            }
-
-            // Add subtasks using batch method (follows SwiftData best practices)
-            if !subtasks.isEmpty {
-                let subtaskTitles = subtasks.enumerated().map { (index, item) in
-                    (title: item.title, order: index)
-                }
-                _ = habitManager.createHabitSubtasks(for: habit, titles: subtaskTitles)
-            }
-
-            // Add attachments
-            for fileURL in attachments {
-                _ = habitManager.addAttachment(to: habit, from: fileURL)
-            }
-
+        case .success:
             dismiss()
 
         case .failure(let error):

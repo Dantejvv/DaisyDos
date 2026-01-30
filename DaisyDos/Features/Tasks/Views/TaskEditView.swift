@@ -241,6 +241,9 @@ struct TaskEditView: View {
                                         subtask: subtask,
                                         onToggle: {
                                             toggleSubtask(subtask)
+                                        },
+                                        onTitleChange: { newTitle in
+                                            updateSubtaskTitle(subtask, title: newTitle)
                                         }
                                     )
                                     .id(subtask.id)
@@ -535,29 +538,24 @@ struct TaskEditView: View {
         // Delete subtasks that are no longer in stagedSubtasks
         for subtask in (task.subtasks ?? []) {
             if !stagedSubtasks.contains(where: { $0.id == subtask.id }) {
-                _ = taskManager.deleteTaskSafely(subtask)
+                _ = taskManager.deleteSubtask(subtask, from: task)
                 existingSubtasks.removeValue(forKey: subtask.id)
             }
         }
 
         // Add or update subtasks
-        for stagedSubtask in stagedSubtasks {
+        for (index, stagedSubtask) in stagedSubtasks.enumerated() {
             if let existingSubtask = existingSubtasks[stagedSubtask.id] {
                 // Update existing subtask
-                existingSubtask.title = stagedSubtask.title
+                existingSubtask.updateTitle(stagedSubtask.title)
                 existingSubtask.isCompleted = stagedSubtask.isCompleted
-                existingSubtask.subtaskOrder = stagedSubtask.subtaskOrder
-                existingSubtask.modifiedDate = Date()
+                existingSubtask.subtaskOrder = index
             } else {
                 // Create new subtask
-                let result = taskManager.createSubtask(
-                    for: task,
-                    title: stagedSubtask.title,
-                    priority: .none
-                )
+                let result = taskManager.createSubtask(for: task, title: stagedSubtask.title)
                 if case .success(let newSubtask) = result {
                     newSubtask.isCompleted = stagedSubtask.isCompleted
-                    newSubtask.subtaskOrder = stagedSubtask.subtaskOrder
+                    newSubtask.subtaskOrder = index
                 }
             }
         }
@@ -637,6 +635,12 @@ struct TaskEditView: View {
 
     private func deleteSubtask(_ subtask: SubtaskItem) {
         stagedSubtasks.removeAll { $0.id == subtask.id }
+    }
+
+    private func updateSubtaskTitle(_ subtask: SubtaskItem, title: String) {
+        if let index = stagedSubtasks.firstIndex(where: { $0.id == subtask.id }) {
+            stagedSubtasks[index].title = title
+        }
     }
 
     private func moveSubtasks(from source: IndexSet, to destination: Int) {

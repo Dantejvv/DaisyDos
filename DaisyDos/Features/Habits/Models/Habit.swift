@@ -64,8 +64,13 @@ class Habit {
     /// When snoozed, this overrides the normal reminder time until the snooze fires
     var snoozedUntil: Date?
 
-    /// Tracks if the reminder notification has been delivered (resets daily for recurring habits)
+    /// Tracks if the reminder notification has been delivered (resets at replenishment)
     var notificationFired: Bool = false
+
+    /// When the current instance period started (resets at replenishment time)
+    /// For habits, this tracks when the current "active period" began
+    /// Alerts only apply to the current instance, not future instances
+    var currentInstanceDate: Date?
 
     /// Custom sort order for manual habit arrangement (lower values appear first)
     var habitOrder: Int = 0
@@ -93,7 +98,7 @@ class Habit {
 
     /// Subtasks/checklist items for the habit
     @Relationship(deleteRule: .cascade)
-    var subtasks: [HabitSubtask]?
+    var subtasks: [Subtask]?
 
     // MARK: - Computed Properties for Non-Optional Array Access
 
@@ -117,7 +122,7 @@ class Habit {
         set { attachments = newValue }
     }
 
-    private var subtasksArray: [HabitSubtask] {
+    private var subtasksArray: [Subtask] {
         get { subtasks ?? [] }
         set { subtasks = newValue }
     }
@@ -145,7 +150,7 @@ class Habit {
     }
 
     var completedSubtaskCount: Int {
-        subtasksArray.filter(\.isCompletedToday).count
+        subtasksArray.filter(\.isCompleted).count
     }
 
     var hasSubtasks: Bool {
@@ -160,16 +165,9 @@ class Habit {
         attachmentsArray.count
     }
 
-    var hasAlert: Bool {
-        alertTimeHour != nil
-    }
-
-    var hasReminder: Bool {
-        alertTimeHour != nil
-    }
-
     /// Computes the effective reminder date from alertTime
-    /// Priority: snoozedUntil > alert time applied to today
+    /// Uses currentInstanceDate to determine when the alert should fire for THIS instance
+    /// Priority: snoozedUntil > alert time applied to instance date
     var effectiveReminderDate: Date? {
         // If snoozed, use the snooze time (overrides normal calculation)
         if let snoozed = snoozedUntil {
@@ -180,45 +178,59 @@ class Habit {
             return nil
         }
 
+        // Use currentInstanceDate if available, otherwise no alert (not yet replenished)
+        // This ensures alerts only apply to the current active instance
+        guard let instanceDate = currentInstanceDate else {
+            return nil
+        }
+
         let calendar = Calendar.current
-        var components = calendar.dateComponents([.year, .month, .day], from: Date())
+        var components = calendar.dateComponents([.year, .month, .day], from: instanceDate)
         components.hour = hour
         components.minute = minute
         components.second = 0
 
-        guard let alertDateTime = calendar.date(from: components) else {
-            return nil
-        }
-
-        // If the alert time has already passed today, schedule for next occurrence
-        if alertDateTime < Date() {
-            // For habits WITHOUT recurrence, just add 1 day
-            if recurrenceRule == nil {
-                return calendar.date(byAdding: .day, value: 1, to: alertDateTime)
-            }
-
-            // For recurring habits, find next due date based on recurrence rule
-            if let nextDue = nextDueDate(after: Date()) {
-                var nextComponents = calendar.dateComponents([.year, .month, .day], from: nextDue)
-                nextComponents.hour = hour
-                nextComponents.minute = minute
-                if let nextAlertDateTime = calendar.date(from: nextComponents) {
-                    return nextAlertDateTime
-                }
-            }
-        }
-
-        return alertDateTime
+        return calendar.date(from: components)
     }
 
     /// Returns true if the habit has a future reminder/alert that hasn't fired yet
+    /// and the current instance is still active (not completed)
     var hasPendingAlert: Bool {
+        // No pending alert if instance is completed
+        guard !isCompletedToday else { return false }
+
         guard let date = effectiveReminderDate else { return false }
         return date > Date() && !notificationFired
     }
 
     /// Short display text for alert time (e.g., "9:00 AM")
+    /// Returns nil if no alert configured or no active instance
+    /// Used for notification scheduling logic
     var reminderDisplayText: String? {
+        guard let hour = alertTimeHour, let minute = alertTimeMinute else {
+            return nil
+        }
+
+        // Only show reminder text if there's an active instance
+        guard currentInstanceDate != nil else {
+            return nil
+        }
+
+        var components = DateComponents()
+        components.hour = hour
+        components.minute = minute
+
+        guard let date = Calendar.current.date(from: components) else { return nil }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: date)
+    }
+
+    /// Display text for configured alert time - always shows the time if configured
+    /// Used in detail views to show what time is set, regardless of instance state
+    /// Returns nil only if no alert is configured
+    var configuredAlertDisplayText: String? {
         guard let hour = alertTimeHour, let minute = alertTimeMinute else {
             return nil
         }
@@ -244,7 +256,7 @@ class Habit {
     }
 
     /// Returns subtasks ordered by their subtaskOrder property
-    var orderedSubtasks: [HabitSubtask] {
+    var orderedSubtasks: [Subtask] {
         // Ensure order values are assigned for existing subtasks
         ensureSubtaskOrderValues()
         return subtasksArray.sorted { $0.subtaskOrder < $1.subtaskOrder }
@@ -282,11 +294,7 @@ class Habit {
 
     // MARK: - Subtask Management
 
-    func addSubtask(_ subtask: HabitSubtask) -> Bool {
-        guard subtask.parentHabit == nil else {
-            return false // Subtask already has a parent
-        }
-
+    func addSubtask(_ subtask: Subtask) -> Bool {
         // Assign the next order value
         let maxOrder = subtasksArray.map(\.subtaskOrder).max() ?? -1
         subtask.subtaskOrder = maxOrder + 1
@@ -297,63 +305,21 @@ class Habit {
         return true
     }
 
-    func removeSubtask(_ subtask: HabitSubtask) {
+    func removeSubtask(_ subtask: Subtask) {
         subtasksArray.removeAll { $0 == subtask }
         subtask.parentHabit = nil
         modifiedDate = Date()
     }
 
-    /// Moves a subtask up one position by adjusting order values
-    func moveSubtaskUp(_ subtask: HabitSubtask) {
-        let orderedTasks = orderedSubtasks
-        guard let currentIndex = orderedTasks.firstIndex(of: subtask),
-              currentIndex > 0 else {
-            return
-        }
-
-        // Get the target subtask to swap orders with
-        let targetSubtask = orderedTasks[currentIndex - 1]
-
-        // Swap the order values
-        let tempOrder = subtask.subtaskOrder
-        subtask.subtaskOrder = targetSubtask.subtaskOrder
-        targetSubtask.subtaskOrder = tempOrder
-
-        modifiedDate = Date()
-    }
-
-    /// Moves a subtask down one position by adjusting order values
-    func moveSubtaskDown(_ subtask: HabitSubtask) {
-        let orderedTasks = orderedSubtasks
-        guard let currentIndex = orderedTasks.firstIndex(of: subtask),
-              currentIndex < orderedTasks.count - 1 else {
-            return
-        }
-
-        // Get the target subtask to swap orders with
-        let targetSubtask = orderedTasks[currentIndex + 1]
-
-        // Swap the order values
-        let tempOrder = subtask.subtaskOrder
-        subtask.subtaskOrder = targetSubtask.subtaskOrder
-        targetSubtask.subtaskOrder = tempOrder
-
-        modifiedDate = Date()
-    }
-
-    func createSubtask(title: String) -> HabitSubtask {
-        let subtask = HabitSubtask(title: title)
-
-        // Inherit parent's creation date
-        subtask.createdDate = self.createdDate
-
+    func createSubtask(title: String) -> Subtask {
+        let subtask = Subtask(title: title)
+        subtask.createdDate = self.createdDate  // Inherit parent's creation date
         _ = addSubtask(subtask)
         return subtask
     }
 
     var subtaskCompletionPercentage: Double {
-        guard hasSubtasks else { return isCompletedToday ? 1.0 : 0.0 }
-        guard subtaskCount > 0 else { return 0.0 }
+        guard hasSubtasks, subtaskCount > 0 else { return 0.0 }
         return Double(completedSubtaskCount) / Double(subtaskCount)
     }
 
@@ -640,4 +606,17 @@ extension Habit: Hashable {
     }
 }
 
+// MARK: - Alertable Conformance
+
+extension Habit: Alertable {
+    /// For habits, completion status is determined by whether completed today
+    var isItemCompleted: Bool {
+        isCompletedToday
+    }
+
+    // Note: currentInstanceDate is already a stored property on Habit
+    // Note: alertTimeHour, alertTimeMinute, notificationFired, snoozedUntil are stored properties
+    // Note: effectiveReminderDate, hasPendingAlert, reminderDisplayText have custom implementations above
+    // Note: hasAlert uses protocol default (alertTimeHour != nil)
+}
 

@@ -89,9 +89,7 @@ class LogbookManager {
         // Subtasks are deleted via cascade when parent is deleted
         let tasksToDelete = allCompleted.filter { task in
             guard let completedDate = task.completedDate else { return false }
-            let isOldEnough = completedDate < cutoffDate
-            let isRootTask = task.parentTask == nil
-            return isOldEnough && isRootTask
+            return completedDate < cutoffDate
         }
 
         #if DEBUG
@@ -145,9 +143,7 @@ class LogbookManager {
         // Subtasks are deleted via cascade when parent is archived
         let tasksToArchive = allCompleted.filter { task in
             guard let completedDate = task.completedDate else { return false }
-            let isInDateRange = completedDate < olderCutoff && completedDate >= newerCutoff
-            let isRootTask = task.parentTask == nil
-            return isInDateRange && isRootTask
+            return completedDate < olderCutoff && completedDate >= newerCutoff
         }
 
         #if DEBUG

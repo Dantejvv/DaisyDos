@@ -141,8 +141,6 @@ struct LogbookManagerTests {
             wasOverdue: false,
             subtaskCount: 0,
             completedSubtaskCount: 0,
-            wasSubtask: false,
-            parentTaskTitle: nil,
             tagNames: [],
             completionDuration: nil
         )

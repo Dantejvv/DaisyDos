@@ -359,9 +359,6 @@ class TaskNotificationManager: BaseNotificationManager {
 
     private func getAllTasks() -> [Task] {
         let descriptor = FetchDescriptor<Task>(
-            predicate: #Predicate<Task> { task in
-                task.parentTask == nil // Only root tasks
-            },
             sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
         )
         return (try? modelContext.fetch(descriptor)) ?? []

@@ -292,8 +292,7 @@ struct TaskManagerTests {
 
         let result = manager.createSubtask(
             for: parent,
-            title: "Subtask",
-            taskDescription: "Details"
+            title: "Subtask"
         )
 
         guard case .success(let subtask) = result else {

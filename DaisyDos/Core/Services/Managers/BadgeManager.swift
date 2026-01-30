@@ -78,11 +78,7 @@ class BadgeManager {
     // MARK: - Data Fetching
 
     private func getAllTasks() -> [Task] {
-        let descriptor = FetchDescriptor<Task>(
-            predicate: #Predicate<Task> { task in
-                task.parentTask == nil // Only root tasks, not subtasks
-            }
-        )
+        let descriptor = FetchDescriptor<Task>()
         return (try? modelContext.fetch(descriptor)) ?? []
     }
 
